@@ -1,1 +1,0 @@
-const XLSX = require('xlsx'); const workbook = XLSX.readFile('../Data Sarana dan Prasarana SMK PGRI Telagasari 2024.xlsx'); const sheet_name_list = workbook.SheetNames; console.log('Sheets:', sheet_name_list); sheet_name_list.forEach(sheet => { console.log('\n--- Data in sheet: ' + sheet + ' ---'); console.log(XLSX.utils.sheet_to_json(workbook.Sheets[sheet]).slice(0, 5)); });
