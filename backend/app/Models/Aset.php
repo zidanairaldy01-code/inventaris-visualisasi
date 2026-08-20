@@ -22,4 +22,6 @@ class Aset extends Model
     public function user() { return $this->belongsTo(User::class, 'id_user'); }
     public function fotos() { return $this->hasMany(FotoAset::class, 'id_aset'); }
     public function histories() { return $this->hasMany(History::class, 'id_aset'); }
+    public function servises() { return $this->hasMany(Servis::class, 'id_aset'); }
+    public function peminjamans() { return $this->hasMany(Peminjaman::class, 'id_aset'); }
 }

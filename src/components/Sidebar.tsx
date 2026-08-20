@@ -2,19 +2,27 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Building2, Map, Tag, Briefcase, FileText, Settings, LogOut, Package } from 'lucide-react';
+import { LayoutDashboard, Building2, Map, Tag, Briefcase, FileText, Settings, LogOut, Package, ChevronRight, Boxes, Wrench, Handshake } from 'lucide-react';
 import Cookies from 'js-cookie';
 import axios from '@/lib/axios';
 
 const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Data Aset', href: '/dashboard/aset', icon: Package },
-  { name: 'Master Gedung', href: '/dashboard/gedung', icon: Building2 },
-  { name: 'Master Ruangan', href: '/dashboard/ruangan', icon: Map },
-  { name: 'Kategori', href: '/dashboard/kategori', icon: Tag },
-  { name: 'Sumber Dana', href: '/dashboard/sumber-dana', icon: Briefcase },
-  { name: 'Kondisi Aset', href: '/dashboard/kondisi', icon: Settings },
-  { name: 'Riwayat/History', href: '/dashboard/history', icon: FileText },
+  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, group: 'main' },
+  { name: 'Data Aset', href: '/dashboard/aset', icon: Package, group: 'main' },
+  { name: 'Peminjaman Aset', href: '/dashboard/peminjaman', icon: Handshake, group: 'main' },
+  { name: 'Servis & Perbaikan', href: '/dashboard/servis', icon: Wrench, group: 'main' },
+  { name: 'Master Gedung', href: '/dashboard/gedung', icon: Building2, group: 'master' },
+  { name: 'Master Ruangan', href: '/dashboard/ruangan', icon: Map, group: 'master' },
+  { name: 'Kategori', href: '/dashboard/kategori', icon: Tag, group: 'master' },
+  { name: 'Sumber Dana', href: '/dashboard/sumber-dana', icon: Briefcase, group: 'master' },
+  { name: 'Kondisi Aset', href: '/dashboard/kondisi', icon: Settings, group: 'master' },
+  { name: 'Riwayat/History', href: '/dashboard/history', icon: FileText, group: 'laporan' },
+];
+
+const groups = [
+  { key: 'main', label: 'Menu Utama' },
+  { key: 'master', label: 'Data Master' },
+  { key: 'laporan', label: 'Laporan' },
 ];
 
 export default function Sidebar() {
@@ -32,52 +40,77 @@ export default function Sidebar() {
   };
 
   return (
-    <div className="flex flex-col w-64 bg-slate-900 border-r border-slate-800 shadow-xl z-20">
-      <div className="flex items-center justify-center h-16 bg-slate-950/50 border-b border-slate-800 px-6">
-        <span className="text-xl font-bold text-white tracking-tight flex items-center">
-          <span className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center mr-3 shadow-lg shadow-blue-500/20">
-            <Package className="w-5 h-5 text-white" />
-          </span>
-          SIM Aset
-        </span>
-      </div>
-      <div className="flex-1 overflow-y-auto py-6">
-        <div className="px-4 mb-3">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Navigasi Utama</p>
+    <div className="flex flex-col w-64 sidebar-gradient shadow-2xl z-20 relative overflow-hidden">
+      {/* Decorative glow elements */}
+      <div className="absolute top-20 left-4 w-24 h-24 bg-blue-600 rounded-full opacity-10 blur-2xl pointer-events-none" />
+      <div className="absolute bottom-40 right-4 w-20 h-20 bg-purple-600 rounded-full opacity-10 blur-2xl pointer-events-none" />
+
+      {/* Logo */}
+      <div className="flex items-center h-16 px-5 border-b border-white/5 flex-shrink-0">
+        <div className="flex items-center space-x-3">
+          <div className="relative">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
+              <Boxes className="w-5 h-5 text-white" />
+            </div>
+            <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2 border-slate-900" />
+          </div>
+          <div>
+            <span className="text-base font-bold text-white tracking-tight">SIM Aset</span>
+            <p className="text-[10px] text-slate-400 -mt-0.5">SMK PGRI Telagasari</p>
+          </div>
         </div>
-        <nav className="px-3 space-y-1">
-          {navigation.map((item) => {
-            const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname?.startsWith(item.href));
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={`
-                  group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200
-                  ${isActive 
-                    ? 'bg-blue-600/15 text-blue-400' 
-                    : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
-                  }
-                `}
-              >
-                <item.icon
-                  className={`flex-shrink-0 -ml-1 mr-3 h-5 w-5 transition-colors ${
-                    isActive ? 'text-blue-500' : 'text-slate-500 group-hover:text-slate-400'
-                  }`}
-                  aria-hidden="true"
-                />
-                <span className="truncate">{item.name}</span>
-              </Link>
-            );
-          })}
-        </nav>
       </div>
-      <div className="p-4 border-t border-slate-800 bg-slate-950/30">
+
+      {/* Navigation */}
+      <div className="flex-1 overflow-y-auto py-4 px-3 space-y-5">
+        {groups.map((group) => {
+          const items = navigation.filter((n) => n.group === group.key);
+          return (
+            <div key={group.key}>
+              <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest px-3 mb-2">
+                {group.label}
+              </p>
+              <nav className="space-y-0.5">
+                {items.map((item) => {
+                  const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname?.startsWith(item.href));
+                  return (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      className={`
+                        group flex items-center px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 relative
+                        ${isActive
+                          ? 'bg-gradient-to-r from-blue-600/30 to-indigo-600/20 text-white shadow-sm'
+                          : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                        }
+                      `}
+                    >
+                      {isActive && (
+                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-gradient-to-b from-blue-400 to-indigo-500 rounded-r-full" />
+                      )}
+                      <item.icon
+                        className={`flex-shrink-0 mr-3 h-4 w-4 transition-all duration-200 ${
+                          isActive ? 'text-blue-400' : 'text-slate-500 group-hover:text-slate-300'
+                        }`}
+                      />
+                      <span className="truncate flex-1">{item.name}</span>
+                      {isActive && <ChevronRight className="h-3.5 w-3.5 text-blue-400 ml-1 flex-shrink-0" />}
+                    </Link>
+                  );
+                })}
+              </nav>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Logout */}
+      <div className="p-3 border-t border-white/5 flex-shrink-0">
         <button
           onClick={handleLogout}
-          className="flex items-center w-full px-3 py-2.5 text-sm font-medium text-red-400 rounded-lg hover:bg-red-500/10 hover:text-red-300 transition-all duration-200"
+          className="flex items-center w-full px-3 py-2.5 text-sm font-medium text-slate-400 rounded-xl hover:bg-red-500/10 hover:text-red-400 transition-all duration-200 group"
         >
-          <LogOut className="flex-shrink-0 -ml-1 mr-3 h-5 w-5" />
+          <LogOut className="flex-shrink-0 mr-3 h-4 w-4 group-hover:text-red-400 transition-colors" />
           Keluar Sistem
         </button>
       </div>
