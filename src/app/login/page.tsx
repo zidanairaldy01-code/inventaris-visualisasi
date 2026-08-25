@@ -54,8 +54,12 @@ export default function LoginPage() {
           <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden mb-6">
             <div className="h-1.5 bg-blue-700 w-full" />
             <div className="p-6 text-center">
-              <div className="w-12 h-12 rounded-full bg-blue-700 text-white font-extrabold text-base flex items-center justify-center mx-auto mb-3 shadow-sm">
-                SMK
+              <div className="flex justify-center mb-3">
+                <img 
+                  src="http://localhost:8000/storage/img/pgri-telagasari.jpg" 
+                  alt="Logo SMK PGRI Telagasari"
+                  className="w-16 h-16 rounded-xl object-cover shadow-md ring-2 ring-gray-100"
+                />
               </div>
               <h1 className="text-xl font-bold text-gray-900">Portal Administrator</h1>
               <p className="text-xs text-gray-500 mt-1">

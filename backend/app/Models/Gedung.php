@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Gedung extends Model
 {
-    protected $fillable = ['id_sekolah', 'nama_gedung', 'kode_gedung', 'jumlah_lantai', 'deskripsi'];
+    protected $fillable = ['id_sekolah', 'nama_gedung', 'kode_gedung', 'jumlah_lantai', 'deskripsi', 'foto_gedung'];
 
     public function ruangans()
     {

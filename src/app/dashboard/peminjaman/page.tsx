@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import axios from '@/lib/axios';
 import { Handshake, Plus, Search, RefreshCw, CheckCircle2, Clock, X, Trash2, Edit2, Loader2, RotateCcw, User, Laptop } from 'lucide-react';
 
@@ -34,6 +35,7 @@ export default function PeminjamanPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -52,6 +54,7 @@ export default function PeminjamanPage() {
   });
 
   useEffect(() => {
+    setMounted(true);
     fetchData();
   }, []);
 
@@ -374,9 +377,9 @@ export default function PeminjamanPage() {
       </div>
 
       {/* Modal Form */}
-      {isModalOpen && (
+      {isModalOpen && mounted && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setIsModalOpen(false)} />
+          <div className="absolute inset-0 bg-black/60" onClick={() => setIsModalOpen(false)} />
           <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col">
             <div className="flex items-center justify-between p-5 border-b border-slate-100">
               <h3 className="font-bold text-slate-900 text-base">
@@ -506,7 +509,8 @@ export default function PeminjamanPage() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

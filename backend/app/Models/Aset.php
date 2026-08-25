@@ -10,11 +10,12 @@ class Aset extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'id_kategori', 'id_ruangan', 'id_sumber_dana', 'id_kondisi', 'id_user',
+        'id_kategori', 'id_ruangan', 'id_sumber_dana', 'id_kondisi', 'id_user', 'id_folder',
         'kode_aset', 'nama_aset', 'merek', 'tipe', 'warna', 'jumlah', 'satuan',
-        'tahun_perolehan', 'harga_perolehan', 'nomor_seri', 'tanggal_perolehan', 'deskripsi', 'status_aset'
+        'tahun_perolehan', 'harga_perolehan', 'nomor_seri', 'tanggal_perolehan', 'deskripsi', 'status_aset', 'foto_thumbnail'
     ];
 
+    public function folder() { return $this->belongsTo(FolderInventaris::class, 'id_folder'); }
     public function kategori() { return $this->belongsTo(Kategori::class, 'id_kategori'); }
     public function ruangan() { return $this->belongsTo(Ruangan::class, 'id_ruangan'); }
     public function sumberDana() { return $this->belongsTo(SumberDana::class, 'id_sumber_dana'); }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import axios from '@/lib/axios';
 import { X, Upload, Trash2, Star, ImageOff, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 
@@ -28,7 +29,12 @@ export default function AsetFotoModal({ aset, onClose, onUpdate }: Props) {
   const [deleting, setDeleting] = useState<number | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const refreshFotos = async () => {
     const res = await axios.get(`/api/asets/${aset.id}`);
@@ -89,9 +95,11 @@ export default function AsetFotoModal({ aset, onClose, onUpdate }: Props) {
 
   const thumbnail = fotos.find(f => f.is_thumbnail) || fotos[0];
 
-  return (
+  if (!mounted) return null;
+
+  const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
 
         {/* Header */}
@@ -207,4 +215,6 @@ export default function AsetFotoModal({ aset, onClose, onUpdate }: Props) {
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }

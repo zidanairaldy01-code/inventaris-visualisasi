@@ -6,11 +6,16 @@ use Illuminate\Database\Eloquent\Model;
 
 class Ruangan extends Model
 {
-    protected $fillable = ['id_gedung', 'nama_ruangan', 'kode_ruangan', 'lantai', 'luas_ruangan', 'deskripsi'];
+    protected $fillable = ['id_gedung', 'id_kelas', 'nama_ruangan', 'kode_ruangan', 'lantai', 'luas_ruangan', 'deskripsi', 'foto_ruangan'];
 
     public function gedung()
     {
         return $this->belongsTo(Gedung::class, 'id_gedung');
+    }
+
+    public function kelas()
+    {
+        return $this->belongsTo(Kelas::class, 'id_kelas');
     }
 
     public function visualisasis()

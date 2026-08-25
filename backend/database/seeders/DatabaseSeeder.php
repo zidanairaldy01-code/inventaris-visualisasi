@@ -15,11 +15,31 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        // Create default admin user
+        User::create([
+            'nama_lengkap' => 'Administrator',
+            'username' => 'admin',
+            'email' => 'admin@example.com',
+            'password' => bcrypt('password'),
+            'role' => 'admin',
+            'status' => true,
+        ]);
 
-        User::factory()->create([
-            'name' => 'Test User',
+        // Create default user
+        User::create([
+            'nama_lengkap' => 'Test User',
+            'username' => 'testuser',
             'email' => 'test@example.com',
+            'password' => bcrypt('password'),
+            'role' => 'user',
+            'status' => true,
+        ]);
+
+        // Call other seeders (only master data)
+        $this->call([
+            MasterDataSeeder::class,      // Master data: Kategori, Kondisi, Sumber Dana, Gedung, Ruangan
+            JurusanKelasSeeder::class,    // Jurusan & Kelas
+            // DummyDataSeeder::class,    // Disabled - no dummy data
         ]);
     }
 }

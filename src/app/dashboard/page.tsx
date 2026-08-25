@@ -5,12 +5,8 @@ import axios from '@/lib/axios';
 import { Package, Map, Building2, FileText, ArrowUpRight, TrendingUp, Activity, DollarSign, Layers } from 'lucide-react';
 import Link from 'next/link';
 
-const formatRupiah = (n: number) => {
-  if (n >= 1_000_000_000) return `Rp ${(n / 1_000_000_000).toFixed(1)}M`;
-  if (n >= 1_000_000) return `Rp ${(n / 1_000_000).toFixed(1)} Jt`;
-  if (n >= 1_000) return `Rp ${(n / 1_000).toFixed(0)} Rb`;
-  return `Rp ${n.toLocaleString('id-ID')}`;
-};
+const formatRupiah = (n: number) =>
+  new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n || 0);
 
 export default function DashboardPage() {
   const [stats, setStats] = useState({ aset: 0, ruangan: 0, gedung: 0, kategori: 0 });
@@ -184,10 +180,10 @@ export default function DashboardPage() {
             <p className="text-xs text-slate-400 mb-5">Navigasi ke menu yang sering digunakan.</p>
             <div className="space-y-2">
               {[
-                { label: 'Data Aset', href: '/dashboard/aset' },
+                { label: 'Sarana & Prasarana', href: '/dashboard/sarana-prasarana' },
+                { label: 'Data Inventaris', href: '/dashboard/inventaris' },
                 { label: 'Data Gedung', href: '/dashboard/gedung' },
                 { label: 'Data Ruangan', href: '/dashboard/ruangan' },
-                { label: 'Lihat Riwayat', href: '/dashboard/history' },
               ].map((action) => (
                 <Link key={action.label} href={action.href} className="flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/10 transition-all duration-200 group">
                   <span className="text-xs font-medium text-slate-200 group-hover:text-white transition-colors">{action.label}</span>

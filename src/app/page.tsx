@@ -108,10 +108,12 @@ export default function LandingPage() {
       <header className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-30">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {/* Logo placeholder — lingkaran dengan inisial */}
-            <div className="w-10 h-10 rounded-full bg-blue-700 flex items-center justify-center text-white font-extrabold text-sm flex-shrink-0">
-              SMK
-            </div>
+            {/* Logo SMK PGRI Telagasari */}
+            <img 
+              src="http://localhost:8000/storage/img/pgri-telagasari.jpg" 
+              alt="Logo SMK PGRI Telagasari"
+              className="w-10 h-10 rounded-full object-cover shadow-sm ring-2 ring-gray-100 flex-shrink-0"
+            />
             <div>
               <p className="font-bold text-gray-800 text-sm leading-tight">SMK PGRI Telagasari</p>
               <p className="text-[10px] text-gray-400 leading-tight">Sistem Informasi Manajemen Aset</p>
@@ -359,7 +361,11 @@ export default function LandingPage() {
           <div className="flex flex-col md:flex-row gap-6 justify-between">
             <div>
               <div className="flex items-center gap-2 mb-3">
-                <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white font-bold text-xs">SMK</div>
+                <img 
+                  src="http://localhost:8000/storage/img/pgri-telagasari.jpg" 
+                  alt="Logo SMK PGRI Telagasari"
+                  className="w-8 h-8 rounded-lg object-cover shadow-md ring-2 ring-white/20"
+                />
                 <span className="font-bold text-white">SMK PGRI Telagasari</span>
               </div>
               <p className="text-xs text-blue-300 max-w-xs leading-relaxed">

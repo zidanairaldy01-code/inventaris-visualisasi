@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import axios from '@/lib/axios';
 import { Wrench, Plus, Search, RefreshCw, DollarSign, CheckCircle2, Clock, AlertCircle, X, Trash2, Edit2, Loader2 } from 'lucide-react';
 
@@ -34,6 +35,7 @@ export default function ServisPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -50,6 +52,7 @@ export default function ServisPage() {
   });
 
   useEffect(() => {
+    setMounted(true);
     fetchData();
   }, []);
 
@@ -337,9 +340,9 @@ export default function ServisPage() {
       </div>
 
       {/* Modal Form */}
-      {isModalOpen && (
+      {isModalOpen && mounted && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setIsModalOpen(false)} />
+          <div className="absolute inset-0 bg-black/60" onClick={() => setIsModalOpen(false)} />
           <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col">
             <div className="flex items-center justify-between p-5 border-b border-slate-100">
               <h3 className="font-bold text-slate-900 text-base">
@@ -459,7 +462,8 @@ export default function ServisPage() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

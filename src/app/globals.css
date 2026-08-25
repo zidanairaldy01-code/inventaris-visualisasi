@@ -59,6 +59,36 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Text Selection Styling */
+::selection {
+  background-color: #60a5fa !important; /* Blue-400 */
+  color: #000000 !important;
+  text-shadow: none !important;
+}
+
+::-moz-selection {
+  background-color: #60a5fa !important; /* Blue-400 */
+  color: #000000 !important;
+  text-shadow: none !important;
+}
+
+/* Selection for inputs, selects, and textareas */
+input::selection,
+select::selection,
+textarea::selection,
+option::selection {
+  background-color: #60a5fa !important;
+  color: #000000 !important;
+}
+
+input::-moz-selection,
+select::-moz-selection,
+textarea::-moz-selection,
+option::-moz-selection {
+  background-color: #60a5fa !important;
+  color: #000000 !important;
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 5px;

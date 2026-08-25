@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Peminjaman;
+use App\Models\History;
 use Illuminate\Http\Request;
 
 class PeminjamanController extends Controller
@@ -33,6 +34,15 @@ class PeminjamanController extends Controller
         $peminjaman = Peminjaman::create($validated);
         $peminjaman->load(['aset.ruangan', 'aset.kategori']);
 
+        // Create history - BARANG KELUAR
+        History::create([
+            'id_aset' => $validated['id_aset'],
+            'id_user' => $request->user()?->id,
+            'aksi' => 'PEMINJAMAN',
+            'keterangan' => "Barang dipinjam oleh {$validated['nama_peminjam']} ({$validated['role_peminjam']}) sejumlah {$validated['jumlah']} unit. Keperluan: " . ($validated['keperluan'] ?? '-'),
+            'tanggal' => now()
+        ]);
+
         return response()->json($peminjaman, 201);
     }
 
@@ -58,12 +68,28 @@ class PeminjamanController extends Controller
             'status'                  => 'sometimes|required|in:Dipinjam,Dikembalikan,Terlambat',
         ]);
 
+        // Check if status changed to "Dikembalikan" - BARANG MASUK
+        $statusBerubah = isset($validated['status']) && 
+                        $validated['status'] === 'Dikembalikan' && 
+                        $peminjaman->status !== 'Dikembalikan';
+
         if (isset($validated['status']) && $validated['status'] === 'Dikembalikan' && !$peminjaman->tanggal_kembali_aktual) {
             $validated['tanggal_kembali_aktual'] = now()->toDateString();
         }
 
         $peminjaman->update($validated);
         $peminjaman->load(['aset.ruangan', 'aset.kategori']);
+
+        // Create history when returned
+        if ($statusBerubah) {
+            History::create([
+                'id_aset' => $peminjaman->id_aset,
+                'id_user' => $request->user()?->id,
+                'aksi' => 'PENGEMBALIAN',
+                'keterangan' => "Barang dikembalikan oleh {$peminjaman->nama_peminjam} sejumlah {$peminjaman->jumlah} unit pada " . ($validated['tanggal_kembali_aktual'] ?? now()->toDateString()),
+                'tanggal' => now()
+            ]);
+        }
 
         return response()->json($peminjaman);
     }

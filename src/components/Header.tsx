@@ -189,13 +189,13 @@ export default function Header() {
                   <div>
                     <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center">
                       <Package className="h-3 w-3 mr-1.5 text-blue-500" />
-                      Data Aset ({results.asets.length})
+                      Sarana &amp; Prasarana ({results.asets.length})
                     </div>
                     <div className="space-y-0.5 mt-1">
                       {results.asets.map((aset) => (
                         <div
                           key={aset.id}
-                          onClick={() => handleSelectResult('/dashboard/aset')}
+                          onClick={() => handleSelectResult('/dashboard/sarana-prasarana')}
                           className="flex items-center justify-between px-3 py-2 rounded-xl hover:bg-blue-50/60 cursor-pointer transition-colors group"
                         >
                           <div>

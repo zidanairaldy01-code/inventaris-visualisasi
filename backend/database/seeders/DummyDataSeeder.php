@@ -106,7 +106,7 @@ class DummyDataSeeder extends Seeder
         $kondisis = Kondisi::all()->keyBy('nama_kondisi');
 
         // ─── SUMBER DANA ─────────────────────────────────────────
-        $sumberDanaData = ['Dana BOS', 'APBD', 'Bantuan Provinsi', 'Dana Komite', 'Hibah'];
+        $sumberDanaData = ['BOS', 'Yayasan (YPLP)', 'Mandiri'];
         foreach ($sumberDanaData as $s) {
             SumberDana::create(['nama_sumber' => $s]);
         }

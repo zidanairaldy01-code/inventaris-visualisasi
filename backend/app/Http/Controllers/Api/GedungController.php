@@ -10,7 +10,8 @@ class GedungController extends Controller
 {
     public function index()
     {
-        return response()->json(Gedung::all());
+        $gedungs = Gedung::with(['ruangans.asets.kategori', 'ruangans.asets.kondisi'])->get();
+        return response()->json($gedungs);
     }
 
     public function store(Request $request)
@@ -19,8 +20,14 @@ class GedungController extends Controller
             'nama_gedung' => 'required|string|max:255',
             'kode_gedung' => 'nullable|string|max:50',
             'jumlah_lantai' => 'nullable|integer',
-            'deskripsi' => 'nullable|string'
+            'deskripsi' => 'nullable|string',
+            'foto_gedung' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
         ]);
+
+        if ($request->hasFile('foto_gedung')) {
+            $path = $request->file('foto_gedung')->store('gedung', 'public');
+            $validated['foto_gedung'] = '/storage/' . $path;
+        }
 
         $gedung = Gedung::create($validated);
         return response()->json($gedung, 201);
@@ -40,8 +47,19 @@ class GedungController extends Controller
             'nama_gedung' => 'required|string|max:255',
             'kode_gedung' => 'nullable|string|max:50',
             'jumlah_lantai' => 'nullable|integer',
-            'deskripsi' => 'nullable|string'
+            'deskripsi' => 'nullable|string',
+            'foto_gedung' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
         ]);
+
+        if ($request->hasFile('foto_gedung')) {
+            // Delete old foto if exists
+            if ($gedung->foto_gedung) {
+                $oldPath = str_replace('/storage/', '', $gedung->foto_gedung);
+                \Storage::disk('public')->delete($oldPath);
+            }
+            $path = $request->file('foto_gedung')->store('gedung', 'public');
+            $validated['foto_gedung'] = '/storage/' . $path;
+        }
 
         $gedung->update($validated);
         return response()->json($gedung);
