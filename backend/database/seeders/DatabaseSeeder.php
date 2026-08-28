@@ -34,12 +34,5 @@ class DatabaseSeeder extends Seeder
             'role' => 'user',
             'status' => true,
         ]);
-
-        // Call other seeders (only master data)
-        $this->call([
-            MasterDataSeeder::class,      // Master data: Kategori, Kondisi, Sumber Dana, Gedung, Ruangan
-            JurusanKelasSeeder::class,    // Jurusan & Kelas
-            // DummyDataSeeder::class,    // Disabled - no dummy data
-        ]);
     }
 }

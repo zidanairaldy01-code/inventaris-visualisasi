@@ -11,6 +11,8 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "SIM Aset - SMK PGRI Telagasari",
   description: "Sistem Informasi Manajemen Aset Digital SMK PGRI Telagasari",
+  viewport: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no",
+  themeColor: "#1e293b",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -19,7 +21,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       lang="id"
       className={`${inter.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+      </head>
+      <body className="min-h-full flex flex-col touch-manipulation">{children}</body>
     </html>
   );
 }

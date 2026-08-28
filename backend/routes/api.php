@@ -16,7 +16,11 @@ use App\Http\Controllers\Api\JurusanController;
 use App\Http\Controllers\Api\KelasController;
 use App\Http\Controllers\Api\AsetPerKelasController;
 use App\Http\Controllers\Api\InventarisController;
+use App\Http\Controllers\Api\InventarisBarangController;
 use App\Http\Controllers\Api\FolderInventarisController;
+use App\Http\Controllers\Api\InventarisGudangController;
+use App\Http\Controllers\Api\SaranaPrasaranaController;
+use App\Http\Controllers\Api\DaftarBelanjaController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login']);
@@ -27,6 +31,7 @@ Route::get('ruangans/{ruangan}', [RuanganController::class, 'show']);
 Route::get('asets', [AsetController::class, 'index']);
 Route::get('asets/{aset}', [AsetController::class, 'show']);
 Route::get('stats', [AsetController::class, 'publicStats']);
+Route::get('daftar-belanja/summary', [DaftarBelanjaController::class, 'summary']);
 Route::get('gedungs', [GedungController::class, 'index']);
 Route::get('kategoris', [KategoriController::class, 'index']);
 Route::get('servises', [ServisController::class, 'index']);
@@ -73,7 +78,24 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Inventaris
     Route::post('inventaris/import', [InventarisController::class, 'importExcel']);
+    Route::post('inventaris/import-barang', [InventarisBarangController::class, 'importExcel']); // Format Barang (Kode Rekening + Kode Program)
     Route::get('inventaris/summary', [InventarisController::class, 'summary']);
     Route::apiResource('inventaris', InventarisController::class);
     Route::apiResource('folder-inventaris', FolderInventarisController::class);
+
+    // Sarana Prasarana
+    Route::post('sarana-prasaranas/import', [SaranaPrasaranaController::class, 'importExcel']);
+    Route::post('sarana-prasaranas/batch-store', [SaranaPrasaranaController::class, 'batchStore']);
+    Route::get('sarana-prasaranas/summary', [SaranaPrasaranaController::class, 'summary']);
+    Route::apiResource('sarana-prasaranas', SaranaPrasaranaController::class);
+
+    // Inventaris Gudang (Tabel & System Terpisah)
+    Route::post('inventaris-gudang/import', [InventarisGudangController::class, 'importExcel']);
+    Route::get('inventaris-gudang/summary', [InventarisGudangController::class, 'summary']);
+    Route::apiResource('inventaris-gudang', InventarisGudangController::class);
+
+    // Daftar Belanja (Tabel & System Terpisah - Format Kode Rekening + Kode Program)
+    Route::post('daftar-belanja/batch-store', [DaftarBelanjaController::class, 'batchStore']);
+    Route::post('daftar-belanja/batch-delete', [DaftarBelanjaController::class, 'batchDelete']);
+    Route::apiResource('daftar-belanja', DaftarBelanjaController::class);
 });

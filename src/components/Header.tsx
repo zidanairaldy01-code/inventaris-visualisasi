@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from '@/lib/axios';
-import { Bell, Search, UserCircle, ChevronDown, Package, MapPin, Building2, X, Loader2 } from 'lucide-react';
+import { Bell, Search, UserCircle, ChevronDown, Package, MapPin, Building2, X, Loader2, Menu } from 'lucide-react';
 import Link from 'next/link';
 
 interface SearchResult {
@@ -12,7 +12,11 @@ interface SearchResult {
   gedungs: any[];
 }
 
-export default function Header() {
+interface HeaderProps {
+  onMenuClick: () => void;
+}
+
+export default function Header({ onMenuClick }: HeaderProps) {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [time, setTime] = useState<string>('');
@@ -123,19 +127,34 @@ export default function Header() {
   const today = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
   return (
-    <header className="flex-shrink-0 h-16 bg-white/80 backdrop-blur-xl border-b border-slate-200/60 flex items-center justify-between px-6 z-30 shadow-sm">
-      {/* Left: Date & Greeting */}
-      <div className="flex items-center space-x-4">
+    <header className="flex-shrink-0 h-16 bg-white/80 backdrop-blur-xl border-b border-slate-200/60 flex items-center justify-between px-4 sm:px-6 z-30 shadow-sm">
+      {/* Left: Hamburger Menu (Mobile) + Date & Greeting */}
+      <div className="flex items-center space-x-3 sm:space-x-4">
+        {/* Hamburger menu - only visible on mobile */}
+        <button
+          onClick={onMenuClick}
+          className="lg:hidden p-2 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+
         <div className="hidden md:block">
           <p className="text-xs text-slate-400 font-medium">{today}</p>
           <p className="text-sm font-semibold text-slate-700 -mt-0.5">
             Selamat datang, <span className="text-blue-600">{user?.nama_lengkap?.split(' ')[0] || 'Admin'}</span> 👋
           </p>
         </div>
+        
+        {/* Mobile: Just show short greeting */}
+        <div className="md:hidden">
+          <p className="text-sm font-semibold text-slate-700">
+            Halo, <span className="text-blue-600">{user?.nama_lengkap?.split(' ')[0] || 'Admin'}</span>
+          </p>
+        </div>
       </div>
 
-      {/* Center: Search with Live Dropdown */}
-      <div className="flex-1 max-w-md mx-6 relative hidden md:block">
+      {/* Center: Search with Live Dropdown - Hidden on small mobile */}
+      <div className="flex-1 max-w-md mx-3 sm:mx-6 relative hidden sm:block">
         <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
             {isSearching ? (
@@ -151,7 +170,7 @@ export default function Header() {
             onChange={(e) => setQuery(e.target.value)}
             onFocus={() => { if (query.trim()) setShowDropdown(true); }}
             className="block w-full pl-9 pr-8 py-2 border border-slate-200 rounded-xl text-sm leading-5 bg-slate-50 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
-            placeholder="Cari aset, ruangan, gedung..."
+            placeholder="Cari aset, ruangan..."
           />
           {query ? (
             <button
@@ -161,7 +180,7 @@ export default function Header() {
               <X className="h-3.5 w-3.5" />
             </button>
           ) : (
-            <kbd className="absolute right-3 top-1/2 -translate-y-1/2 hidden sm:flex items-center gap-1 px-1.5 py-0.5 bg-slate-200 rounded text-[10px] text-slate-500 font-mono">
+            <kbd className="absolute right-3 top-1/2 -translate-y-1/2 hidden lg:flex items-center gap-1 px-1.5 py-0.5 bg-slate-200 rounded text-[10px] text-slate-500 font-mono">
               ⌘K
             </kbd>
           )}
@@ -220,7 +239,7 @@ export default function Header() {
                   <div>
                     <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center">
                       <MapPin className="h-3 w-3 mr-1.5 text-emerald-500" />
-                      Data Ruangan ({results.ruangans.length})
+                      Ruangan Workshop ({results.ruangans.length})
                     </div>
                     <div className="space-y-0.5 mt-1">
                       {results.ruangans.map((ruangan) => (
@@ -273,9 +292,9 @@ export default function Header() {
       </div>
 
       {/* Right: Actions */}
-      <div className="flex items-center space-x-2">
-        {/* Live indicator */}
-        <div className="hidden sm:flex items-center space-x-1.5 px-2.5 py-1 bg-emerald-50 rounded-lg border border-emerald-100 mr-2">
+      <div className="flex items-center space-x-1 sm:space-x-2">
+        {/* Live indicator - Hide on mobile */}
+        <div className="hidden lg:flex items-center space-x-1.5 px-2.5 py-1 bg-emerald-50 rounded-lg border border-emerald-100 mr-2">
           <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
           <span className="text-xs font-semibold text-emerald-600">{time} WIB</span>
         </div>
@@ -287,17 +306,17 @@ export default function Header() {
         </button>
 
         {/* User profile */}
-        <div className="flex items-center border border-slate-200 pl-2 pr-3 py-1.5 space-x-2.5 cursor-pointer hover:bg-slate-50 rounded-xl transition-colors ml-1">
+        <div className="flex items-center border border-slate-200 pl-2 pr-2 sm:pr-3 py-1.5 space-x-2 sm:space-x-2.5 cursor-pointer hover:bg-slate-50 rounded-xl transition-colors ml-1">
           <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-sm flex-shrink-0">
             <span className="text-xs font-bold text-white">
               {user?.nama_lengkap?.[0]?.toUpperCase() || 'A'}
             </span>
           </div>
-          <div className="hidden sm:block text-sm text-left">
+          <div className="hidden md:block text-sm text-left">
             <div className="font-semibold text-slate-800 text-xs leading-tight">{user?.nama_lengkap || 'Memuat...'}</div>
             <div className="text-[10px] text-slate-400 capitalize leading-tight">{user?.role || 'Admin'}</div>
           </div>
-          <ChevronDown className="h-3 w-3 text-slate-400 flex-shrink-0" />
+          <ChevronDown className="h-3 w-3 text-slate-400 flex-shrink-0 hidden sm:block" />
         </div>
       </div>
     </header>

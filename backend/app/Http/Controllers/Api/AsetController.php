@@ -57,11 +57,33 @@ class AsetController extends Controller
             ->groupBy(fn($a) => $a->kategori?->nama_kategori ?? 'Lainnya')
             ->map(fn($g) => ['jumlah' => $g->count(), 'nilai' => $g->sum(fn($a) => (float) ($a->harga_perolehan ?? 0))]);
 
+        // Hitung jumlah ruangan, gedung, kategori
+        $totalRuangan = \App\Models\Ruangan::count();
+        $totalGedung  = \App\Models\Gedung::count();
+        $totalKategori = \App\Models\Kategori::count();
+
+        // Hitung total nilai pembelian dari daftar belanja
+        $totalBelanja = \App\Models\DaftarBelanja::sum('jumlah');
+        $totalItemBelanja = \App\Models\DaftarBelanja::count();
+
+        // Hitung total nilai pembelian dari sarana prasarana
+        $totalNilaiPembelianSarana = (float) \App\Models\SaranaPrasarana::sum('nilai_harga_pembelian');
+        $totalNilaiSekarangSarana  = (float) \App\Models\SaranaPrasarana::sum('nilai_harga_sekarang');
+        $totalItemSarana           = \App\Models\SaranaPrasarana::count();
+
         return response()->json([
-            'total_item' => $totalItem,
-            'total_unit' => $totalUnit,
-            'total_nilai' => $totalNilai,
-            'per_kategori' => $perKategori,
+            'total_item'                   => $totalItem,
+            'total_unit'                   => $totalUnit,
+            'total_nilai'                  => $totalNilai,
+            'per_kategori'                 => $perKategori,
+            'total_ruangan'                => $totalRuangan,
+            'total_gedung'                 => $totalGedung,
+            'total_kategori'               => $totalKategori,
+            'total_belanja'                => (float) $totalBelanja,
+            'total_item_belanja'           => $totalItemBelanja,
+            'total_nilai_pembelian_sarana' => $totalNilaiPembelianSarana,
+            'total_nilai_sekarang_sarana'  => $totalNilaiSekarangSarana,
+            'total_item_sarana'            => $totalItemSarana,
         ]);
     }
 
@@ -238,9 +260,9 @@ class AsetController extends Controller
         $validated = $request->validate([
             'items' => 'required|array',
             'items.*.nama_aset' => 'required|string|max:255',
-            'items.*.id_kategori' => 'required|integer',
-            'items.*.id_ruangan' => 'required|integer',
-            'items.*.id_kondisi' => 'required|integer',
+            'items.*.id_kategori' => 'nullable|integer',
+            'items.*.id_ruangan' => 'nullable|integer',
+            'items.*.id_kondisi' => 'nullable|integer',
             'items.*.id_folder' => 'nullable|integer',
             'items.*.jumlah' => 'required|integer',
             'items.*.satuan' => 'required|string',
@@ -254,13 +276,58 @@ class AsetController extends Controller
         $now = now();
         $importedCount = 0;
 
+        // Resolve default master data (auto-create jika belum ada)
+        $defaultKategori = \App\Models\Kategori::firstOrCreate(
+            ['nama_kategori' => 'Sarana & Prasarana'],
+            ['nama_kategori' => 'Sarana & Prasarana']
+        );
+        $defaultGedung = \App\Models\Gedung::firstOrCreate(
+            ['nama_gedung' => 'Gedung Utama'],
+            ['nama_gedung' => 'Gedung Utama', 'kode_gedung' => 'GD-UTAMA', 'jumlah_lantai' => 1, 'deskripsi' => 'Dibuat otomatis']
+        );
+        $defaultRuangan = \App\Models\Ruangan::firstOrCreate(
+            ['nama_ruangan' => 'Belum Ditentukan'],
+            ['nama_ruangan' => 'Belum Ditentukan', 'id_gedung' => $defaultGedung->id]
+        );
+        $defaultKondisi = \App\Models\Kondisi::firstOrCreate(
+            ['nama_kondisi' => 'Baik'],
+            ['nama_kondisi' => 'Baik']
+        );
+
         DB::beginTransaction();
         try {
             foreach ($validated['items'] as $item) {
-                $item['id_user'] = $userId;
-                $item['created_at'] = $now;
-                $item['updated_at'] = $now;
-                Aset::create($item);
+                // Gunakan ID yang dikirim jika valid, fallback ke default
+                $idKategori = !empty($item['id_kategori']) && \App\Models\Kategori::find($item['id_kategori'])
+                    ? $item['id_kategori']
+                    : $defaultKategori->id;
+
+                $idRuangan = !empty($item['id_ruangan']) && \App\Models\Ruangan::find($item['id_ruangan'])
+                    ? $item['id_ruangan']
+                    : $defaultRuangan->id;
+
+                $idKondisi = !empty($item['id_kondisi']) && \App\Models\Kondisi::find($item['id_kondisi'])
+                    ? $item['id_kondisi']
+                    : $defaultKondisi->id;
+
+                Aset::create([
+                    'nama_aset'        => $item['nama_aset'],
+                    'id_kategori'      => $idKategori,
+                    'id_ruangan'       => $idRuangan,
+                    'id_kondisi'       => $idKondisi,
+                    'id_folder'        => $item['id_folder'] ?? null,
+                    'id_sumber_dana'   => $item['id_sumber_dana'] ?? null,
+                    'id_user'          => $userId,
+                    'kode_aset'        => $item['kode_aset'] ?? null,
+                    'jumlah'           => $item['jumlah'],
+                    'satuan'           => $item['satuan'],
+                    'harga_perolehan'  => $item['harga_perolehan'] ?? null,
+                    'tahun_perolehan'  => $item['tahun_perolehan'] ?? (int) date('Y'),
+                    'deskripsi'        => $item['deskripsi'] ?? null,
+                    'status_aset'      => $item['status_aset'] ?? 'aktif',
+                    'created_at'       => $now,
+                    'updated_at'       => $now,
+                ]);
                 $importedCount++;
             }
             DB::commit();

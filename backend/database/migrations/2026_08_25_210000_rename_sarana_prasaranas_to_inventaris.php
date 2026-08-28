@@ -11,9 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        if (Schema::hasTable('sarana_prasaranas') && !Schema::hasTable('inventaris')) {
-            Schema::rename('sarana_prasaranas', 'inventaris');
-        } elseif (!Schema::hasTable('inventaris')) {
+        // Skip rename - kita akan gunakan tabel terpisah untuk sarana_prasaranas dan inventaris
+        if (!Schema::hasTable('inventaris')) {
             Schema::create('inventaris', function (Blueprint $table) {
                 $table->id();
                 $table->date('tanggal_pengambilan');
@@ -36,8 +35,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        if (Schema::hasTable('inventaris')) {
-            Schema::rename('inventaris', 'sarana_prasaranas');
-        }
+        Schema::dropIfExists('inventaris');
     }
 };

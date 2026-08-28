@@ -11,6 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
+        Schema::dropIfExists('visualisasis');
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
         Schema::create('visualisasis', function (Blueprint $table) {
             $table->id();
             $table->foreignId('id_ruangan')->constrained('ruangans')->cascadeOnDelete();
@@ -21,13 +29,5 @@ return new class extends Migration
             $table->text('deskripsi')->nullable();
             $table->timestamps();
         });
-    }
-
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
-    {
-        Schema::dropIfExists('visualisasis');
     }
 };

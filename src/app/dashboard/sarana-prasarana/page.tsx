@@ -30,52 +30,37 @@ interface CustomFolder {
   created_at?: string;
 }
 
-interface Aset {
+interface SaranaPrasaranaItem {
   id: number;
-  nama_aset: string;
-  kode_aset: string | null;
-  id_kategori?: number;
-  id_ruangan?: number;
-  id_kondisi?: number;
-  id_sumber_dana?: number;
-  id_folder?: number;
-  merek?: string;
-  tipe?: string;
-  warna?: string;
-  jumlah: number;
+  tanggal_pengambilan: string | null;
+  kode: string | null;
+  nama_barang: string;
   satuan: string;
-  harga_perolehan?: number;
-  tahun_perolehan?: number;
-  nomor_seri?: string;
-  tanggal_perolehan?: string;
-  deskripsi?: string;
-  status_aset: string;
-  foto_thumbnail?: string;
-  kategori?: { id: number; nama_kategori: string };
-  ruangan?: { id: number; nama_ruangan: string };
-  kondisi?: { id: number; nama_kondisi: string };
-  folder?: { id: number; nama_folder: string };
+  stok_awal: number;
+  stok_masuk: number;
+  stok_keluar: number;
+  stok_akhir: number;
+  nilai_harga_pembelian: number;
+  nilai_harga_sekarang: number;
+  keterangan: string | null;
+  id_user: number | null;
+  id_folder: number | null;
+  user?: { id: number; name: string };
+  created_at?: string;
+  updated_at?: string;
 }
 
 interface FormData {
-  nama_aset: string;
-  kode_aset: string;
-  id_kategori: string;
-  id_ruangan: string;
-  id_kondisi: string;
-  id_sumber_dana: string;
-  id_folder?: string;
-  merek: string;
-  tipe: string;
-  warna: string;
-  jumlah: string;
+  tanggal_pengambilan: string;
+  kode: string;
+  nama_barang: string;
   satuan: string;
-  harga_perolehan: string;
-  tahun_perolehan: string;
-  nomor_seri: string;
-  tanggal_perolehan: string;
-  deskripsi: string;
-  status_aset: string;
+  stok_awal: string;
+  stok_masuk: string;
+  stok_keluar: string;
+  nilai_harga_pembelian: string;
+  nilai_harga_sekarang: string;
+  keterangan: string;
 }
 
 interface PreviewRow {
@@ -85,9 +70,6 @@ interface PreviewRow {
   nilai_harga_pembelian: number;
   nilai_harga_sekarang: number;
   keterangan: string;
-  id_kategori: string;
-  id_ruangan: string;
-  id_kondisi: string;
   satuan: string;
 }
 
@@ -110,12 +92,17 @@ const formatRupiahShort = (n: number) => {
   return `Rp ${n}`;
 };
 
-const emptyForm = (folderId?: number | null): FormData => ({
-  nama_aset: '', kode_aset: '', id_kategori: '', id_ruangan: '',
-  id_kondisi: '', id_sumber_dana: '', id_folder: folderId ? String(folderId) : '',
-  merek: '', tipe: '', warna: '', jumlah: '1', satuan: 'Unit',
-  harga_perolehan: '', tahun_perolehan: '', nomor_seri: '',
-  tanggal_perolehan: '', deskripsi: '', status_aset: 'aktif',
+const emptyForm = (): FormData => ({
+  tanggal_pengambilan: '',
+  kode: '',
+  nama_barang: '',
+  satuan: 'Unit',
+  stok_awal: '0',
+  stok_masuk: '0',
+  stok_keluar: '0',
+  nilai_harga_pembelian: '0',
+  nilai_harga_sekarang: '0',
+  keterangan: '',
 });
 
 const parseAngka = (val: unknown): number => {
@@ -258,9 +245,6 @@ function parseKekayaanExcel(file: File): Promise<PreviewRow[]> {
             nilai_harga_pembelian: beli,
             nilai_harga_sekarang: skrg,
             keterangan: ket,
-            id_kategori: '',
-            id_ruangan: '',
-            id_kondisi: '',
             satuan: 'Unit',
           });
         }
@@ -294,8 +278,8 @@ const inputCls = "w-full px-3 py-2 text-sm border border-slate-200 rounded-xl bg
 
 /* ─────────────────────── Halaman Utama ─────────────────────── */
 export default function SaranaPrasaranaPage() {
-  const [asets, setAsets] = useState<Aset[]>([]);
-  const [filtered, setFiltered] = useState<Aset[]>([]);
+  const [asets, setAsets] = useState<SaranaPrasaranaItem[]>([]);
+  const [filtered, setFiltered] = useState<SaranaPrasaranaItem[]>([]);
   const [folders, setFolders] = useState<CustomFolder[]>([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' | 'warning' }>({ show: false, message: '', type: 'success' });
@@ -326,17 +310,17 @@ export default function SaranaPrasaranaPage() {
   const PER_PAGE = 20;
 
   // Foto modal
-  const [selectedAset, setSelectedAset] = useState<Aset | null>(null);
+  const [selectedAset, setSelectedAset] = useState<SaranaPrasaranaItem | null>(null);
 
   // Edit/Add modal
   const [showFormModal, setShowFormModal] = useState(false);
-  const [editingAset, setEditingAset] = useState<Aset | null>(null);
+  const [editingAset, setEditingAset] = useState<SaranaPrasaranaItem | null>(null);
   const [formData, setFormData] = useState<FormData>(emptyForm());
   const [submitting, setSubmitting] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   // Single Delete confirm
-  const [deleteTarget, setDeleteTarget] = useState<Aset | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<SaranaPrasaranaItem | null>(null);
   const [deleting, setDeleting] = useState(false);
 
   // Master data
@@ -365,12 +349,12 @@ export default function SaranaPrasaranaPage() {
     setMounted(true);
     fetchFolders();
     fetchAsets();
-    fetchMasterData();
+    // fetchMasterData tidak diperlukan — kategoris/ruangans/kondisis tidak digunakan di halaman ini
   }, []);
 
   const fetchFolders = async () => {
     try {
-      const res = await axios.get('/api/folder-inventaris');
+      const res = await axios.get('/api/folder-inventaris?jenis=sarana-prasarana');
       const list = Array.isArray(res.data) ? res.data : (res.data?.data || []);
       setFolders(list);
     } catch { setFolders([]); }
@@ -379,53 +363,34 @@ export default function SaranaPrasaranaPage() {
   const fetchAsets = async (showRefresh = false) => {
     if (showRefresh) setRefreshing(true); else setLoading(true);
     try {
-      const res = await axios.get('/api/asets?per_page=all');
-      const data: Aset[] = res.data.data || res.data;
+      const res = await axios.get('/api/sarana-prasaranas');
+      const data: SaranaPrasaranaItem[] = res.data.data || res.data;
       setAsets(data);
     } catch { /* silent */ }
     finally { setLoading(false); setRefreshing(false); }
   };
 
   const fetchMasterData = async () => {
-    try {
-      const [katRes, ruangRes, kondRes] = await Promise.all([
-        axios.get('/api/kategoris'),
-        axios.get('/api/ruangans'),
-        axios.get('/api/kondisis'),
-      ]);
-      setKategoris(katRes.data);
-      setRuangans(ruangRes.data);
-      setKondisis(kondRes.data);
-    } catch { /* silent */ }
+    // Tidak digunakan — data kategori/ruangan/kondisi tidak relevan untuk sarana & prasarana
   };
 
-  // Filter items by folder and search
+  // Filter items by search only (no folder support for sarana prasarana)
   useEffect(() => {
     let result = asets;
 
-    if (viewMode === 'folders') {
-      if (activeFolderId === null) {
-        result = []; // At root grid, items are hidden (show folders)
-      } else if (activeFolderId === -1) {
-        result = result.filter(a => !a.id_folder);
-      } else {
-        result = result.filter(a => Number(a.id_folder) === Number(activeFolderId));
-      }
-    }
-
     if (search.trim()) {
       const q = search.toLowerCase();
-      result = (viewMode === 'folders' && activeFolderId === null ? asets : result).filter(a =>
-        a.nama_aset.toLowerCase().includes(q) ||
-        (a.kode_aset?.toLowerCase().includes(q) ?? false) ||
-        (a.deskripsi?.toLowerCase().includes(q) ?? false)
+      result = result.filter(a =>
+        a.nama_barang.toLowerCase().includes(q) ||
+        (a.kode?.toLowerCase().includes(q) ?? false) ||
+        (a.keterangan?.toLowerCase().includes(q) ?? false)
       );
     }
 
     setFiltered(result);
     setPage(1);
     setSelectedItemIds(new Set()); // Reset selections on filter change
-  }, [search, asets, activeFolderId, viewMode]);
+  }, [search, asets]);
 
   /* ── Folder Handlers ── */
   const openAddFolder = () => {
@@ -445,11 +410,12 @@ export default function SaranaPrasaranaPage() {
     if (!folderForm.nama_folder.trim()) { showToast('Nama folder wajib diisi', 'error'); return; }
     try {
       setSavingFolder(true);
+      const payload = { ...folderForm, jenis: 'sarana-prasarana' };
       if (editFolderTarget) {
-        await axios.put(`/api/folder-inventaris/${editFolderTarget.id}`, folderForm);
+        await axios.put(`/api/folder-inventaris/${editFolderTarget.id}`, payload);
         showToast(`Folder "${folderForm.nama_folder}" berhasil diperbarui`, 'success');
       } else {
-        await axios.post('/api/folder-inventaris', folderForm);
+        await axios.post('/api/folder-inventaris', payload);
         showToast(`Folder "${folderForm.nama_folder}" berhasil dibuat`, 'success');
       }
       setShowFolderModal(false);
@@ -499,13 +465,13 @@ export default function SaranaPrasaranaPage() {
     try {
       setDeletingBatch(true);
       const ids = Array.from(selectedItemIds);
-      await axios.post('/api/asets/batch-delete', { ids });
+      // Delete one by one since no batch delete endpoint exists for sarana-prasarana
+      await Promise.all(ids.map(id => axios.delete(`/api/sarana-prasaranas/${id}`)));
       showToast(`Berhasil menghapus ${ids.length} data sarana & prasarana`, 'success');
       setSelectedItemIds(new Set());
       setIsSelectMode(false);
       setShowBatchDeleteConfirm(false);
       fetchAsets(true);
-      fetchFolders();
     } catch {
       showToast('Gagal menghapus data terpilih', 'error');
     } finally { setDeletingBatch(false); }
@@ -514,33 +480,24 @@ export default function SaranaPrasaranaPage() {
   /* ── Item Single CRUD ── */
   const openAddModal = () => {
     setEditingAset(null);
-    const defaultFolderId = activeFolderId && activeFolderId > 0 ? activeFolderId : null;
-    setFormData(emptyForm(defaultFolderId));
+    setFormData(emptyForm());
     setFormErrors({});
     setShowFormModal(true);
   };
 
-  const openEditModal = (aset: Aset) => {
-    setEditingAset(aset);
+  const openEditModal = (item: SaranaPrasaranaItem) => {
+    setEditingAset(item);
     setFormData({
-      nama_aset:        aset.nama_aset,
-      kode_aset:        aset.kode_aset ?? '',
-      id_kategori:      String(aset.id_kategori ?? aset.kategori?.id ?? ''),
-      id_ruangan:       String(aset.id_ruangan ?? aset.ruangan?.id ?? ''),
-      id_kondisi:       String(aset.id_kondisi ?? aset.kondisi?.id ?? ''),
-      id_sumber_dana:   String(aset.id_sumber_dana ?? ''),
-      id_folder:        String(aset.id_folder ?? ''),
-      merek:            aset.merek ?? '',
-      tipe:             aset.tipe ?? '',
-      warna:            aset.warna ?? '',
-      jumlah:           String(aset.jumlah),
-      satuan:           aset.satuan,
-      harga_perolehan:  String(aset.harga_perolehan ?? ''),
-      tahun_perolehan:  String(aset.tahun_perolehan ?? ''),
-      nomor_seri:       aset.nomor_seri ?? '',
-      tanggal_perolehan: aset.tanggal_perolehan ?? '',
-      deskripsi:        aset.deskripsi ?? '',
-      status_aset:      aset.status_aset,
+      tanggal_pengambilan:    item.tanggal_pengambilan || '',
+      kode:                   item.kode || '',
+      nama_barang:            item.nama_barang,
+      satuan:                 item.satuan,
+      stok_awal:              String(item.stok_awal),
+      stok_masuk:             String(item.stok_masuk),
+      stok_keluar:            String(item.stok_keluar),
+      nilai_harga_pembelian:  String(item.nilai_harga_pembelian ?? 0),
+      nilai_harga_sekarang:   String(item.nilai_harga_sekarang ?? 0),
+      keterangan:             item.keterangan || '',
     });
     setFormErrors({});
     setShowFormModal(true);
@@ -551,39 +508,25 @@ export default function SaranaPrasaranaPage() {
     setFormErrors({});
     setSubmitting(true);
     try {
-      const defaultKatId = Number(kategoris[0]?.id || 1);
-      const defaultRuangId = Number(ruangans[0]?.id || 1);
-      const defaultKondId = Number(kondisis[0]?.id || 1);
-
-      const targetFolderId = formData.id_folder ? Number(formData.id_folder) : (activeFolderId && activeFolderId > 0 ? activeFolderId : null);
-
       const payload = {
-        nama_aset:         formData.nama_aset,
-        kode_aset:         formData.kode_aset || null,
-        id_kategori:       formData.id_kategori ? Number(formData.id_kategori) : defaultKatId,
-        id_ruangan:        formData.id_ruangan ? Number(formData.id_ruangan) : defaultRuangId,
-        id_kondisi:        formData.id_kondisi ? Number(formData.id_kondisi) : defaultKondId,
-        id_folder:         targetFolderId,
-        id_sumber_dana:    formData.id_sumber_dana ? Number(formData.id_sumber_dana) : null,
-        merek:             formData.merek || null,
-        tipe:              formData.tipe || null,
-        warna:             formData.warna || null,
-        jumlah:            Number(formData.jumlah),
-        satuan:            formData.satuan,
-        harga_perolehan:   formData.harga_perolehan ? Number(formData.harga_perolehan) : null,
-        tahun_perolehan:   formData.tahun_perolehan ? Number(formData.tahun_perolehan) : null,
-        nomor_seri:        formData.nomor_seri || null,
-        tanggal_perolehan: formData.tanggal_perolehan || null,
-        deskripsi:         formData.deskripsi || null,
-        status_aset:       formData.status_aset,
+        tanggal_pengambilan:    formData.tanggal_pengambilan || null,
+        kode:                   formData.kode || null,
+        nama_barang:            formData.nama_barang,
+        satuan:                 formData.satuan || 'Unit',
+        stok_awal:              Number(formData.stok_awal) || 0,
+        stok_masuk:             Number(formData.stok_masuk) || 0,
+        stok_keluar:            Number(formData.stok_keluar) || 0,
+        nilai_harga_pembelian:  Number(formData.nilai_harga_pembelian) || 0,
+        nilai_harga_sekarang:   Number(formData.nilai_harga_sekarang) || 0,
+        keterangan:             formData.keterangan || null,
       };
 
       if (editingAset) {
-        await axios.put(`/api/asets/${editingAset.id}`, payload);
-        showToast(`Sarana & Prasarana "${formData.nama_aset}" berhasil diperbarui.`, 'success');
+        await axios.put(`/api/sarana-prasaranas/${editingAset.id}`, payload);
+        showToast(`Sarana & Prasarana "${formData.nama_barang}" berhasil diperbarui.`, 'success');
       } else {
-        await axios.post('/api/asets', payload);
-        showToast(`Sarana & Prasarana "${formData.nama_aset}" berhasil ditambahkan.`, 'success');
+        await axios.post('/api/sarana-prasaranas', payload);
+        showToast(`Sarana & Prasarana "${formData.nama_barang}" berhasil ditambahkan.`, 'success');
       }
       setShowFormModal(false);
       fetchAsets(true);
@@ -607,8 +550,8 @@ export default function SaranaPrasaranaPage() {
     if (!deleteTarget) return;
     try {
       setDeleting(true);
-      await axios.delete(`/api/asets/${deleteTarget.id}`);
-      showToast(`Data "${deleteTarget.nama_aset}" berhasil dihapus.`, 'success');
+      await axios.delete(`/api/sarana-prasaranas/${deleteTarget.id}`);
+      showToast(`Data "${deleteTarget.nama_barang}" berhasil dihapus.`, 'success');
       setDeleteTarget(null);
       fetchAsets(true);
       fetchFolders();
@@ -683,30 +626,17 @@ export default function SaranaPrasaranaPage() {
     setImportState('importing');
     setImportProgress({ current: 0, total, percent: 10, currentItemName: 'Menyiapkan paket data...' });
 
-    const defaultKatId = Number(kategoris[0]?.id || 1);
-    const defaultRuangId = Number(ruangans[0]?.id || 1);
-    const defaultKondId = Number(kondisis[0]?.id || 1);
-    const targetFolderId = activeFolderId && activeFolderId > 0 ? activeFolderId : null;
-
     const payloadItems = rows.map(row => ({
-      nama_aset:       row.jenis_kekayaan,
-      kode_aset:       null,
-      id_kategori:     row.id_kategori ? Number(row.id_kategori) : defaultKatId,
-      id_ruangan:      row.id_ruangan ? Number(row.id_ruangan) : defaultRuangId,
-      id_kondisi:      row.id_kondisi ? Number(row.id_kondisi) : defaultKondId,
-      id_folder:       targetFolderId,
-      id_sumber_dana:  null,
-      merek:           null,
-      tipe:            null,
-      warna:           null,
-      jumlah:          parseInt(row.luas_jumlah) || 1,
-      satuan:          row.satuan || 'Unit',
-      harga_perolehan: row.nilai_harga_pembelian || null,
-      tahun_perolehan: new Date().getFullYear(),
-      nomor_seri:      null,
-      tanggal_perolehan: null,
-      deskripsi:       row.keterangan || null,
-      status_aset:     'aktif',
+      tanggal_pengambilan:    new Date().toISOString().split('T')[0],
+      kode:                   null,
+      nama_barang:            row.jenis_kekayaan,
+      satuan:                 row.satuan || 'Unit',
+      stok_awal:              parseInt(row.luas_jumlah) || 1,
+      stok_masuk:             0,
+      stok_keluar:            0,
+      nilai_harga_pembelian:  row.nilai_harga_pembelian || 0,
+      nilai_harga_sekarang:   row.nilai_harga_sekarang  || 0,
+      keterangan:             row.keterangan || null,
     }));
 
     try {
@@ -714,7 +644,7 @@ export default function SaranaPrasaranaPage() {
       let ok = 0;
       for (let c = 0; c < payloadItems.length; c += CHUNK_SIZE) {
         const chunk = payloadItems.slice(c, c + CHUNK_SIZE);
-        const res = await axios.post('/api/asets/batch-store', { items: chunk });
+        const res = await axios.post('/api/sarana-prasaranas/batch-store', { items: chunk });
         ok += res.data.count || chunk.length;
         const processed = Math.min(c + CHUNK_SIZE, payloadItems.length);
         const percent = Math.round((processed / total) * 100);
@@ -731,15 +661,17 @@ export default function SaranaPrasaranaPage() {
       setTimeout(() => {
         setImporting(false);
         setImportState('idle');
-        showToast(`Berhasil import ${ok} data kekayaan`, 'success');
+        showToast(`Berhasil import ${ok} data sarana prasarana`, 'success');
         closeImport();
         fetchAsets(true);
         fetchFolders();
       }, 800);
-    } catch {
+    } catch (err: unknown) {
       setImporting(false);
       setImportState('idle');
-      showToast('Gagal meng-import data ke database.', 'error');
+      const e = err as { response?: { data?: { message?: string } } };
+      const msg = e?.response?.data?.message || 'Gagal meng-import data ke database.';
+      showToast(msg, 'error');
     }
   };
 
@@ -760,7 +692,7 @@ export default function SaranaPrasaranaPage() {
       [2, 'Meja Kerja Besi Minimalis', '10', 1200000, 1000000, ''],
       [3, 'Kursi Putar Kantor', '20', 800000, 650000, 'Beberapa ada goresan'],
     ]);
-    ws['!cols'] = [{ wch: 6 }, { wch: 40 }, { wch: 15 }, { wch: 22 }, { wch: 22 }, { wch: 25 }];
+    ws['!cols'] = [{ wch: 6 }, { wch: 40 }, { wch: 15 }, { wch: 26 }, { wch: 26 }, { wch: 25 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Template Kekayaan');
     XLSX.writeFile(wb, 'Template_Sarana_Prasarana.xlsx');
@@ -771,12 +703,11 @@ export default function SaranaPrasaranaPage() {
     if (!filtered.length) { showToast('Tidak ada data untuk diexport', 'warning'); return; }
     const ws = XLSX.utils.json_to_sheet(filtered.map((a, i) => ({
       'NO': i + 1,
-      'JENIS KEKAYAAN': a.nama_aset,
-      'KODE': a.kode_aset || '-',
-      'LUAS/JUMLAH': `${a.jumlah} ${a.satuan}`,
-      'NILAI HARGA PEMBELIAN': a.harga_perolehan || 0,
-      'FOLDER': a.folder?.nama_folder || 'Utama',
-      'KET': a.deskripsi || '',
+      'JENIS KEKAYAAN': a.nama_barang,
+      'LUAS/JUMLAH': `${a.stok_akhir} ${a.satuan}`,
+      'NILAI HARGA PEMBELIAN': a.nilai_harga_pembelian || 0,
+      'NILAI HARGA SEKARANG': a.nilai_harga_sekarang || 0,
+      'KET': a.keterangan || '',
     })));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Sarana & Prasarana');
@@ -785,8 +716,10 @@ export default function SaranaPrasaranaPage() {
   };
 
   // Summary calculation
-  const totalNilai = filtered.reduce((s, a) => s + (a.harga_perolehan ?? 0), 0);
-  const totalUnit  = filtered.reduce((s, a) => s + (a.jumlah ?? 0), 0);
+  const totalJenis = filtered.length;
+  const totalLuasJumlah = filtered.reduce((s, a) => s + (Number(a.stok_akhir) || 0), 0);
+  const totalNilaiPembelian = filtered.reduce((s, a) => s + (Number(a.nilai_harga_pembelian) || 0), 0);
+  const totalNilaiSekarang = filtered.reduce((s, a) => s + (Number(a.nilai_harga_sekarang) || 0), 0);
 
   // Pagination
   const totalPages = Math.ceil(filtered.length / PER_PAGE);
@@ -861,27 +794,34 @@ export default function SaranaPrasaranaPage() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl p-4 text-white shadow-sm shadow-blue-500/20">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-blue-200 uppercase tracking-wider">Total Jenis</span>
+            <span className="text-xs font-medium text-blue-200 uppercase tracking-wider">Total Jenis Kekayaan</span>
             <div className="p-2 bg-white/10 rounded-xl"><Package className="h-4 w-4 text-white" /></div>
           </div>
-          <p className="text-2xl font-bold mt-2">{filtered.length} <span className="text-sm font-normal text-blue-200">Jenis</span></p>
+          <p className="text-2xl font-bold mt-2">{totalJenis} <span className="text-sm font-normal text-blue-200">Jenis</span></p>
         </div>
         <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Total Fisik Unit</span>
-            <div className="p-2 bg-blue-50 text-blue-600 rounded-xl"><TrendingUp className="h-4 w-4" /></div>
+            <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Total Luas/Jumlah</span>
+            <div className="p-2 bg-blue-50 text-blue-600 rounded-xl"><Layers className="h-4 w-4" /></div>
           </div>
-          <p className="text-2xl font-bold text-slate-800 mt-2">{totalUnit} <span className="text-sm font-normal text-slate-400">Unit</span></p>
+          <p className="text-2xl font-bold text-slate-800 mt-2">{totalLuasJumlah.toLocaleString('id-ID')}</p>
         </div>
         <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Estimasi Nilai</span>
-            <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl"><DollarSign className="h-4 w-4" /></div>
+            <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Total Nilai Pembelian</span>
+            <div className="p-2 bg-blue-50 text-blue-600 rounded-xl"><DollarSign className="h-4 w-4" /></div>
           </div>
-          <p className="text-xl font-bold text-slate-800 mt-2 tracking-tight">{formatRupiah(totalNilai)}</p>
+          <p className="text-xl font-bold text-blue-600 mt-2 truncate" title={formatRupiah(totalNilaiPembelian)}>{formatRupiahShort(totalNilaiPembelian)}</p>
+        </div>
+        <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Total Nilai Sekarang</span>
+            <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl"><TrendingUp className="h-4 w-4" /></div>
+          </div>
+          <p className="text-xl font-bold text-emerald-600 mt-2 truncate" title={formatRupiah(totalNilaiSekarang)}>{formatRupiahShort(totalNilaiSekarang)}</p>
         </div>
       </div>
 
@@ -1053,11 +993,12 @@ export default function SaranaPrasaranaPage() {
                         />
                       </th>
                     )}
-                    <th className="px-4 py-3">No</th>
+                    <th className="px-4 py-3 w-10">No</th>
                     <th className="px-4 py-3">Jenis Kekayaan</th>
                     <th className="px-4 py-3 text-center">Luas/Jumlah</th>
-                    <th className="px-4 py-3">Kondisi</th>
                     <th className="px-4 py-3 text-right">Nilai Harga Pembelian</th>
+                    <th className="px-4 py-3 text-right">Nilai Harga Sekarang</th>
+                    <th className="px-4 py-3">Ket</th>
                     <th className="px-4 py-3 text-center">Aksi</th>
                   </tr>
                 </thead>
@@ -1078,27 +1019,26 @@ export default function SaranaPrasaranaPage() {
                         )}
                         <td className="px-4 py-3 text-slate-400 text-xs">{(page - 1) * PER_PAGE + i + 1}</td>
                         <td className="px-4 py-3">
-                          <div className="font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">{aset.nama_aset}</div>
-                          {aset.kode_aset && <div className="text-xs text-slate-400 font-mono mt-0.5">{aset.kode_aset}</div>}
-                          {aset.deskripsi && <div className="text-xs text-slate-400 truncate max-w-[200px]">{aset.deskripsi}</div>}
+                          <div className="font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">{aset.nama_barang}</div>
+                          {aset.kode && <div className="text-xs font-mono text-slate-400 mt-0.5">{aset.kode}</div>}
                         </td>
                         <td className="px-4 py-3 text-center">
-                          <span className="font-bold text-slate-800">{aset.jumlah}</span>{' '}
-                          <span className="text-xs text-slate-400 font-normal">{aset.satuan}</span>
+                          <span className="font-bold text-slate-800">{aset.stok_akhir}</span>
+                          <span className="text-xs text-slate-400 ml-1">{aset.satuan}</span>
                         </td>
-                        <td className="px-4 py-3 text-xs">
-                          <span className={`px-2.5 py-1 rounded-full font-medium ${kondisiStyle(aset.kondisi?.nama_kondisi)}`}>
-                            {aset.kondisi?.nama_kondisi || '-'}
-                          </span>
+                        <td className="px-4 py-3 text-right">
+                          <span className="text-sm font-semibold text-slate-700">{formatRupiah(aset.nilai_harga_pembelian || 0)}</span>
                         </td>
-                        <td className="px-4 py-3 text-right text-xs font-semibold text-slate-800">
-                          {aset.harga_perolehan ? formatRupiah(aset.harga_perolehan) : '-'}
+                        <td className="px-4 py-3 text-right">
+                          <span className="text-sm font-semibold text-emerald-600">{formatRupiah(aset.nilai_harga_sekarang || 0)}</span>
+                        </td>
+                        <td className="px-4 py-3 text-xs text-slate-500">
+                          {aset.keterangan ? (
+                            <div className="truncate max-w-[160px]" title={aset.keterangan}>{aset.keterangan}</div>
+                          ) : '-'}
                         </td>
                         <td className="px-4 py-3 text-center">
                           <div className="flex items-center justify-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={() => setSelectedAset(aset)} className="p-1.5 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors" title="Kelola Foto">
-                              <Camera className="h-4 w-4" />
-                            </button>
                             <button onClick={() => openEditModal(aset)} className="p-1.5 hover:bg-amber-50 text-amber-600 rounded-lg transition-colors" title="Edit">
                               <Edit2 className="h-4 w-4" />
                             </button>
@@ -1224,14 +1164,7 @@ export default function SaranaPrasaranaPage() {
         document.body
       )}
 
-      {/* Modal Foto */}
-      {selectedAset && (
-        <AsetFotoModal
-          aset={selectedAset}
-          onClose={() => setSelectedAset(null)}
-          onUpdate={() => fetchAsets(true)}
-        />
-      )}
+      {/* Modal Foto — tidak digunakan di sarana & prasarana */}
 
       {/* ════════ SINGLE DELETE CONFIRM MODAL ════════ */}
       {deleteTarget && createPortal(
@@ -1241,7 +1174,7 @@ export default function SaranaPrasaranaPage() {
               <AlertTriangle className="h-7 w-7 text-red-600" />
             </div>
             <h3 className="text-lg font-bold text-slate-900 mb-1">Hapus Data Ini?</h3>
-            <p className="text-sm text-slate-600 mb-6 font-semibold">{deleteTarget.nama_aset}</p>
+            <p className="text-sm text-slate-600 mb-6 font-semibold">{deleteTarget.nama_barang}</p>
             <div className="flex gap-3">
               <button onClick={() => setDeleteTarget(null)} disabled={deleting}
                 className="flex-1 py-2.5 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 text-sm font-medium transition-colors">Batal</button>
@@ -1258,19 +1191,24 @@ export default function SaranaPrasaranaPage() {
 
       {/* ════════ IMPORT EXCEL MODAL ════════ */}
       {showImportModal && createPortal(
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className={`bg-white rounded-2xl w-full shadow-2xl transition-all duration-300 ${showPreview ? 'max-w-6xl' : 'max-w-lg'}`}>
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-              <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                <FileSpreadsheet className="h-5 w-5 text-emerald-600" />
-                {showPreview
-                  ? `Preview & Edit Data Kekayaan (${previewRows.length} baris)`
-                  : `Import Excel ke ${activeFolderTitle}`}
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4 overflow-y-auto">
+          <div className={`bg-white rounded-2xl w-full shadow-2xl transition-all duration-300 my-4 ${showPreview ? 'max-w-6xl' : 'max-w-lg'} max-h-[95vh] flex flex-col`}>
+            <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 flex-shrink-0">
+              <h2 className="text-sm sm:text-lg font-bold text-slate-900 flex items-center gap-2">
+                <FileSpreadsheet className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-600" />
+                <span className="hidden sm:inline">
+                  {showPreview
+                    ? `Preview & Edit Data Kekayaan (${previewRows.length} baris)`
+                    : `Import Excel ke ${activeFolderTitle}`}
+                </span>
+                <span className="sm:hidden">
+                  {showPreview ? `Preview (${previewRows.length})` : 'Import Excel'}
+                </span>
               </h2>
-              <button onClick={closeImport} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors"><X className="h-5 w-5 text-slate-500" /></button>
+              <button onClick={closeImport} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors"><X className="h-4 w-4 sm:h-5 sm:w-5 text-slate-500" /></button>
             </div>
 
-            <div className="px-6 py-5">
+            <div className="px-4 sm:px-6 py-4 sm:py-5 overflow-y-auto flex-1">
               {!showPreview ? (
                 <div className="space-y-4">
                   {/* Format info */}
@@ -1324,50 +1262,60 @@ export default function SaranaPrasaranaPage() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-emerald-50 border border-emerald-200 rounded-xl px-3 sm:px-4 py-2 sm:py-3 gap-2">
                     <div>
-                      <p className="text-sm font-semibold text-emerald-900">{previewRows.length} data dari Excel</p>
-                      <p className="text-xs text-emerald-600">{selectedRows.size} dipilih untuk diimport ke {activeFolderTitle}</p>
+                      <p className="text-xs sm:text-sm font-semibold text-emerald-900">{previewRows.length} data dari Excel</p>
+                      <p className="text-[10px] sm:text-xs text-emerald-600">{selectedRows.size} dipilih untuk diimport ke {activeFolderTitle}</p>
                     </div>
                     <button onClick={toggleAll}
-                      className="px-3 py-1.5 bg-emerald-600 text-white text-xs rounded-lg hover:bg-emerald-700 transition-colors font-medium">
+                      className="px-3 py-1.5 bg-emerald-600 text-white text-xs rounded-lg hover:bg-emerald-700 transition-colors font-medium whitespace-nowrap">
                       {selectedRows.size === previewRows.length ? 'Batal Semua' : 'Pilih Semua'}
                     </button>
                   </div>
 
-                  <div className="border border-slate-200 rounded-xl overflow-hidden max-h-[55vh] overflow-y-auto">
-                    <table className="w-full text-xs">
-                      <thead className="bg-gradient-to-r from-slate-100 to-slate-200 sticky top-0 z-10">
-                        <tr>
-                          <th className="px-3 py-2.5 w-10"><input type="checkbox" checked={selectedRows.size === previewRows.length && previewRows.length > 0} onChange={toggleAll} className="w-3.5 h-3.5 rounded text-emerald-600 cursor-pointer" /></th>
-                          <th className="px-3 py-2.5 text-left font-bold text-slate-600">No</th>
-                          <th className="px-3 py-2.5 text-left font-bold text-slate-600">Jenis Kekayaan</th>
-                          <th className="px-3 py-2.5 text-left font-bold text-slate-600">Luas/Jumlah</th>
-                          <th className="px-3 py-2.5 text-right font-bold text-blue-700">Nilai Harga Pembelian</th>
-                          <th className="px-3 py-2.5 text-right font-bold text-emerald-700">Nilai Harga Sekarang</th>
-                          <th className="px-3 py-2.5 text-left font-bold text-slate-600">Ket</th>
-                          <th className="px-3 py-2.5 text-center font-bold text-slate-600">Aksi</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
+                  {/* Mobile: Scroll hint */}
+                  <div className="sm:hidden bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                    <p className="text-xs text-blue-700">Geser tabel ke kanan untuk melihat semua kolom →</p>
+                  </div>
+
+                  {/* Scrollable table container */}
+                  <div className="border border-slate-200 rounded-xl overflow-hidden">
+                    <div className="overflow-x-auto overflow-y-auto max-h-[50vh] sm:max-h-[55vh]">
+                      <table className="w-full text-xs min-w-[800px]">
+                        <thead className="bg-gradient-to-r from-slate-100 to-slate-200 sticky top-0 z-10">
+                          <tr>
+                            <th className="px-2 sm:px-3 py-2 sm:py-2.5 w-10 sticky left-0 bg-slate-100 shadow-[2px_0_4px_rgba(0,0,0,0.05)]">
+                              <input type="checkbox" checked={selectedRows.size === previewRows.length && previewRows.length > 0} onChange={toggleAll} className="w-3.5 h-3.5 rounded text-emerald-600 cursor-pointer" />
+                            </th>
+                            <th className="px-2 sm:px-3 py-2 sm:py-2.5 text-left font-bold text-slate-600 sticky left-10 bg-slate-100 shadow-[2px_0_4px_rgba(0,0,0,0.05)]">No</th>
+                            <th className="px-2 sm:px-3 py-2 sm:py-2.5 text-left font-bold text-slate-600">Jenis Kekayaan</th>
+                            <th className="px-2 sm:px-3 py-2 sm:py-2.5 text-left font-bold text-slate-600">Luas/Jumlah</th>
+                            <th className="px-2 sm:px-3 py-2 sm:py-2.5 text-right font-bold text-blue-700">Nilai Harga Pembelian</th>
+                            <th className="px-2 sm:px-3 py-2 sm:py-2.5 text-right font-bold text-emerald-700">Nilai Harga Sekarang</th>
+                            <th className="px-2 sm:px-3 py-2 sm:py-2.5 text-left font-bold text-slate-600">Ket</th>
+                            <th className="px-2 sm:px-3 py-2 sm:py-2.5 text-center font-bold text-slate-600 sticky right-0 bg-slate-100 shadow-[-2px_0_4px_rgba(0,0,0,0.05)]">Aksi</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
                         {previewRows.map((row, idx) => {
                           const isEditing = editingPreviewIdx === idx;
                           const eRow = editingPreviewRow!;
                           return (
                             <tr key={idx} className={`transition-colors ${selectedRows.has(idx) ? 'bg-emerald-50/40' : 'hover:bg-slate-50'} ${isEditing ? 'bg-amber-50 ring-2 ring-inset ring-amber-400' : ''}`}>
-                              <td className="px-3 py-2 text-center">
+                              <td className="px-2 sm:px-3 py-2 text-center sticky left-0 bg-white border-r border-slate-100">
                                 <input type="checkbox" checked={selectedRows.has(idx)} onChange={() => toggleRow(idx)} className="w-3.5 h-3.5 rounded text-emerald-600 cursor-pointer" />
                               </td>
-                              <td className="px-3 py-2 text-slate-500">{row.no}</td>
+                              <td className="px-2 sm:px-3 py-2 text-slate-500 font-medium sticky left-10 bg-white border-r border-slate-100">{row.no}</td>
 
                               {isEditing ? (
                                 <>
-                                  <td className="px-2 py-1"><input value={eRow.jenis_kekayaan} onChange={e => setEditingPreviewRow(r => r ? { ...r, jenis_kekayaan: e.target.value } : r)} className="w-48 border border-amber-300 rounded px-1.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-amber-400" /></td>
-                                  <td className="px-2 py-1"><input value={eRow.luas_jumlah} onChange={e => setEditingPreviewRow(r => r ? { ...r, luas_jumlah: e.target.value } : r)} className="w-24 border border-amber-300 rounded px-1.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-amber-400" /></td>
-                                  <td className="px-2 py-1"><input type="number" min="0" value={eRow.nilai_harga_pembelian} onChange={e => setEditingPreviewRow(r => r ? { ...r, nilai_harga_pembelian: +e.target.value } : r)} className="w-32 border border-blue-300 rounded px-1.5 py-1 text-xs text-right focus:outline-none focus:ring-1 focus:ring-blue-400 bg-blue-50" /></td>
-                                  <td className="px-2 py-1"><input type="number" min="0" value={eRow.nilai_harga_sekarang} onChange={e => setEditingPreviewRow(r => r ? { ...r, nilai_harga_sekarang: +e.target.value } : r)} className="w-32 border border-emerald-300 rounded px-1.5 py-1 text-xs text-right focus:outline-none focus:ring-1 focus:ring-emerald-400 bg-emerald-50" /></td>
-                                  <td className="px-2 py-1"><input value={eRow.keterangan} onChange={e => setEditingPreviewRow(r => r ? { ...r, keterangan: e.target.value } : r)} className="w-40 border border-amber-300 rounded px-1.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-amber-400" /></td>
-                                  <td className="px-2 py-1">
+                                  <td className="px-2 py-1"><input value={eRow.jenis_kekayaan} onChange={e => setEditingPreviewRow(r => r ? { ...r, jenis_kekayaan: e.target.value } : r)} className="w-40 sm:w-48 border border-amber-300 rounded px-1.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-amber-400" /></td>
+                                  <td className="px-2 py-1"><input value={eRow.luas_jumlah} onChange={e => setEditingPreviewRow(r => r ? { ...r, luas_jumlah: e.target.value } : r)} className="w-20 sm:w-24 border border-amber-300 rounded px-1.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-amber-400" /></td>
+                                  <td className="px-2 py-1"><input type="number" min="0" value={eRow.nilai_harga_pembelian} onChange={e => setEditingPreviewRow(r => r ? { ...r, nilai_harga_pembelian: +e.target.value } : r)} className="w-28 sm:w-32 border border-blue-300 rounded px-1.5 py-1 text-xs text-right focus:outline-none focus:ring-1 focus:ring-blue-400 bg-blue-50" /></td>
+                                  <td className="px-2 py-1"><input type="number" min="0" value={eRow.nilai_harga_sekarang} onChange={e => setEditingPreviewRow(r => r ? { ...r, nilai_harga_sekarang: +e.target.value } : r)} className="w-28 sm:w-32 border border-emerald-300 rounded px-1.5 py-1 text-xs text-right focus:outline-none focus:ring-1 focus:ring-emerald-400 bg-emerald-50" /></td>
+                                  <td className="px-2 py-1"><input value={eRow.keterangan} onChange={e => setEditingPreviewRow(r => r ? { ...r, keterangan: e.target.value } : r)} className="w-32 sm:w-40 border border-amber-300 rounded px-1.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-amber-400" /></td>
+                                  <td className="px-2 py-1 sticky right-0 bg-amber-50 border-l border-slate-100">
                                     <div className="flex gap-1 justify-center">
                                       <button onClick={() => saveEditPreview(idx)} className="p-1 bg-emerald-500 text-white rounded hover:bg-emerald-600" title="Simpan"><Save className="h-3 w-3" /></button>
                                       <button onClick={cancelEditPreview} className="p-1 bg-slate-400 text-white rounded hover:bg-slate-500" title="Batal"><X className="h-3 w-3" /></button>
@@ -1376,20 +1324,20 @@ export default function SaranaPrasaranaPage() {
                                 </>
                               ) : (
                                 <>
-                                  <td className="px-3 py-2 font-medium text-slate-900 max-w-[220px]">
+                                  <td className="px-2 sm:px-3 py-2 font-medium text-slate-900 max-w-[180px] sm:max-w-[220px]">
                                     <div className="truncate">{row.jenis_kekayaan}</div>
                                   </td>
-                                  <td className="px-3 py-2 text-slate-600">{row.luas_jumlah}</td>
-                                  <td className="px-3 py-2 text-right font-semibold text-blue-700">
+                                  <td className="px-2 sm:px-3 py-2 text-slate-600">{row.luas_jumlah}</td>
+                                  <td className="px-2 sm:px-3 py-2 text-right font-semibold text-blue-700">
                                     {row.nilai_harga_pembelian > 0 ? formatRupiah(row.nilai_harga_pembelian) : '-'}
                                   </td>
-                                  <td className="px-3 py-2 text-right font-semibold text-emerald-700">
+                                  <td className="px-2 sm:px-3 py-2 text-right font-semibold text-emerald-700">
                                     {row.nilai_harga_sekarang > 0 ? formatRupiah(row.nilai_harga_sekarang) : '-'}
                                   </td>
-                                  <td className="px-3 py-2 text-slate-500 max-w-[150px]">
+                                  <td className="px-2 sm:px-3 py-2 text-slate-500 max-w-[120px] sm:max-w-[150px]">
                                     <div className="truncate">{row.keterangan || '-'}</div>
                                   </td>
-                                  <td className="px-3 py-2">
+                                  <td className="px-2 sm:px-3 py-2 sticky right-0 bg-white border-l border-slate-100">
                                     <div className="flex gap-1 justify-center">
                                       <button onClick={() => startEditPreview(idx)} className="p-1 bg-indigo-100 text-indigo-600 rounded hover:bg-indigo-200" title="Edit baris"><Edit2 className="h-3 w-3" /></button>
                                       <button onClick={() => deletePreviewRow(idx)} className="p-1 bg-red-100 text-red-600 rounded hover:bg-red-200" title="Hapus baris"><Trash2 className="h-3 w-3" /></button>
@@ -1403,8 +1351,9 @@ export default function SaranaPrasaranaPage() {
                       </tbody>
                     </table>
                   </div>
+                </div>
 
-                  <div className="flex gap-3">
+                <div className="flex gap-3">
                     <button onClick={() => { setShowPreview(false); setImportFile(null); setPreviewRows([]); setSelectedRows(new Set()); }}
                       disabled={importing}
                       className="flex-1 py-2.5 bg-slate-100 text-slate-700 text-sm rounded-xl hover:bg-slate-200 disabled:opacity-50 font-medium transition-colors">
@@ -1436,51 +1385,99 @@ export default function SaranaPrasaranaPage() {
 
             <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-4 flex-1">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField label="Kode Barang">
+                  <input 
+                    type="text" 
+                    value={formData.kode} 
+                    onChange={e => set('kode', e.target.value)} 
+                    placeholder="Opsional" 
+                    className={inputCls} 
+                  />
+                  {formErrors.kode && <p className="text-xs text-red-500 mt-1">{formErrors.kode}</p>}
+                </FormField>
+
+                <FormField label="Tanggal Pengambilan">
+                  <input 
+                    type="date" 
+                    value={formData.tanggal_pengambilan} 
+                    onChange={e => set('tanggal_pengambilan', e.target.value)} 
+                    className={inputCls} 
+                  />
+                  {formErrors.tanggal_pengambilan && <p className="text-xs text-red-500 mt-1">{formErrors.tanggal_pengambilan}</p>}
+                </FormField>
+
                 <div className="sm:col-span-2">
-                  <FormField label="Jenis Kekayaan / Nama Item" required>
-                    <input type="text" value={formData.nama_aset} onChange={e => set('nama_aset', e.target.value)} required placeholder="Contoh: Proyektor Epson EB-X400" className={inputCls} />
-                    {formErrors.nama_aset && <p className="text-xs text-red-500 mt-1">{formErrors.nama_aset}</p>}
+                  <FormField label="Jenis Kekayaan" required>
+                    <input 
+                      type="text" 
+                      value={formData.nama_barang} 
+                      onChange={e => set('nama_barang', e.target.value)} 
+                      required 
+                      placeholder="Contoh: Proyektor Epson EB-X400" 
+                      className={inputCls} 
+                    />
+                    {formErrors.nama_barang && <p className="text-xs text-red-500 mt-1">{formErrors.nama_barang}</p>}
                   </FormField>
                 </div>
 
-                <FormField label="Simpan Ke Folder">
-                  <select value={formData.id_folder || ''} onChange={e => set('id_folder', e.target.value)} className={inputCls}>
-                    <option value="">-- Tanpa Folder (Utama) --</option>
-                    {folderList.map(f => <option key={f.id} value={f.id}>{f.nama_folder}</option>)}
-                  </select>
-                </FormField>
-
-                <FormField label="Kode Barang">
-                  <input type="text" value={formData.kode_aset} onChange={e => set('kode_aset', e.target.value)} placeholder="Otomatis jika kosong" className={inputCls} />
-                </FormField>
-
-                <FormField label="Kondisi Barang" required>
-                  <select value={formData.id_kondisi} onChange={e => set('id_kondisi', e.target.value)} required className={inputCls}>
-                    <option value="">-- Pilih Kondisi --</option>
-                    {kondisis.map(k => <option key={k.id} value={k.id}>{k.nama_kondisi}</option>)}
-                  </select>
-                </FormField>
-
                 <FormField label="Luas / Jumlah" required>
-                  <input type="number" min="1" value={formData.jumlah} onChange={e => set('jumlah', e.target.value)} required className={inputCls} />
+                  <input 
+                    type="number" 
+                    min="0" 
+                    value={formData.stok_awal} 
+                    onChange={e => set('stok_awal', e.target.value)} 
+                    required 
+                    className={inputCls} 
+                  />
+                  {formErrors.stok_awal && <p className="text-xs text-red-500 mt-1">{formErrors.stok_awal}</p>}
                 </FormField>
 
                 <FormField label="Satuan" required>
-                  <input type="text" value={formData.satuan} onChange={e => set('satuan', e.target.value)} required placeholder="Unit, m², Pcs..." className={inputCls} />
+                  <input 
+                    type="text" 
+                    value={formData.satuan} 
+                    onChange={e => set('satuan', e.target.value)} 
+                    required 
+                    placeholder="Unit, Pcs, m²..." 
+                    className={inputCls} 
+                  />
+                  {formErrors.satuan && <p className="text-xs text-red-500 mt-1">{formErrors.satuan}</p>}
                 </FormField>
 
-                <FormField label="Nilai Harga Pembelian (Rp)">
-                  <input type="number" min="0" value={formData.harga_perolehan} onChange={e => set('harga_perolehan', e.target.value)} placeholder="0" className={inputCls} />
+                <FormField label="Nilai Harga Pembelian">
+                  <input 
+                    type="number" 
+                    min="0" 
+                    value={formData.nilai_harga_pembelian} 
+                    onChange={e => set('nilai_harga_pembelian', e.target.value)} 
+                    placeholder="0" 
+                    className={inputCls} 
+                  />
+                  {formErrors.nilai_harga_pembelian && <p className="text-xs text-red-500 mt-1">{formErrors.nilai_harga_pembelian}</p>}
                 </FormField>
 
-                <FormField label="Tahun Perolehan">
-                  <input type="number" min="1990" max="2099" value={formData.tahun_perolehan} onChange={e => set('tahun_perolehan', e.target.value)} placeholder="2026" className={inputCls} />
+                <FormField label="Nilai Harga Sekarang">
+                  <input 
+                    type="number" 
+                    min="0" 
+                    value={formData.nilai_harga_sekarang} 
+                    onChange={e => set('nilai_harga_sekarang', e.target.value)} 
+                    placeholder="0" 
+                    className={inputCls} 
+                  />
+                  {formErrors.nilai_harga_sekarang && <p className="text-xs text-red-500 mt-1">{formErrors.nilai_harga_sekarang}</p>}
                 </FormField>
 
                 <div className="sm:col-span-2">
-                  <FormField label="Keterangan">
-                    <textarea value={formData.deskripsi} onChange={e => set('deskripsi', e.target.value)} rows={2}
-                      className={inputCls + ' resize-none'} placeholder="Catatan kondisi, lokasi detail, dll..." />
+                  <FormField label="Keterangan (Ket)">
+                    <textarea 
+                      value={formData.keterangan} 
+                      onChange={e => set('keterangan', e.target.value)} 
+                      rows={2}
+                      className={inputCls + ' resize-none'} 
+                      placeholder="Catatan kondisi, lokasi, dll..." 
+                    />
+                    {formErrors.keterangan && <p className="text-xs text-red-500 mt-1">{formErrors.keterangan}</p>}
                   </FormField>
                 </div>
               </div>

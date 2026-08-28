@@ -18,11 +18,6 @@ class Ruangan extends Model
         return $this->belongsTo(Kelas::class, 'id_kelas');
     }
 
-    public function visualisasis()
-    {
-        return $this->hasMany(Visualisasi::class, 'id_ruangan');
-    }
-
     public function asets()
     {
         return $this->hasMany(Aset::class, 'id_ruangan');
