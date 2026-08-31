@@ -13,7 +13,16 @@ class FolderInventaris extends Model
         'keterangan',
         'warna',
         'jenis',
+        'id_sumber_dana',
     ];
+
+    /**
+     * Relasi dengan Sumber Dana
+     */
+    public function sumberDana()
+    {
+        return $this->belongsTo(SumberDana::class, 'id_sumber_dana');
+    }
 
     public function items()
     {

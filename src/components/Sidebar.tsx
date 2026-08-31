@@ -3,9 +3,9 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  LayoutDashboard, Building2, Map, Tag, Briefcase, FileText,
+  LayoutDashboard, Building2, Map, Tag, FileText,
   Settings, LogOut, Package, ChevronRight, Wrench, Handshake,
-  BarChart3, ChevronDown, ClipboardList, X,
+  BarChart3, ChevronDown, ClipboardList, X, Wallet,
 } from 'lucide-react';
 import Cookies from 'js-cookie';
 import axios from '@/lib/axios';
@@ -15,12 +15,12 @@ const navigation = [
   { name: 'Dashboard',          href: '/dashboard',                  icon: LayoutDashboard, group: 'main' },
   { name: 'Sarana & Prasarana', href: '/dashboard/sarana-prasarana', icon: Package,         group: 'main' },
   { name: 'Inventaris',         href: '/dashboard/inventaris',       icon: ClipboardList,   group: 'main' },
+  { name: 'Sumber Dana',        href: '/dashboard/sumber-dana',      icon: Wallet,          group: 'main' },
   { name: 'Peminjaman Aset',    href: '/dashboard/peminjaman',       icon: Handshake,       group: 'main' },
   { name: 'Servis & Perbaikan', href: '/dashboard/servis',           icon: Wrench,          group: 'main' },
   { name: 'Master Gedung',      href: '/dashboard/gedung',           icon: Building2,       group: 'master' },
   { name: 'Ruangan Workshop',   href: '/dashboard/ruangan',          icon: Map,             group: 'master' },
   { name: 'Kategori',           href: '/dashboard/kategori',         icon: Tag,             group: 'master' },
-  { name: 'Sumber Dana',        href: '/dashboard/sumber-dana',      icon: Briefcase,       group: 'master' },
   { name: 'Kondisi Aset',       href: '/dashboard/kondisi',          icon: Settings,        group: 'master' },
   { name: 'Riwayat/History',    href: '/dashboard/history',          icon: FileText,        group: 'laporan' },
   { name: 'Laporan',            href: '/dashboard/laporan',          icon: BarChart3,       group: 'laporan' },
@@ -172,7 +172,7 @@ function SidebarContent({
                             {[
                               { label: 'Rekap Belanja', href: '/dashboard/inventaris/rekap-belanja', dot: 'bg-indigo-400' },
                               { label: 'Daftar Belanja', href: '/dashboard/inventaris/belanja',      dot: 'bg-teal-400'   },
-                              { label: 'Gudang',         href: '/dashboard/inventaris/gudang',       dot: 'bg-emerald-400'},
+                              { label: 'Gudang',         href: '/dashboard/inventaris/gudang',       dot: 'bg-amber-400'  },
                             ].map((sub) => (
                               <Link
                                 key={sub.href}

@@ -21,6 +21,7 @@ class DaftarBelanja extends Model
         'keterangan',
         'id_user',
         'id_folder',
+        'id_sumber_dana',
     ];
 
     protected $casts = [
@@ -46,6 +47,14 @@ class DaftarBelanja extends Model
     public function folder()
     {
         return $this->belongsTo(FolderInventaris::class, 'id_folder');
+    }
+
+    /**
+     * Relasi dengan Sumber Dana
+     */
+    public function sumberDana()
+    {
+        return $this->belongsTo(\App\Models\SumberDana::class, 'id_sumber_dana');
     }
 
     /**

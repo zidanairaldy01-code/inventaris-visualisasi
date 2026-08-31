@@ -34,5 +34,9 @@ class DatabaseSeeder extends Seeder
             'role' => 'user',
             'status' => true,
         ]);
+
+        $this->call([
+            SumberDanaSeeder::class,
+        ]);
     }
 }

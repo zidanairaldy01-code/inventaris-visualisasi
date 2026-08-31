@@ -12,4 +12,14 @@ class SumberDana extends Model
     {
         return $this->hasMany(Aset::class, 'id_sumber_dana');
     }
+
+    public function daftarBelanjas()
+    {
+        return $this->hasMany(DaftarBelanja::class, 'id_sumber_dana');
+    }
+
+    public function folderInventaris()
+    {
+        return $this->hasMany(\App\Models\FolderInventaris::class, 'id_sumber_dana');
+    }
 }

@@ -22,11 +22,20 @@ class FolderInventarisController extends Controller
             $query->where('jenis', $jenis);
         }
 
+        // Filter berdasarkan id_sumber_dana
+        if ($request->has('id_sumber_dana')) {
+            if ($request->id_sumber_dana === 'null' || $request->id_sumber_dana === 'general') {
+                $query->whereNull('id_sumber_dana');
+            } else {
+                $query->where('id_sumber_dana', $request->id_sumber_dana);
+            }
+        }
+
         // Load count berdasarkan jenis folder
         if ($jenis === 'inventaris') {
             $query->withCount('items');
         } elseif ($jenis === 'inventaris-belanja') {
-            $query->withCount('daftarBelanjas as items_count');
+            $query->withCount('daftarBelanjas as items_count')->with('sumberDana');
         } elseif ($jenis === 'sarana-prasarana') {
             $query->withCount('saranaPrasaranas as items_count');
         } elseif ($jenis === 'inventaris-gudang') {
@@ -49,10 +58,11 @@ class FolderInventarisController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'nama_folder' => 'required|string|max:255',
-            'keterangan'  => 'nullable|string',
-            'warna'       => 'nullable|string|max:30',
-            'jenis'       => 'required|string|in:inventaris,sarana-prasarana,inventaris-belanja,inventaris-gudang',
+            'nama_folder'   => 'required|string|max:255',
+            'keterangan'    => 'nullable|string',
+            'warna'         => 'nullable|string|max:30',
+            'jenis'         => 'required|string|in:inventaris,sarana-prasarana,inventaris-belanja,inventaris-gudang',
+            'id_sumber_dana' => 'nullable|integer|exists:sumber_danas,id',
         ]);
 
         if (empty($validated['warna'])) {
@@ -67,7 +77,7 @@ class FolderInventarisController extends Controller
         if ($jenis === 'inventaris') {
             $folder->loadCount('items');
         } elseif ($jenis === 'inventaris-belanja') {
-            $folder->loadCount(['daftarBelanjas as items_count']);
+            $folder->loadCount(['daftarBelanjas as items_count'])->load('sumberDana');
         } elseif ($jenis === 'sarana-prasarana') {
             $folder->loadCount(['saranaPrasaranas as items_count']);
         } elseif ($jenis === 'inventaris-gudang') {
@@ -104,18 +114,30 @@ class FolderInventarisController extends Controller
         $folder = FolderInventaris::findOrFail($id);
 
         $validated = $request->validate([
-            'nama_folder' => 'sometimes|required|string|max:255',
-            'keterangan'  => 'nullable|string',
-            'warna'       => 'nullable|string|max:30',
-            'jenis'       => 'sometimes|string|in:inventaris,sarana-prasarana,inventaris-belanja,inventaris-gudang',
+            'nama_folder'   => 'sometimes|required|string|max:255',
+            'keterangan'    => 'nullable|string',
+            'warna'         => 'nullable|string|max:30',
+            'jenis'         => 'sometimes|string|in:inventaris,sarana-prasarana,inventaris-belanja,inventaris-gudang',
+            'id_sumber_dana' => 'nullable|integer|exists:sumber_danas,id',
         ]);
 
         $folder->update($validated);
 
+        // Reload dengan relasi sumber dana
+        $jenis = $folder->fresh()->jenis;
+        $folder->refresh();
+        $folder->load('sumberDana');
+
+        if ($jenis === 'inventaris-belanja') {
+            $folder->loadCount(['daftarBelanjas as items_count']);
+        } else {
+            $folder->loadCount('items');
+        }
+
         return response()->json([
             'status'  => 'success',
             'message' => 'Folder berhasil diperbarui',
-            'data'    => $folder->fresh()->loadCount('items'),
+            'data'    => $folder,
         ]);
     }
 

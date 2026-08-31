@@ -22,6 +22,14 @@ interface CustomFolder {
   warna?: string;
   items_count?: number;
   created_at?: string;
+  id_sumber_dana?: number | null;
+  sumber_dana?: { id: number; nama_sumber: string; jenis_sumber: string | null } | null;
+}
+
+interface SumberDana {
+  id: number;
+  nama_sumber: string;
+  jenis_sumber: string | null;
 }
 
 interface InventarisItem {
@@ -36,7 +44,9 @@ interface InventarisItem {
   jumlah: number;
   keterangan: string | null;
   id_folder: number | null;
+  id_sumber_dana?: number | null;
   folder?: CustomFolder | null;
+  sumber_dana?: SumberDana | null;
   user?: { name: string };
   created_at: string;
 }
@@ -58,6 +68,7 @@ interface PreviewRow {
   jumlah: number;
   keterangan: string;
   id_folder?: number | null;
+  id_sumber_dana?: number | null;
 }
 
 type FormData = {
@@ -70,6 +81,7 @@ type FormData = {
   tarif_harga: string;
   keterangan: string;
   id_folder: number | null;
+  id_sumber_dana: number | null;
 };
 
 const emptyForm = (defaultFolderId: number | null = null): FormData => ({
@@ -82,6 +94,7 @@ const emptyForm = (defaultFolderId: number | null = null): FormData => ({
   tarif_harga: '0',
   keterangan: '',
   id_folder: defaultFolderId,
+  id_sumber_dana: null,
 });
 
 /* ─────────────────────── Helpers ─────────────────────── */
@@ -304,6 +317,8 @@ function parseExcelFile(file: File, activeFolderId: number | null): Promise<Prev
 /* ══════════════════════ MAIN COMPONENT ══════════════════════ */
 export default function CustomInventarisDrivePage() {
   const [folders, setFolders] = useState<CustomFolder[]>([]);
+  const [sumberDanaList, setSumberDanaList] = useState<SumberDana[]>([]);
+  const [filterSumberDana, setFilterSumberDana] = useState<string>('');
   const [data, setData] = useState<InventarisItem[]>([]);
   const [filtered, setFiltered] = useState<InventarisItem[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);
@@ -322,7 +337,7 @@ export default function CustomInventarisDrivePage() {
   // Folder CRUD modal
   const [showFolderModal, setShowFolderModal] = useState(false);
   const [editFolderTarget, setEditFolderTarget] = useState<CustomFolder | null>(null);
-  const [folderForm, setFolderForm] = useState({ nama_folder: '', keterangan: '', warna: 'blue' });
+  const [folderForm, setFolderForm] = useState({ nama_folder: '', keterangan: '', warna: 'blue', id_sumber_dana: null as number | null });
   const [savingFolder, setSavingFolder] = useState(false);
   const [deleteFolderTarget, setDeleteFolderTarget] = useState<CustomFolder | null>(null);
   const [deletingFolder, setDeletingFolder] = useState(false);
@@ -366,16 +381,29 @@ export default function CustomInventarisDrivePage() {
     }
   }, []);
 
+  /* ── Fetch Sumber Dana List ── */
+  const fetchSumberDana = useCallback(async () => {
+    try {
+      const res = await axios.get('/api/sumber-danas');
+      const list = Array.isArray(res.data) ? res.data : (res.data.data ?? []);
+      setSumberDanaList(list);
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
+
   /* ── Fetch Inventaris Items ── */
   const fetchData = useCallback(async (folderId: number | null | -1 = activeFolderId) => {
     try {
       setLoading(true);
       let url = '/api/daftar-belanja';
+      const params: string[] = [];
       if (folderId === -1) {
-        url += '?id_folder=general';
+        params.push('id_folder=general');
       } else if (typeof folderId === 'number' && folderId > 0) {
-        url += `?id_folder=${folderId}`;
+        params.push(`id_folder=${folderId}`);
       }
+      if (url && params.length) url += '?' + params.join('&');
 
       const res = await axios.get(url);
       if (res.data.status === 'success') {
@@ -387,7 +415,8 @@ export default function CustomInventarisDrivePage() {
 
   useEffect(() => {
     fetchFolders();
-  }, [fetchFolders]);
+    fetchSumberDana();
+  }, [fetchFolders, fetchSumberDana]);
 
   useEffect(() => {
     fetchData(activeFolderId);
@@ -395,15 +424,20 @@ export default function CustomInventarisDrivePage() {
 
   useEffect(() => {
     const q = searchQuery.toLowerCase();
-    setFiltered(data.filter(item =>
-      item.uraian.toLowerCase().includes(q) ||
-      (item.kode_rekening || '').toLowerCase().includes(q) ||
-      (item.kode_program || '').toLowerCase().includes(q) ||
-      item.satuan.toLowerCase().includes(q) ||
-      item.folder?.nama_folder.toLowerCase().includes(q)
-    ));
+    setFiltered(data.filter(item => {
+      const matchSearch =
+        item.uraian.toLowerCase().includes(q) ||
+        (item.kode_rekening || '').toLowerCase().includes(q) ||
+        (item.kode_program || '').toLowerCase().includes(q) ||
+        item.satuan.toLowerCase().includes(q) ||
+        item.folder?.nama_folder.toLowerCase().includes(q) ||
+        (item.sumber_dana?.nama_sumber ?? '').toLowerCase().includes(q);
+      const matchSumber = !filterSumberDana ||
+        String(item.id_sumber_dana) === filterSumberDana;
+      return matchSearch && matchSumber;
+    }));
     setPage(1);
-  }, [searchQuery, data]);
+  }, [searchQuery, filterSumberDana, data]);
 
   /* ── Get Active Folder Object ── */
   const activeFolderObj = folders.find(f => f.id === activeFolderId);
@@ -414,14 +448,14 @@ export default function CustomInventarisDrivePage() {
   /* ── FOLDER CRUD HANDLERS ── */
   const openCreateFolder = () => {
     setEditFolderTarget(null);
-    setFolderForm({ nama_folder: '', keterangan: '', warna: 'blue' });
+    setFolderForm({ nama_folder: '', keterangan: '', warna: 'blue', id_sumber_dana: null });
     setShowFolderModal(true);
   };
 
   const openEditFolder = (f: CustomFolder, e: React.MouseEvent) => {
     e.stopPropagation();
     setEditFolderTarget(f);
-    setFolderForm({ nama_folder: f.nama_folder, keterangan: f.keterangan || '', warna: f.warna || 'blue' });
+    setFolderForm({ nama_folder: f.nama_folder, keterangan: f.keterangan || '', warna: f.warna || 'blue', id_sumber_dana: f.id_sumber_dana ?? null });
     setShowFolderModal(true);
   };
 
@@ -461,8 +495,12 @@ export default function CustomInventarisDrivePage() {
   /* ── ITEM CRUD HANDLERS ── */
   const openAdd = () => {
     const defaultFolder = activeFolderId && activeFolderId > 0 ? activeFolderId : null;
+    // Auto-set sumber dana dari folder aktif jika ada
+    const defaultSumberDana = defaultFolder
+      ? (folders.find(f => f.id === defaultFolder)?.id_sumber_dana ?? null)
+      : null;
     setEditTarget(null);
-    setFormData(emptyForm(defaultFolder));
+    setFormData({ ...emptyForm(defaultFolder), id_sumber_dana: defaultSumberDana });
     setShowFormModal(true);
   };
 
@@ -478,6 +516,7 @@ export default function CustomInventarisDrivePage() {
       tarif_harga: String(item.tarif_harga),
       keterangan: item.keterangan || '',
       id_folder: item.id_folder || null,
+      id_sumber_dana: item.id_sumber_dana || null,
     });
     setShowFormModal(true);
   };
@@ -492,6 +531,7 @@ export default function CustomInventarisDrivePage() {
     tarif_harga: parseFloat(form.tarif_harga) || 0,
     keterangan: form.keterangan || null,
     id_folder: form.id_folder,
+    id_sumber_dana: form.id_sumber_dana,
   });
 
   const handleSave = async () => {
@@ -741,6 +781,15 @@ export default function CustomInventarisDrivePage() {
                 <FolderOpen className="h-4 w-4 text-indigo-600" />
                 <span>{activeFolderTitle}</span>
               </div>
+              {/* Badge sumber dana folder aktif */}
+              {activeFolderObj?.sumber_dana && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-teal-100 text-teal-700 border border-teal-200">
+                  💰 {activeFolderObj.sumber_dana.nama_sumber}
+                  {activeFolderObj.sumber_dana.jenis_sumber && (
+                    <span className="opacity-70">({activeFolderObj.sumber_dana.jenis_sumber})</span>
+                  )}
+                </span>
+              )}
             </>
           )}
         </div>
@@ -865,6 +914,12 @@ export default function CustomInventarisDrivePage() {
                       <h3 className={`font-bold text-base ${color.text} group-hover:underline line-clamp-1`}>
                         {f.nama_folder}
                       </h3>
+                      {/* Badge Sumber Dana */}
+                      {f.sumber_dana && (
+                        <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-teal-100 text-teal-700 border border-teal-200">
+                          💰 {f.sumber_dana.nama_sumber}
+                        </span>
+                      )}
                       {f.keterangan && <p className="text-xs text-slate-500 truncate mt-0.5">{f.keterangan}</p>}
                       <div className="mt-3 space-y-1 pt-2 border-t border-black/5">
                         <p className="text-xs text-slate-600 flex items-center justify-between">
@@ -940,6 +995,17 @@ export default function CustomInventarisDrivePage() {
                   className="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-lg pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all"
                 />
               </div>
+              {/* Filter Sumber Dana */}
+              <select
+                value={filterSumberDana}
+                onChange={e => setFilterSumberDana(e.target.value)}
+                className="border border-slate-200 bg-slate-50 text-slate-700 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+              >
+                <option value="">Semua Sumber Dana</option>
+                {sumberDanaList.map(sd => (
+                  <option key={sd.id} value={String(sd.id)}>{sd.nama_sumber}</option>
+                ))}
+              </select>
               <div className="flex items-center gap-2 flex-wrap">
                 <button onClick={() => fetchData()} className="p-2.5 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors" title="Refresh">
                   <RefreshCw className={`h-4 w-4 text-slate-600 ${loading ? 'animate-spin' : ''}`} />
@@ -998,6 +1064,7 @@ export default function CustomInventarisDrivePage() {
                       <th className="px-4 py-3 text-xs font-bold text-slate-600 uppercase tracking-wide text-left">Kode Rekening</th>
                       <th className="px-4 py-3 text-xs font-bold text-slate-600 uppercase tracking-wide text-left">Kode Program</th>
                       <th className="px-4 py-3 text-xs font-bold text-slate-600 uppercase tracking-wide text-left">Uraian</th>
+                      <th className="px-4 py-3 text-xs font-bold text-teal-700 uppercase tracking-wide text-left">Sumber Dana</th>
                       <th className="px-4 py-3 text-xs font-bold text-blue-700 uppercase tracking-wide text-center">Volume</th>
                       <th className="px-4 py-3 text-xs font-bold text-slate-600 uppercase tracking-wide text-center">Satuan</th>
                       <th className="px-4 py-3 text-xs font-bold text-emerald-700 uppercase tracking-wide text-right">Tarif Harga</th>
@@ -1032,6 +1099,15 @@ export default function CustomInventarisDrivePage() {
                           <td className="px-4 py-3">
                             <div className="font-semibold text-slate-900">{item.uraian}</div>
                             {item.keterangan && <div className="text-xs text-slate-400 truncate max-w-[250px]">{item.keterangan}</div>}
+                          </td>
+                          <td className="px-4 py-3">
+                            {item.sumber_dana ? (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-teal-100 text-teal-700 border border-teal-200 whitespace-nowrap">
+                                {item.sumber_dana.nama_sumber}
+                              </span>
+                            ) : (
+                              <span className="text-slate-300 text-xs">-</span>
+                            )}
                           </td>
                           <td className="px-4 py-3 text-center">
                             <span className="px-2.5 py-1 bg-blue-100 text-blue-700 text-xs font-bold rounded-lg border border-blue-200">
@@ -1105,6 +1181,31 @@ export default function CustomInventarisDrivePage() {
                   placeholder="Misal: Inventaris Lab Komputer, TKR, DKV..."
                   className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
+              </div>
+
+              {/* Sumber Dana — field baru */}
+              <div>
+                <label className="block text-xs font-semibold text-teal-700 mb-1 flex items-center gap-1">
+                  💰 Sumber Dana
+                  <span className="text-slate-400 font-normal">(opsional)</span>
+                </label>
+                <select
+                  value={folderForm.id_sumber_dana ?? ''}
+                  onChange={e => setFolderForm(f => ({ ...f, id_sumber_dana: e.target.value ? Number(e.target.value) : null }))}
+                  className="w-full border border-teal-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 bg-teal-50"
+                >
+                  <option value="">-- Tidak ada / Pilih Sumber Dana --</option>
+                  {sumberDanaList.map(sd => (
+                    <option key={sd.id} value={sd.id}>
+                      {sd.nama_sumber}{sd.jenis_sumber ? ` (${sd.jenis_sumber})` : ''}
+                    </option>
+                  ))}
+                </select>
+                {folderForm.id_sumber_dana && (
+                  <p className="text-[11px] text-teal-600 mt-1">
+                    ✓ Item baru di folder ini akan otomatis menggunakan sumber dana ini
+                  </p>
+                )}
               </div>
 
               <div>
@@ -1207,6 +1308,19 @@ export default function CustomInventarisDrivePage() {
                     <option value="">File Tanpa Folder (Umum)</option>
                     {folders.map(f => (
                       <option key={f.id} value={f.id}>📁 {f.nama_folder}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-xs font-semibold text-teal-700 mb-1">Sumber Dana</label>
+                  <select
+                    value={formData.id_sumber_dana || ''}
+                    onChange={e => setFormData(f => ({ ...f, id_sumber_dana: e.target.value ? Number(e.target.value) : null }))}
+                    className="w-full border border-teal-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 bg-teal-50"
+                  >
+                    <option value="">-- Pilih Sumber Dana (Opsional) --</option>
+                    {sumberDanaList.map(sd => (
+                      <option key={sd.id} value={sd.id}>{sd.nama_sumber}{sd.jenis_sumber ? ` (${sd.jenis_sumber})` : ''}</option>
                     ))}
                   </select>
                 </div>

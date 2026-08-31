@@ -53,7 +53,7 @@ class DaftarBelanjaController extends Controller
     public function index(Request $request)
     {
         try {
-            $query = DaftarBelanja::with(['user', 'folder']);
+            $query = DaftarBelanja::with(['user', 'folder', 'sumberDana']);
 
             // Filter by folder if specified
             if ($request->has('id_folder')) {
@@ -61,6 +61,15 @@ class DaftarBelanjaController extends Controller
                     $query->whereNull('id_folder');
                 } else {
                     $query->where('id_folder', $request->id_folder);
+                }
+            }
+
+            // Filter by sumber dana if specified
+            if ($request->has('id_sumber_dana')) {
+                if ($request->id_sumber_dana === 'null') {
+                    $query->whereNull('id_sumber_dana');
+                } else {
+                    $query->where('id_sumber_dana', $request->id_sumber_dana);
                 }
             }
 
@@ -96,6 +105,7 @@ class DaftarBelanjaController extends Controller
             'tarif_harga' => 'required|numeric|min:0',
             'keterangan' => 'nullable|string',
             'id_folder' => 'nullable|integer|exists:folder_inventaris,id',
+            'id_sumber_dana' => 'nullable|integer|exists:sumber_danas,id',
         ], [
             'uraian.required' => 'Uraian wajib diisi',
             'volume.required' => 'Volume wajib diisi',
@@ -125,7 +135,7 @@ class DaftarBelanjaController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'Data daftar belanja berhasil ditambahkan',
-                'data' => $item->load(['user', 'folder'])
+                'data' => $item->load(['user', 'folder', 'sumberDana'])
             ], 201);
         } catch (\Exception $e) {
             return response()->json([
@@ -142,7 +152,7 @@ class DaftarBelanjaController extends Controller
     public function show(string $id)
     {
         try {
-            $item = DaftarBelanja::with(['user', 'folder'])->findOrFail($id);
+            $item = DaftarBelanja::with(['user', 'folder', 'sumberDana'])->findOrFail($id);
 
             return response()->json([
                 'status' => 'success',
@@ -172,6 +182,7 @@ class DaftarBelanjaController extends Controller
             'tarif_harga' => 'required|numeric|min:0',
             'keterangan' => 'nullable|string',
             'id_folder' => 'nullable|integer|exists:folder_inventaris,id',
+            'id_sumber_dana' => 'nullable|integer|exists:sumber_danas,id',
         ], [
             'uraian.required' => 'Uraian wajib diisi',
             'volume.required' => 'Volume wajib diisi',
@@ -201,7 +212,7 @@ class DaftarBelanjaController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'Data daftar belanja berhasil diperbarui',
-                'data' => $item->load(['user', 'folder'])
+                'data' => $item->load(['user', 'folder', 'sumberDana'])
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -250,6 +261,7 @@ class DaftarBelanjaController extends Controller
             'items.*.tarif_harga' => 'required|numeric|min:0',
             'items.*.keterangan' => 'nullable|string',
             'items.*.id_folder' => 'nullable|integer|exists:folder_inventaris,id',
+            'items.*.id_sumber_dana' => 'nullable|integer|exists:sumber_danas,id',
         ]);
 
         if ($validator->fails()) {

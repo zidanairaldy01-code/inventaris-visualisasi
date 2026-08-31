@@ -3,7 +3,11 @@
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from '@/lib/axios';
-import { Bell, Search, UserCircle, ChevronDown, Package, MapPin, Building2, X, Loader2, Menu } from 'lucide-react';
+import Cookies from 'js-cookie';
+import {
+  Bell, Search, UserCircle, ChevronDown, Package, MapPin, Building2,
+  X, Loader2, Menu, User, KeyRound, LogOut, ShieldCheck, ChevronRight
+} from 'lucide-react';
 import Link from 'next/link';
 
 interface SearchResult {
@@ -20,6 +24,10 @@ export default function Header({ onMenuClick }: HeaderProps) {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [time, setTime] = useState<string>('');
+
+  // User Dropdown State
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
   // Search States
   const [query, setQuery] = useState('');
@@ -52,13 +60,14 @@ export default function Header({ onMenuClick }: HeaderProps) {
       }
       if (e.key === 'Escape') {
         setShowDropdown(false);
+        setUserMenuOpen(false);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Close dropdown on click outside
+  // Close search dropdown on click outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (
@@ -67,10 +76,26 @@ export default function Header({ onMenuClick }: HeaderProps) {
       ) {
         setShowDropdown(false);
       }
+      if (
+        userMenuRef.current && !userMenuRef.current.contains(e.target as Node)
+      ) {
+        setUserMenuOpen(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const handleLogout = async () => {
+    try {
+      await axios.post('/api/logout');
+    } catch (e) {
+      console.error(e);
+    } finally {
+      Cookies.remove('auth_token');
+      window.location.href = '/login';
+    }
+  };
 
   // Live Search Logic with Debounce
   useEffect(() => {
@@ -305,18 +330,92 @@ export default function Header({ onMenuClick }: HeaderProps) {
           <span className="absolute top-1.5 right-1.5 block h-1.5 w-1.5 rounded-full bg-red-500 ring-1 ring-white" />
         </button>
 
-        {/* User profile */}
-        <div className="flex items-center border border-slate-200 pl-2 pr-2 sm:pr-3 py-1.5 space-x-2 sm:space-x-2.5 cursor-pointer hover:bg-slate-50 rounded-xl transition-colors ml-1">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-sm flex-shrink-0">
-            <span className="text-xs font-bold text-white">
-              {user?.nama_lengkap?.[0]?.toUpperCase() || 'A'}
-            </span>
+        {/* User profile dropdown container */}
+        <div className="relative" ref={userMenuRef}>
+          <div
+            onClick={() => setUserMenuOpen(!userMenuOpen)}
+            className={`flex items-center border border-slate-200 pl-2 pr-2 sm:pr-3 py-1.5 space-x-2 sm:space-x-2.5 cursor-pointer hover:bg-slate-50 rounded-xl transition-all ml-1 ${
+              userMenuOpen ? 'bg-slate-100 ring-2 ring-blue-500/20 border-blue-300' : ''
+            }`}
+          >
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-sm flex-shrink-0">
+              <span className="text-xs font-bold text-white">
+                {user?.nama_lengkap?.[0]?.toUpperCase() || 'A'}
+              </span>
+            </div>
+            <div className="hidden md:block text-sm text-left">
+              <div className="font-semibold text-slate-800 text-xs leading-tight">{user?.nama_lengkap || 'Memuat...'}</div>
+              <div className="text-[10px] text-slate-400 capitalize leading-tight">{user?.role || 'Admin'}</div>
+            </div>
+            <ChevronDown className={`h-3 w-3 text-slate-400 flex-shrink-0 hidden sm:block transition-transform duration-200 ${userMenuOpen ? 'rotate-180 text-blue-600' : ''}`} />
           </div>
-          <div className="hidden md:block text-sm text-left">
-            <div className="font-semibold text-slate-800 text-xs leading-tight">{user?.nama_lengkap || 'Memuat...'}</div>
-            <div className="text-[10px] text-slate-400 capitalize leading-tight">{user?.role || 'Admin'}</div>
-          </div>
-          <ChevronDown className="h-3 w-3 text-slate-400 flex-shrink-0 hidden sm:block" />
+
+          {/* Profile Dropdown Menu */}
+          {userMenuOpen && (
+            <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-2xl border border-slate-200/80 shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+              {/* User Summary Header */}
+              <div className="p-4 bg-slate-50/80 border-b border-slate-100">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold text-base shadow-md">
+                    {user?.nama_lengkap?.[0]?.toUpperCase() || 'A'}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold text-slate-800 truncate">{user?.nama_lengkap || 'Pengguna'}</p>
+                    <p className="text-[11px] text-slate-400 truncate">{user?.email || `@${user?.username}` || 'admin@smkpgri.sch.id'}</p>
+                    <div className="mt-1 flex items-center gap-1">
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-700 capitalize">
+                        <ShieldCheck className="w-3 h-3 mr-0.5" />
+                        {user?.role || 'admin'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Menu Links */}
+              <div className="p-1.5 space-y-0.5">
+                <Link
+                  href="/dashboard/profil"
+                  onClick={() => setUserMenuOpen(false)}
+                  className="flex items-center justify-between px-3 py-2 text-xs font-medium text-slate-700 rounded-xl hover:bg-blue-50 hover:text-blue-600 transition-colors group"
+                >
+                  <div className="flex items-center space-x-2.5">
+                    <div className="p-1.5 rounded-lg bg-blue-50 text-blue-600 group-hover:bg-blue-100 transition-colors">
+                      <User className="h-4 w-4" />
+                    </div>
+                    <span>Profil Saya</span>
+                  </div>
+                  <ChevronRight className="h-3.5 w-3.5 text-slate-400 group-hover:text-blue-500 group-hover:translate-x-0.5 transition-all" />
+                </Link>
+
+                <Link
+                  href="/dashboard/profil?tab=password"
+                  onClick={() => setUserMenuOpen(false)}
+                  className="flex items-center justify-between px-3 py-2 text-xs font-medium text-slate-700 rounded-xl hover:bg-indigo-50 hover:text-indigo-600 transition-colors group"
+                >
+                  <div className="flex items-center space-x-2.5">
+                    <div className="p-1.5 rounded-lg bg-indigo-50 text-indigo-600 group-hover:bg-indigo-100 transition-colors">
+                      <KeyRound className="h-4 w-4" />
+                    </div>
+                    <span>Ubah Password</span>
+                  </div>
+                  <ChevronRight className="h-3.5 w-3.5 text-slate-400 group-hover:text-indigo-500 group-hover:translate-x-0.5 transition-all" />
+                </Link>
+              </div>
+
+              <div className="border-t border-slate-100 p-1.5">
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center space-x-2.5 px-3 py-2 text-xs font-medium text-red-600 rounded-xl hover:bg-red-50 transition-colors group"
+                >
+                  <div className="p-1.5 rounded-lg bg-red-50 text-red-600 group-hover:bg-red-100 transition-colors">
+                    <LogOut className="h-4 w-4" />
+                  </div>
+                  <span>Keluar Sistem</span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </header>

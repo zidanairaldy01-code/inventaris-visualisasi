@@ -34,6 +34,7 @@ Route::get('stats', [AsetController::class, 'publicStats']);
 Route::get('daftar-belanja/summary', [DaftarBelanjaController::class, 'summary']);
 Route::get('gedungs', [GedungController::class, 'index']);
 Route::get('kategoris', [KategoriController::class, 'index']);
+Route::get('sumber-danas', [SumberDanaController::class, 'index']);
 Route::get('servises', [ServisController::class, 'index']);
 Route::get('peminjamans', [PeminjamanController::class, 'index']);
 
@@ -50,6 +51,8 @@ Route::get('aset-per-kelas/summary/kelas/{id}', [AsetPerKelasController::class, 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [AuthController::class, 'me']);
+    Route::put('/profile', [AuthController::class, 'updateProfile']);
+    Route::put('/profile/password', [AuthController::class, 'updatePassword']);
 
     Route::apiResource('gedungs', GedungController::class)->except(['index']);
     Route::apiResource('ruangans', RuanganController::class)->except(['index', 'show']);
