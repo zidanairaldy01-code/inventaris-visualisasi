@@ -307,6 +307,8 @@ const inputCls = "w-full px-3 py-2 text-sm border border-slate-200 rounded-xl bg
 
 /* ─────────────────────── Halaman Utama ─────────────────────── */
 export default function SaranaPrasaranaPage() {
+  const [user, setUser] = useState<any>(null);
+  const isSuperAdmin = user?.role === 'super_admin' || user?.role === 'admin';
   const [asets, setAsets] = useState<SaranaPrasaranaItem[]>([]);
   const [filtered, setFiltered] = useState<SaranaPrasaranaItem[]>([]);
   const [folders, setFolders] = useState<CustomFolder[]>([]);
@@ -377,6 +379,7 @@ export default function SaranaPrasaranaPage() {
 
   useEffect(() => {
     setMounted(true);
+    axios.get('/api/user').then(res => setUser(res.data)).catch(() => {});
     fetchFolders();
     fetchAsets();
     // fetchMasterData tidak diperlukan — kategoris/ruangans/kondisis tidak digunakan di halaman ini
@@ -820,20 +823,22 @@ export default function SaranaPrasaranaPage() {
               className="flex items-center gap-2 px-3.5 py-2.5 bg-white/15 backdrop-blur-md border border-white/30 text-white rounded-xl hover:bg-white/25 text-sm font-semibold transition-all shadow-sm">
               <FolderPlus className="h-4 w-4" /> Buat Folder
             </button>
-            <button
-              onClick={() => {
-                setIsSelectMode(!isSelectMode);
-                if (isSelectMode) setSelectedItemIds(new Set());
-              }}
-              className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-md ${
-                isSelectMode
-                  ? 'bg-rose-500 text-white hover:bg-rose-600'
-                  : 'bg-white/15 backdrop-blur-md border border-white/30 text-white hover:bg-white/25'
-              }`}
-            >
-              {isSelectMode ? <X className="h-4 w-4" /> : <Trash2 className="h-4 w-4 text-rose-300" />}
-              <span>{isSelectMode ? 'Batal Pilih' : 'Hapus Beberapa'}</span>
-            </button>
+            {isSuperAdmin && (
+              <button
+                onClick={() => {
+                  setIsSelectMode(!isSelectMode);
+                  if (isSelectMode) setSelectedItemIds(new Set());
+                }}
+                className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-md ${
+                  isSelectMode
+                    ? 'bg-rose-500 text-white hover:bg-rose-600'
+                    : 'bg-white/15 backdrop-blur-md border border-white/30 text-white hover:bg-white/25'
+                }`}
+              >
+                {isSelectMode ? <X className="h-4 w-4" /> : <Trash2 className="h-4 w-4 text-rose-300" />}
+                <span>{isSelectMode ? 'Batal Pilih' : 'Hapus Beberapa'}</span>
+              </button>
+            )}
             <button onClick={exportExcel} disabled={!filtered.length}
               className="flex items-center gap-2 px-3.5 py-2.5 bg-white/10 backdrop-blur-sm border border-white/20 text-white rounded-xl hover:bg-white/20 text-sm font-semibold transition-colors disabled:opacity-40">
               <Download className="h-4 w-4" /> Export
@@ -994,9 +999,11 @@ export default function SaranaPrasaranaPage() {
                       <button onClick={(e) => openEditFolder(f, e)} className="p-1.5 hover:bg-slate-100 text-slate-500 rounded-lg transition-colors" title="Edit Folder">
                         <Edit2 className="h-3.5 w-3.5" />
                       </button>
-                      <button onClick={(e) => { e.stopPropagation(); setDeleteFolderTarget(f); }} className="p-1.5 hover:bg-rose-50 text-rose-600 rounded-lg transition-colors" title="Hapus Folder">
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+                      {isSuperAdmin && (
+                        <button onClick={(e) => { e.stopPropagation(); setDeleteFolderTarget(f); }} className="p-1.5 hover:bg-rose-50 text-rose-600 rounded-lg transition-colors" title="Hapus Folder">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
                     </div>
                   </div>
                   <div>
@@ -1122,9 +1129,11 @@ export default function SaranaPrasaranaPage() {
                             <button onClick={() => openEditModal(aset)} className="p-1.5 hover:bg-amber-50 text-amber-600 rounded-lg transition-colors" title="Edit">
                               <Edit2 className="h-4 w-4" />
                             </button>
-                            <button onClick={() => setDeleteTarget(aset)} className="p-1.5 hover:bg-rose-50 text-rose-600 rounded-lg transition-colors" title="Hapus">
-                              <Trash2 className="h-4 w-4" />
-                            </button>
+                            {isSuperAdmin && (
+                              <button onClick={() => setDeleteTarget(aset)} className="p-1.5 hover:bg-rose-50 text-rose-600 rounded-lg transition-colors" title="Hapus">
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>

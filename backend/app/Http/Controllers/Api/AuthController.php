@@ -44,7 +44,11 @@ class AuthController extends Controller
 
     public function me(Request $request)
     {
-        return response()->json($request->user());
+        $user = $request->user();
+        if ($user) {
+            $user->load('ruangan.gedung');
+        }
+        return response()->json($user);
     }
 
     public function updateProfile(Request $request)

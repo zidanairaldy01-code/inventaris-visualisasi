@@ -20,6 +20,8 @@ use App\Http\Controllers\Api\FolderInventarisController;
 use App\Http\Controllers\Api\InventarisGudangController;
 use App\Http\Controllers\Api\SaranaPrasaranaController;
 use App\Http\Controllers\Api\DaftarBelanjaController;
+use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\DistribusiAsetController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login'])->name('login');
@@ -99,4 +101,17 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('daftar-belanja/batch-store', [DaftarBelanjaController::class, 'batchStore']);
     Route::post('daftar-belanja/batch-delete', [DaftarBelanjaController::class, 'batchDelete']);
     Route::apiResource('daftar-belanja', DaftarBelanjaController::class);
+
+    // Manajemen Pengguna (Khusus Super Admin)
+    Route::middleware('role:super_admin')->apiResource('users', UserController::class);
+
+    // Distribusi Aset, Surat Jalan & BAST
+    Route::get('stats/petugas', [DistribusiAsetController::class, 'statsPetugas']);
+    Route::get('stats/wakapro', [DistribusiAsetController::class, 'statsWakapro']);
+    Route::get('stats/wakasek', [DistribusiAsetController::class, 'statsWakasek']);
+    Route::get('distribusi-asets', [DistribusiAsetController::class, 'index']);
+    Route::post('distribusi-asets', [DistribusiAsetController::class, 'store']);
+    Route::post('distribusi-asets/{id}/konfirmasi', [DistribusiAsetController::class, 'konfirmasi']);
+    Route::get('distribusi-asets/{id}/surat-jalan', [DistribusiAsetController::class, 'cetakSuratJalan']);
+    Route::get('distribusi-asets/{id}/bast', [DistribusiAsetController::class, 'cetakBast']);
 });

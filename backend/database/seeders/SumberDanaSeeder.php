@@ -26,11 +26,6 @@ class SumberDanaSeeder extends Seeder
                 'keterangan'   => 'Anggaran Pendapatan dan Belanja Daerah',
             ],
             [
-                'nama_sumber' => 'APBN',
-                'jenis_sumber' => 'APBN',
-                'keterangan'   => 'Anggaran Pendapatan dan Belanja Negara',
-            ],
-            [
                 'nama_sumber' => 'Hibah / Donasi',
                 'jenis_sumber' => 'Hibah',
                 'keterangan'   => 'Dana hibah atau donasi dari pihak eksternal',

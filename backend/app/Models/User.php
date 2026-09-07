@@ -12,7 +12,7 @@ class User extends Authenticatable
     use HasApiTokens, HasFactory, Notifiable;
 
     protected $fillable = [
-        'nama_lengkap', 'username', 'email', 'password', 'role', 'status',
+        'nama_lengkap', 'username', 'email', 'password', 'role', 'status', 'ruangan_id',
     ];
 
     protected $hidden = [
@@ -25,5 +25,30 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function ruangan()
+    {
+        return $this->belongsTo(Ruangan::class, 'ruangan_id');
+    }
+
+    public function isSuperAdmin(): bool
+    {
+        return $this->role === 'super_admin';
+    }
+
+    public function isPetugas(): bool
+    {
+        return $this->role === 'petugas';
+    }
+
+    public function isWakasek(): bool
+    {
+        return $this->role === 'wakasek';
+    }
+
+    public function isWakapro(): bool
+    {
+        return $this->role === 'wakapro';
     }
 }

@@ -2,8 +2,9 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use App\Models\User;
+use App\Models\Ruangan;
 
 class UserSeeder extends Seeder
 {
@@ -12,13 +13,56 @@ class UserSeeder extends Seeder
      */
     public function run(): void
     {
-        \App\Models\User::create([
-            'nama_lengkap' => 'Administrator',
-            'username' => 'admin',
-            'email' => 'admin@sekolah.com',
-            'password' => bcrypt('password123'),
-            'role' => 'admin',
-            'status' => true,
-        ]);
+        // Cari salah satu ruangan workshop untuk Wakapro jika ada
+        $ruanganWorkshop = Ruangan::where('jenis', 'workshop')->first() ?? Ruangan::first();
+
+        // 1. Super Admin
+        User::updateOrCreate(
+            ['username' => 'admin'],
+            [
+                'nama_lengkap' => 'Super Administrator',
+                'email' => 'admin@sekolah.com',
+                'password' => bcrypt('password123'),
+                'role' => 'super_admin',
+                'status' => true,
+            ]
+        );
+
+        // 2. Petugas Input
+        User::updateOrCreate(
+            ['username' => 'petugas'],
+            [
+                'nama_lengkap' => 'Ahmad Fauzi (Petugas Input)',
+                'email' => 'petugas@sekolah.com',
+                'password' => bcrypt('password123'),
+                'role' => 'petugas',
+                'status' => true,
+            ]
+        );
+
+        // 3. Wakasek Sarpras
+        User::updateOrCreate(
+            ['username' => 'wakasek'],
+            [
+                'nama_lengkap' => 'Drs. H. Mulyadi, M.Pd (Wakasek Sarpras)',
+                'email' => 'wakasek@sekolah.com',
+                'password' => bcrypt('password123'),
+                'role' => 'wakasek',
+                'status' => true,
+            ]
+        );
+
+        // 4. Wakapro (Kepala Bengkel)
+        User::updateOrCreate(
+            ['username' => 'wakapro'],
+            [
+                'nama_lengkap' => 'Rahmat Hidayat, S.T. (Wakapro Bengkel)',
+                'email' => 'wakapro@sekolah.com',
+                'password' => bcrypt('password123'),
+                'role' => 'wakapro',
+                'ruangan_id' => $ruanganWorkshop ? $ruanganWorkshop->id : null,
+                'status' => true,
+            ]
+        );
     }
 }

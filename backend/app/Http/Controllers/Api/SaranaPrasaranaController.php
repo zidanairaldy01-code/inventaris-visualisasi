@@ -155,8 +155,16 @@ class SaranaPrasaranaController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
+    public function destroy(Request $request, string $id)
     {
+        $user = $request->user();
+        if ($user && !in_array($user->role, ['super_admin', 'admin'])) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Hanya Super Administrator yang memiliki hak akses untuk menghapus data sarana prasarana.',
+            ], 403);
+        }
+
         $item = SaranaPrasarana::findOrFail($id);
         $item->delete();
 

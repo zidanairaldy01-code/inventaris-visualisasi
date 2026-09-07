@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Building2, Warehouse,
   LogOut, Package, ChevronRight, Wrench, Handshake,
   BarChart3, ChevronDown, ClipboardList, X, Wallet,
-  SlidersHorizontal, History, User
+  SlidersHorizontal, History, User, Users, Truck, Inbox
 } from 'lucide-react';
 import Cookies from 'js-cookie';
 import axios from '@/lib/axios';
@@ -19,37 +19,44 @@ interface NavItem {
   group: string;
   badge?: string;
   badgeColor?: string;
+  roles?: string[];
 }
 
 const groups = [
   { key: 'main',        label: 'Menu Utama' },
+  { key: 'distribusi',  label: 'Distribusi & Serah Terima' },
   { key: 'inventaris',  label: 'Inventaris & Pengadaan' },
   { key: 'layanan',     label: 'Sirkulasi & Layanan' },
   { key: 'master',      label: 'Data Master' },
-  { key: 'laporan',     label: 'Laporan & Audit' },
+  { key: 'laporan',     label: 'Laporan & Pengaturan' },
 ];
 
 const navigation: NavItem[] = [
   // Menu Utama
   { name: 'Dashboard',          href: '/dashboard',                  icon: LayoutDashboard,    group: 'main' },
 
+  // Distribusi & Serah Terima
+  { name: 'Distribusi & BAST',  href: '/dashboard/distribusi',       icon: Truck,              group: 'distribusi', roles: ['super_admin', 'petugas'] },
+  { name: 'Penerimaan Barang',  href: '/dashboard/penerimaan',       icon: Inbox,              group: 'distribusi', roles: ['super_admin', 'wakapro'] },
+
   // Inventaris & Pengadaan
-  { name: 'Sarana & Prasarana', href: '/dashboard/sarana-prasarana', icon: Package,            group: 'inventaris' },
-  { name: 'Inventaris',         href: '/dashboard/inventaris',       icon: ClipboardList,      group: 'inventaris' },
-  { name: 'Sumber Dana',        href: '/dashboard/sumber-dana',      icon: Wallet,             group: 'inventaris' },
+  { name: 'Sarana & Prasarana', href: '/dashboard/sarana-prasarana', icon: Package,            group: 'inventaris', roles: ['super_admin', 'petugas', 'wakasek'] },
+  { name: 'Inventaris',         href: '/dashboard/inventaris',       icon: ClipboardList,      group: 'inventaris', roles: ['super_admin', 'petugas', 'wakasek'] },
+  { name: 'Sumber Dana',        href: '/dashboard/sumber-dana',      icon: Wallet,             group: 'inventaris', roles: ['super_admin', 'petugas', 'wakasek'] },
 
   // Sirkulasi & Layanan
   { name: 'Peminjaman Aset',    href: '/dashboard/peminjaman',       icon: Handshake,          group: 'layanan' },
   { name: 'Servis & Perbaikan', href: '/dashboard/servis',           icon: Wrench,             group: 'layanan' },
 
   // Data Master
-  { name: 'Master Gedung',      href: '/dashboard/gedung',           icon: Building2,          group: 'master' },
-  { name: 'Ruangan Workshop',   href: '/dashboard/ruangan',          icon: Warehouse,          group: 'master' },
+  { name: 'Master Gedung',      href: '/dashboard/gedung',           icon: Building2,          group: 'master',     roles: ['super_admin', 'petugas'] },
+  { name: 'Ruangan Workshop',   href: '/dashboard/ruangan',          icon: Warehouse,          group: 'master',     roles: ['super_admin', 'petugas'] },
   { name: 'Kondisi Aset',       href: '/dashboard/kondisi',          icon: SlidersHorizontal,  group: 'master' },
 
-  // Laporan & Audit
-  { name: 'Riwayat Aktivitas',  href: '/dashboard/history',          icon: History,            group: 'laporan' },
+  // Laporan & Pengaturan
+  { name: 'Riwayat Aktivitas',  href: '/dashboard/history',          icon: History,            group: 'laporan',    roles: ['super_admin', 'petugas', 'wakasek'] },
   { name: 'Laporan',            href: '/dashboard/laporan',          icon: BarChart3,          group: 'laporan' },
+  { name: 'Kelola Pengguna',    href: '/dashboard/users',            icon: Users,              group: 'laporan',    roles: ['super_admin'] },
 ];
 
 interface SidebarProps {
@@ -189,7 +196,12 @@ function SidebarContent({
       {/* ── Main Navigation List ── */}
       <div className="flex-1 overflow-y-auto py-3 px-3 space-y-4 relative z-10 scrollbar-none">
         {groups.map((group) => {
-          const items = navigation.filter((n) => n.group === group.key);
+          const userRole = user?.role || 'petugas';
+          const items = navigation.filter((n) => {
+            if (n.group !== group.key) return false;
+            if (n.roles && !n.roles.includes(userRole)) return false;
+            return true;
+          });
           if (items.length === 0) return null;
 
           return (
@@ -318,11 +330,18 @@ function SidebarContent({
           </div>
           <div className="truncate flex-1">
             <p className="text-xs font-semibold text-slate-200 group-hover:text-white truncate">
-              {user?.name || 'Administrator'}
+              {user?.nama_lengkap || user?.name || 'Administrator'}
             </p>
-            <p className="text-[10px] text-slate-400 truncate">
-              {user?.email || 'admin@smkpgritelagasari.sch.id'}
-            </p>
+            <div className="flex items-center gap-1 mt-0.5">
+              <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30 uppercase tracking-wider">
+                {user?.role ? user.role.replace('_', ' ') : 'Petugas'}
+              </span>
+              {user?.ruangan && (
+                <span className="text-[9px] text-slate-400 truncate">
+                  • {user.ruangan.nama_ruangan}
+                </span>
+              )}
+            </div>
           </div>
           <ChevronRight className="h-3 w-3 text-slate-500 group-hover:text-slate-300 flex-shrink-0" />
         </Link>

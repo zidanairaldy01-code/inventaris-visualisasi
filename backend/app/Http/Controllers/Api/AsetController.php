@@ -307,6 +307,11 @@ class AsetController extends Controller
 
     public function destroy(Request $request, string $id)
     {
+        $user = $request->user();
+        if ($user && !in_array($user->role, ['super_admin', 'admin'])) {
+            return response()->json(['message' => 'Hanya Super Administrator yang berhak menghapus data sarana prasarana.'], 403);
+        }
+
         $aset = Aset::findOrFail($id);
 
         History::create([
@@ -323,6 +328,11 @@ class AsetController extends Controller
 
     public function batchDelete(Request $request)
     {
+        $user = $request->user();
+        if ($user && !in_array($user->role, ['super_admin', 'admin'])) {
+            return response()->json(['message' => 'Hanya Super Administrator yang berhak menghapus data sarana prasarana.'], 403);
+        }
+
         $validated = $request->validate([
             'ids' => 'required|array',
             'ids.*' => 'integer|exists:asets,id',
