@@ -17,11 +17,17 @@ class AsetController extends Controller
         $perPage = $request->query('per_page', 50);
         $idFolder = $request->query('id_folder');
         
+        $idRuangan = $request->query('id_ruangan');
+        
         $query = Aset::with(['kategori', 'kondisi', 'sumberDana', 'folder'])
-            ->select(['id', 'kode_aset', 'nama_aset', 'merek', 'jumlah', 'satuan', 
+            ->select(['id', 'kode_aset', 'nama_aset', 'merek', 'tipe', 'warna', 'jumlah', 'satuan', 
                      'harga_perolehan', 'status_aset', 'id_kategori', 'id_kondisi', 
-                     'id_sumber_dana', 'id_ruangan', 'id_folder', 'created_at'])
+                     'id_sumber_dana', 'id_ruangan', 'id_folder', 'foto_thumbnail', 'deskripsi', 'created_at'])
             ->orderBy('created_at', 'desc');
+
+        if ($idRuangan && is_numeric($idRuangan)) {
+            $query->where('id_ruangan', $idRuangan);
+        }
 
         if ($idFolder === 'null') {
             $query->whereNull('id_folder');
@@ -31,7 +37,7 @@ class AsetController extends Controller
             $query->where('id_folder', $idFolder);
         }
 
-        if ($perPage === 'all') {
+        if ($perPage === 'all' || !$request->has('per_page')) {
             $asets = $query->get();
             return response()->json($asets);
         }
@@ -58,9 +64,11 @@ class AsetController extends Controller
             ->map(fn($g) => ['jumlah' => $g->count(), 'nilai' => $g->sum(fn($a) => (float) ($a->harga_perolehan ?? 0))]);
 
         // Hitung jumlah ruangan, gedung, kategori
-        $totalRuangan = \App\Models\Ruangan::count();
-        $totalGedung  = \App\Models\Gedung::count();
-        $totalKategori = \App\Models\Kategori::count();
+        $totalRuanganWorkshop = \App\Models\Ruangan::where('jenis', 'workshop')->count();
+        $totalRuanganGedung   = \App\Models\Ruangan::where('jenis', 'gedung')->count();
+        $totalRuangan         = \App\Models\Ruangan::count();
+        $totalGedung          = \App\Models\Gedung::count();
+        $totalKategori        = \App\Models\Kategori::count();
 
         // Hitung total nilai pembelian dari daftar belanja
         $totalBelanja = \App\Models\DaftarBelanja::sum('jumlah');
@@ -71,12 +79,19 @@ class AsetController extends Controller
         $totalNilaiSekarangSarana  = (float) \App\Models\SaranaPrasarana::sum('nilai_harga_sekarang');
         $totalItemSarana           = \App\Models\SaranaPrasarana::count();
 
+        // Hitung peminjaman aktif & servis proses
+        $totalPeminjamanAktif = \App\Models\Peminjaman::where('status', 'Dipinjam')->count();
+        $totalServisProses    = \App\Models\Servis::where('status', 'Proses')->count();
+
         return response()->json([
             'total_item'                   => $totalItem,
             'total_unit'                   => $totalUnit,
             'total_nilai'                  => $totalNilai,
             'per_kategori'                 => $perKategori,
-            'total_ruangan'                => $totalRuangan,
+            'total_ruangan'                => $totalRuanganWorkshop, // Sesuai kartu "Ruangan Workshop" di dashboard
+            'total_ruangan_all'            => $totalRuangan,
+            'total_ruangan_gedung'         => $totalRuanganGedung,
+            'total_ruangan_workshop'       => $totalRuanganWorkshop,
             'total_gedung'                 => $totalGedung,
             'total_kategori'               => $totalKategori,
             'total_belanja'                => (float) $totalBelanja,
@@ -84,16 +99,18 @@ class AsetController extends Controller
             'total_nilai_pembelian_sarana' => $totalNilaiPembelianSarana,
             'total_nilai_sekarang_sarana'  => $totalNilaiSekarangSarana,
             'total_item_sarana'            => $totalItemSarana,
+            'total_peminjaman_aktif'       => $totalPeminjamanAktif,
+            'total_servis_proses'          => $totalServisProses,
         ]);
     }
 
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'id_kategori' => 'required|exists:kategoris,id',
+            'id_kategori' => 'nullable|integer',
             'id_ruangan' => 'required|exists:ruangans,id',
             'id_sumber_dana' => 'nullable|exists:sumber_danas,id',
-            'id_kondisi' => 'required|exists:kondisis,id',
+            'id_kondisi' => 'nullable|integer',
             'id_folder' => 'nullable|exists:folder_inventaris,id',
             'kode_aset' => 'nullable|string|max:100',
             'nama_aset' => 'required|string|max:255',
@@ -102,14 +119,46 @@ class AsetController extends Controller
             'warna' => 'nullable|string|max:100',
             'jumlah' => 'required|integer',
             'satuan' => 'required|string|max:50',
-            'tahun_perolehan' => 'nullable|integer',
-            'harga_perolehan' => 'nullable|numeric',
+            'tahun_perolehan' => 'nullable',
+            'harga_perolehan' => 'nullable',
             'nomor_seri' => 'nullable|string|max:100',
             'tanggal_perolehan' => 'nullable|date',
             'deskripsi' => 'nullable|string',
-            'status_aset' => 'required|string|in:aktif,dipinjam,rusak,dihapus',
+            'status_aset' => 'nullable|string|in:aktif,dipinjam,rusak,dihapus',
             'foto_thumbnail' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
         ]);
+
+        if (empty($validated['id_kategori']) || !\App\Models\Kategori::where('id', $validated['id_kategori'])->exists()) {
+            $defaultKategori = \App\Models\Kategori::firstOrCreate(
+                ['nama_kategori' => 'Peralatan & Fasilitas'],
+                ['nama_kategori' => 'Peralatan & Fasilitas', 'kode_kategori' => 'FASILITAS']
+            );
+            $validated['id_kategori'] = $defaultKategori->id;
+        }
+
+        if (empty($validated['id_kondisi']) || !\App\Models\Kondisi::where('id', $validated['id_kondisi'])->exists()) {
+            $defaultKondisi = \App\Models\Kondisi::firstOrCreate(
+                ['nama_kondisi' => 'Baik'],
+                ['nama_kondisi' => 'Baik']
+            );
+            $validated['id_kondisi'] = $defaultKondisi->id;
+        }
+
+        if (empty($validated['status_aset'])) {
+            $validated['status_aset'] = 'aktif';
+        }
+
+        if (array_key_exists('harga_perolehan', $validated)) {
+            $validated['harga_perolehan'] = (!is_null($validated['harga_perolehan']) && $validated['harga_perolehan'] !== '')
+                ? (float) $validated['harga_perolehan']
+                : null;
+        }
+
+        if (array_key_exists('tahun_perolehan', $validated)) {
+            $validated['tahun_perolehan'] = (!is_null($validated['tahun_perolehan']) && $validated['tahun_perolehan'] !== '')
+                ? (int) $validated['tahun_perolehan']
+                : (int) date('Y');
+        }
 
         // Handle foto upload
         if ($request->hasFile('foto_thumbnail')) {
@@ -117,7 +166,7 @@ class AsetController extends Controller
             $validated['foto_thumbnail'] = '/storage/' . $path;
         }
 
-        $validated['id_user'] = $request->user()->id;
+        $validated['id_user'] = $request->user()?->id ?? \App\Models\User::first()?->id ?? 1;
 
         DB::beginTransaction();
         try {
@@ -126,7 +175,7 @@ class AsetController extends Controller
             $ruangan = Ruangan::find($aset->id_ruangan);
             History::create([
                 'id_aset' => $aset->id,
-                'id_user' => $request->user()->id,
+                'id_user' => $validated['id_user'],
                 'aksi' => 'PENAMBAHAN',
                 'keterangan' => 'Aset baru ditambahkan ke Ruangan ' . ($ruangan ? $ruangan->nama_ruangan : '-'),
                 'tanggal' => now()
@@ -152,10 +201,10 @@ class AsetController extends Controller
         $aset = Aset::findOrFail($id);
 
         $validated = $request->validate([
-            'id_kategori' => 'required|exists:kategoris,id',
+            'id_kategori' => 'nullable|integer',
             'id_ruangan' => 'required|exists:ruangans,id',
             'id_sumber_dana' => 'nullable|exists:sumber_danas,id',
-            'id_kondisi' => 'required|exists:kondisis,id',
+            'id_kondisi' => 'nullable|integer',
             'id_folder' => 'nullable|exists:folder_inventaris,id',
             'kode_aset' => 'nullable|string|max:100',
             'nama_aset' => 'required|string|max:255',
@@ -164,14 +213,42 @@ class AsetController extends Controller
             'warna' => 'nullable|string|max:100',
             'jumlah' => 'required|integer',
             'satuan' => 'required|string|max:50',
-            'tahun_perolehan' => 'nullable|integer',
-            'harga_perolehan' => 'nullable|numeric',
+            'tahun_perolehan' => 'nullable',
+            'harga_perolehan' => 'nullable',
             'nomor_seri' => 'nullable|string|max:100',
             'tanggal_perolehan' => 'nullable|date',
             'deskripsi' => 'nullable|string',
-            'status_aset' => 'required|string|in:aktif,dipinjam,rusak,dihapus',
-            'foto_thumbnail' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
+            'status_aset' => 'nullable|string|in:aktif,dipinjam,rusak,dihapus',
+            'foto_thumbnail' => 'nullable'
         ]);
+
+        if (empty($validated['id_kategori']) || !\App\Models\Kategori::where('id', $validated['id_kategori'])->exists()) {
+            $defaultKategori = \App\Models\Kategori::firstOrCreate(
+                ['nama_kategori' => 'Peralatan & Fasilitas'],
+                ['nama_kategori' => 'Peralatan & Fasilitas', 'kode_kategori' => 'FASILITAS']
+            );
+            $validated['id_kategori'] = $defaultKategori->id;
+        }
+
+        if (empty($validated['id_kondisi']) || !\App\Models\Kondisi::where('id', $validated['id_kondisi'])->exists()) {
+            $validated['id_kondisi'] = $aset->id_kondisi;
+        }
+
+        if (empty($validated['status_aset'])) {
+            $validated['status_aset'] = $aset->status_aset ?? 'aktif';
+        }
+
+        if (array_key_exists('harga_perolehan', $validated)) {
+            $validated['harga_perolehan'] = (!is_null($validated['harga_perolehan']) && $validated['harga_perolehan'] !== '')
+                ? (float) $validated['harga_perolehan']
+                : null;
+        }
+
+        if (array_key_exists('tahun_perolehan', $validated)) {
+            $validated['tahun_perolehan'] = (!is_null($validated['tahun_perolehan']) && $validated['tahun_perolehan'] !== '')
+                ? (int) $validated['tahun_perolehan']
+                : $aset->tahun_perolehan;
+        }
 
         // Handle foto upload
         if ($request->hasFile('foto_thumbnail')) {
@@ -183,7 +260,11 @@ class AsetController extends Controller
             
             $path = $request->file('foto_thumbnail')->store('aset', 'public');
             $validated['foto_thumbnail'] = '/storage/' . $path;
+        } else {
+            unset($validated['foto_thumbnail']);
         }
+
+        $userId = $request->user()?->id ?? $aset->id_user ?? \App\Models\User::first()?->id ?? 1;
 
         DB::beginTransaction();
         try {
@@ -194,7 +275,7 @@ class AsetController extends Controller
 
                 History::create([
                     'id_aset' => $aset->id,
-                    'id_user' => $request->user()->id,
+                    'id_user' => $userId,
                     'aksi' => 'MUTASI',
                     'keterangan' => 'Aset dipindahkan dari Ruangan ' . ($ruanganLama ? $ruanganLama->nama_ruangan : '-') . ' ke Ruangan ' . ($ruanganBaru ? $ruanganBaru->nama_ruangan : '-'),
                     'tanggal' => now()
@@ -208,7 +289,7 @@ class AsetController extends Controller
 
                 History::create([
                     'id_aset' => $aset->id,
-                    'id_user' => $request->user()->id,
+                    'id_user' => $userId,
                     'aksi' => 'UBAH KONDISI',
                     'keterangan' => 'Kondisi diubah dari ' . ($kondisiLama ? $kondisiLama->nama_kondisi : '-') . ' menjadi ' . ($kondisiBaru ? $kondisiBaru->nama_kondisi : '-'),
                     'tanggal' => now()
@@ -230,7 +311,7 @@ class AsetController extends Controller
 
         History::create([
             'id_aset' => $aset->id,
-            'id_user' => $request->user()->id,
+            'id_user' => $request->user()?->id ?? \App\Models\User::first()?->id ?? 1,
             'aksi' => 'PENGHAPUSAN',
             'keterangan' => 'Aset dihapus (Soft Delete)',
             'tanggal' => now()

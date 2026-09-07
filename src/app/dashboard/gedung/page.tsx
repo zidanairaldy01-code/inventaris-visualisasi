@@ -6,8 +6,8 @@ import axios from '@/lib/axios';
 import {
   Building2, Search, Plus, Edit2, Trash2, RefreshCw,
   MapPin, Layers, X, Save, AlertTriangle, ChevronLeft,
-  ChevronRight, Folder, FolderOpen, ArrowLeft, Grid,
-  List as ListIcon, Package, Eye, CheckCircle2
+  ChevronRight, ArrowLeft, Grid,
+  List as ListIcon, Package
 } from 'lucide-react';
 import Toast from '@/components/Toast';
 
@@ -93,20 +93,33 @@ const emptyRuanganForm = (): RuanganFormData => ({
   deskripsi: '',
 });
 
+const DEFAULT_KONDISIS = [
+  { id: 1, nama_kondisi: 'Baik' },
+  { id: 2, nama_kondisi: 'Cukup Baik' },
+  { id: 3, nama_kondisi: 'Rusak Ringan' },
+  { id: 4, nama_kondisi: 'Rusak Berat' },
+  { id: 5, nama_kondisi: 'Tidak Layak Pakai' },
+];
+
+const getKondisiBadge = (nama?: string) => {
+  if (!nama) return 'bg-slate-100 text-slate-600 border border-slate-200';
+  const n = nama.toLowerCase();
+  if (n === 'baik') return 'bg-emerald-50 text-emerald-700 border border-emerald-200';
+  if (n === 'cukup baik') return 'bg-sky-50 text-sky-700 border border-sky-200';
+  if (n === 'rusak ringan') return 'bg-amber-50 text-amber-700 border border-amber-200';
+  if (n === 'rusak berat') return 'bg-rose-50 text-rose-700 border border-rose-200';
+  if (n === 'tidak layak pakai') return 'bg-purple-50 text-purple-700 border border-purple-200';
+  if (n.includes('rusak')) return 'bg-rose-50 text-rose-700 border border-rose-200';
+  return 'bg-slate-50 text-slate-700 border border-slate-200';
+};
+
 const getImageUrl = (path: string | null) => {
   if (!path) return null;
   if (path.startsWith('http')) return path;
   return `http://localhost:8000${path}`;
 };
 
-const gedungColorMap: Record<number, { bg: string; border: string; text: string; iconBg: string }> = {
-  0: { bg: 'bg-blue-50 hover:bg-blue-100/80', border: 'border-blue-200', text: 'text-blue-800', iconBg: 'bg-blue-600' },
-  1: { bg: 'bg-indigo-50 hover:bg-indigo-100/80', border: 'border-indigo-200', text: 'text-indigo-800', iconBg: 'bg-indigo-600' },
-  2: { bg: 'bg-purple-50 hover:bg-purple-100/80', border: 'border-purple-200', text: 'text-purple-800', iconBg: 'bg-purple-600' },
-  3: { bg: 'bg-emerald-50 hover:bg-emerald-100/80', border: 'border-emerald-200', text: 'text-emerald-800', iconBg: 'bg-emerald-600' },
-  4: { bg: 'bg-amber-50 hover:bg-amber-100/80', border: 'border-amber-200', text: 'text-amber-800', iconBg: 'bg-amber-600' },
-  5: { bg: 'bg-rose-50 hover:bg-rose-100/80', border: 'border-rose-200', text: 'text-rose-800', iconBg: 'bg-rose-600' },
-};
+
 
 /* ══════════════════════ MAIN COMPONENT ══════════════════════ */
 export default function GedungDrivePage() {
@@ -163,7 +176,6 @@ export default function GedungDrivePage() {
     jumlah: '1',
     satuan: 'Unit',
     harga_perolehan: '',
-    id_kategori: '',
     id_kondisi: '',
     deskripsi: '',
   });
@@ -174,8 +186,7 @@ export default function GedungDrivePage() {
   const [deletingAset, setDeletingAset] = useState(false);
   
   // Master data
-  const [kategoris, setKategoris] = useState<{ id: number; nama_kategori: string }[]>([]);
-  const [kondisiList, setKondisiList] = useState<{ id: number; nama_kondisi: string }[]>([]);
+  const [kondisiList, setKondisiList] = useState<{ id: number; nama_kondisi: string }[]>(DEFAULT_KONDISIS);
 
   const showToast = useCallback((message: string, type: 'success' | 'error' | 'warning') => {
     setToast({ show: true, message, type });
@@ -198,9 +209,9 @@ export default function GedungDrivePage() {
   const fetchRuangans = useCallback(async (gedungId: number | null = activeGedungId) => {
     try {
       setLoading(true);
-      let url = '/api/ruangans';
+      let url = '/api/ruangans?jenis=gedung';
       if (typeof gedungId === 'number' && gedungId > 0) {
-        url += `?id_gedung=${gedungId}`;
+        url += `&id_gedung=${gedungId}`;
       }
       const res = await axios.get(url);
       setRuangans(res.data);
@@ -234,9 +245,9 @@ export default function GedungDrivePage() {
     if (!ruanganId) return;
     try {
       setLoading(true);
-      const res = await axios.get('/api/asets');
-      const allAsets = res.data as Aset[];
-      const filtered = allAsets.filter(a => a.id_ruangan === ruanganId);
+      const res = await axios.get(`/api/asets?per_page=all&id_ruangan=${ruanganId}`);
+      const rawData = Array.isArray(res.data) ? res.data : (res.data?.data ?? []);
+      const filtered = (rawData as Aset[]).filter(a => a.id_ruangan === ruanganId);
       setAsets(filtered);
       setFilteredAsets(filtered);
     } catch (e) {
@@ -246,29 +257,23 @@ export default function GedungDrivePage() {
     }
   }, [activeRuanganId]);
 
-  const fetchKategoris = useCallback(async () => {
-    try {
-      const res = await axios.get('/api/kategoris');
-      setKategoris(res.data);
-    } catch (e) {
-      console.error(e);
-    }
-  }, []);
-
   const fetchKondisiList = useCallback(async () => {
     try {
       const res = await axios.get('/api/kondisis');
-      setKondisiList(res.data);
-    } catch (e) {
-      console.error(e);
+      if (Array.isArray(res.data) && res.data.length > 0) {
+        setKondisiList(res.data);
+      } else {
+        setKondisiList(DEFAULT_KONDISIS);
+      }
+    } catch {
+      setKondisiList(DEFAULT_KONDISIS);
     }
   }, []);
 
   useEffect(() => {
     fetchGedungs();
-    fetchKategoris();
     fetchKondisiList();
-  }, [fetchGedungs, fetchKategoris, fetchKondisiList]);
+  }, [fetchGedungs, fetchKondisiList]);
 
   useEffect(() => {
     if (activeGedungId !== null && activeRuanganId === null) {
@@ -366,14 +371,10 @@ export default function GedungDrivePage() {
       if (gedungFoto) formData.append('foto_gedung', gedungFoto);
 
       if (editGedungTarget) {
-        await axios.post(`/api/gedungs/${editGedungTarget.id}?_method=PUT`, formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
+        await axios.post(`/api/gedungs/${editGedungTarget.id}?_method=PUT`, formData);
         showToast('Gedung berhasil diperbarui', 'success');
       } else {
-        await axios.post('/api/gedungs', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
+        await axios.post('/api/gedungs', formData);
         showToast('Gedung baru berhasil dibuat', 'success');
       }
       setShowGedungModal(false);
@@ -436,6 +437,7 @@ export default function GedungDrivePage() {
       const gedungId = editRuanganTarget?.id_gedung ?? activeGedungId;
       formData.append('id_gedung', String(gedungId));
       formData.append('nama_ruangan', ruanganForm.nama_ruangan);
+      formData.append('jenis', 'gedung');
       if (ruanganForm.kode_ruangan) formData.append('kode_ruangan', ruanganForm.kode_ruangan);
       if (ruanganForm.lantai) formData.append('lantai', ruanganForm.lantai);
       if (ruanganForm.luas_ruangan) formData.append('luas_ruangan', ruanganForm.luas_ruangan);
@@ -443,14 +445,10 @@ export default function GedungDrivePage() {
       if (ruanganFoto) formData.append('foto_ruangan', ruanganFoto);
 
       if (editRuanganTarget) {
-        await axios.post(`/api/ruangans/${editRuanganTarget.id}?_method=PUT`, formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
+        await axios.post(`/api/ruangans/${editRuanganTarget.id}?_method=PUT`, formData);
         showToast('Ruangan berhasil diperbarui', 'success');
       } else {
-        await axios.post('/api/ruangans', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
+        await axios.post('/api/ruangans', formData);
         showToast('Ruangan baru berhasil dibuat', 'success');
       }
       setShowRuanganModal(false);
@@ -489,8 +487,7 @@ export default function GedungDrivePage() {
       jumlah: '1',
       satuan: 'Unit',
       harga_perolehan: '',
-      id_kategori: '',
-      id_kondisi: '',
+      id_kondisi: String(kondisiList[0]?.id ?? 1),
       deskripsi: '',
     });
     setAsetFoto(null);
@@ -509,7 +506,6 @@ export default function GedungDrivePage() {
       jumlah: String(a.jumlah),
       satuan: a.satuan,
       harga_perolehan: a.harga_perolehan ? String(a.harga_perolehan) : '',
-      id_kategori: String(a.kategori?.id ?? ''),
       id_kondisi: String(a.kondisi?.id ?? ''),
       deskripsi: '',
     });
@@ -520,44 +516,49 @@ export default function GedungDrivePage() {
 
   const handleSaveAset = async () => {
     if (!asetForm.nama_aset.trim()) { showToast('Nama aset wajib diisi', 'error'); return; }
-    if (!activeRuanganId && !editAsetTarget) {
+    const ruanganId = editAsetTarget?.id_ruangan ?? activeRuanganId;
+    if (!ruanganId) {
       showToast('Pilih ruangan terlebih dahulu', 'error');
       return;
     }
     try {
       setSavingAset(true);
       const formData = new FormData();
-      formData.append('nama_aset', asetForm.nama_aset);
-      if (asetForm.kode_aset) formData.append('kode_aset', asetForm.kode_aset);
-      if (asetForm.merek) formData.append('merek', asetForm.merek);
-      if (asetForm.tipe) formData.append('tipe', asetForm.tipe);
-      if (asetForm.warna) formData.append('warna', asetForm.warna);
-      formData.append('jumlah', asetForm.jumlah);
-      formData.append('satuan', asetForm.satuan);
+      formData.append('nama_aset', asetForm.nama_aset.trim());
+      if (asetForm.kode_aset) formData.append('kode_aset', asetForm.kode_aset.trim());
+      if (asetForm.merek) formData.append('merek', asetForm.merek.trim());
+      if (asetForm.tipe) formData.append('tipe', asetForm.tipe.trim());
+      if (asetForm.warna) formData.append('warna', asetForm.warna.trim());
+      formData.append('jumlah', asetForm.jumlah || '1');
+      formData.append('satuan', asetForm.satuan || 'Unit');
       if (asetForm.harga_perolehan) formData.append('harga_perolehan', asetForm.harga_perolehan);
-      formData.append('id_kategori', asetForm.id_kategori);
-      formData.append('id_kondisi', asetForm.id_kondisi);
-      formData.append('id_ruangan', String(editAsetTarget?.id_ruangan ?? activeRuanganId));
-      if (asetForm.deskripsi) formData.append('deskripsi', asetForm.deskripsi);
+      
+      const chosenKondisi = asetForm.id_kondisi ? asetForm.id_kondisi : String(kondisiList[0]?.id ?? 1);
+      formData.append('id_kondisi', chosenKondisi);
+      formData.append('id_ruangan', String(ruanganId));
+      if (asetForm.deskripsi) formData.append('deskripsi', asetForm.deskripsi.trim());
       formData.append('tahun_perolehan', String(new Date().getFullYear()));
       formData.append('status_aset', 'aktif');
       if (asetFoto) formData.append('foto_thumbnail', asetFoto);
 
       if (editAsetTarget) {
-        await axios.post(`/api/asets/${editAsetTarget.id}?_method=PUT`, formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
+        await axios.post(`/api/asets/${editAsetTarget.id}?_method=PUT`, formData);
         showToast('Aset berhasil diperbarui', 'success');
       } else {
-        await axios.post('/api/asets', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
+        await axios.post('/api/asets', formData);
         showToast('Aset baru berhasil dibuat', 'success');
       }
       setShowAsetModal(false);
       fetchAsets(); fetchRuangans(); fetchGedungs();
-    } catch {
-      showToast('Gagal menyimpan aset', 'error');
+    } catch (err: unknown) {
+      const e = err as { response?: { status?: number; data?: { message?: string; errors?: Record<string, string[]> } } };
+      if (e?.response?.status === 401) {
+        showToast('Sesi login telah berakhir. Silakan login kembali.', 'error');
+        return;
+      }
+      const errMsg = e?.response?.data?.message ||
+        (e?.response?.data?.errors ? Object.values(e.response.data.errors).flat().join(', ') : 'Gagal menyimpan aset');
+      showToast(errMsg, 'error');
     } finally { setSavingAset(false); }
   };
 
@@ -755,58 +756,72 @@ export default function GedungDrivePage() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {gedungs.map((g, idx) => {
-                const colorKey = idx % 6;
-                const color = gedungColorMap[colorKey] || gedungColorMap[0];
                 const ruanganCount = g.ruangans?.length ?? g.ruangans_count ?? 0;
+                const gradients = [
+                  { gradient: 'from-blue-600 to-indigo-600', bg: 'bg-blue-50', iconColor: 'text-blue-600' },
+                  { gradient: 'from-violet-600 to-purple-600', bg: 'bg-violet-50', iconColor: 'text-violet-600' },
+                  { gradient: 'from-emerald-500 to-teal-500', bg: 'bg-emerald-50', iconColor: 'text-emerald-600' },
+                  { gradient: 'from-amber-500 to-orange-500', bg: 'bg-amber-50', iconColor: 'text-amber-600' },
+                  { gradient: 'from-rose-500 to-red-500', bg: 'bg-rose-50', iconColor: 'text-rose-600' },
+                  { gradient: 'from-cyan-500 to-teal-500', bg: 'bg-cyan-50', iconColor: 'text-cyan-600' },
+                ];
+                const color = gradients[idx % gradients.length];
 
                 return (
                   <div
                     key={g.id}
                     onClick={() => setActiveGedungId(g.id)}
-                    className={`${color.bg} border ${color.border} rounded-2xl p-5 cursor-pointer transition-all duration-200 hover:-translate-y-1 hover:shadow-lg group relative overflow-hidden`}
+                    className="relative bg-white overflow-hidden rounded-2xl border border-slate-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 p-5 cursor-pointer flex flex-col justify-between group"
                   >
-                    <div className="flex items-start justify-between mb-3">
-                      <div className={`p-3 ${color.iconBg} rounded-xl text-white shadow-md group-hover:scale-110 transition-transform`}>
-                        {g.foto_gedung ? (
-                          <img src={getImageUrl(g.foto_gedung) || ''} alt={g.nama_gedung} className="w-6 h-6 object-cover rounded" />
-                        ) : (
-                          <Building2 className="h-6 w-6" />
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          onClick={(e) => openEditGedung(g, e)}
-                          className="p-1.5 bg-white/80 hover:bg-white text-slate-600 rounded-lg shadow-sm"
-                          title="Edit Gedung"
-                        >
-                          <Edit2 className="h-3.5 w-3.5" />
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setDeleteGedungTarget(g); }}
-                          className="p-1.5 bg-white/80 hover:bg-white text-red-600 rounded-lg shadow-sm"
-                          title="Hapus Gedung"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    </div>
+                    {/* Gradient strip top — muncul saat hover, sama persis dengan dashboard */}
+                    <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${color.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
 
                     <div>
-                      <h3 className={`font-bold text-base ${color.text} group-hover:underline line-clamp-1`}>
-                        {g.nama_gedung}
-                      </h3>
-                      {g.kode_gedung && <p className="text-xs text-slate-500 font-mono mt-0.5">{g.kode_gedung}</p>}
-                      {g.deskripsi && <p className="text-xs text-slate-500 truncate mt-0.5">{g.deskripsi}</p>}
-                      <div className="flex items-center gap-3 mt-3 text-xs text-slate-600">
-                        <div className="flex items-center gap-1">
-                          <Layers className="h-3.5 w-3.5 text-slate-400" />
-                          <span className="font-semibold">{g.jumlah_lantai ?? 0}</span> lantai
+                      <div className="flex items-start justify-between mb-3">
+                        <div className={`p-3 rounded-2xl ${color.bg} group-hover:scale-110 transition-transform duration-300`}>
+                          {g.foto_gedung ? (
+                            <img src={getImageUrl(g.foto_gedung) || ''} alt={g.nama_gedung} className="w-5 h-5 object-cover rounded" />
+                          ) : (
+                            <Building2 className={`h-5 w-5 ${color.iconColor}`} />
+                          )}
                         </div>
                         <div className="flex items-center gap-1">
-                          <MapPin className="h-3.5 w-3.5 text-slate-400" />
-                          <span className="font-semibold">{ruanganCount}</span> ruangan
+                          <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${color.bg} ${color.iconColor} border border-slate-100`}>
+                            Gedung
+                          </span>
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-1">
+                            <button
+                              onClick={(e) => openEditGedung(g, e)}
+                              className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg"
+                              title="Edit Gedung"
+                            >
+                              <Edit2 className="h-3 w-3" />
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setDeleteGedungTarget(g); }}
+                              className="p-1.5 bg-red-50 hover:bg-red-100 text-red-500 rounded-lg"
+                              title="Hapus Gedung"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </button>
+                          </div>
                         </div>
                       </div>
+
+                      <p className="text-xs font-semibold text-slate-500 mb-1">{g.kode_gedung ?? 'Tanpa Kode'}</p>
+                      <p className="text-lg font-black text-slate-900 tracking-tight mb-1 line-clamp-1">{g.nama_gedung}</p>
+                      <p className="text-[11px] text-slate-400 line-clamp-1">{g.deskripsi ?? `${ruanganCount} ruangan · ${g.jumlah_lantai ?? 0} lantai`}</p>
+                    </div>
+
+                    {/* Footer — sama dengan dashboard */}
+                    <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-100 text-xs font-semibold text-slate-400 group-hover:text-indigo-600 transition-colors">
+                      <span className="flex items-center gap-2">
+                        <MapPin className="h-3 w-3" />
+                        {ruanganCount} Ruangan
+                        <Layers className="h-3 w-3 ml-1" />
+                        {g.jumlah_lantai ?? 0} Lantai
+                      </span>
+                      <ChevronRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
                     </div>
                   </div>
                 );
@@ -844,130 +859,141 @@ export default function GedungDrivePage() {
             </div>
           </div>
 
-          {/* Table */}
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
-              <div>
-                <h2 className="text-base font-semibold text-slate-900 flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-indigo-600" />
-                  Daftar Ruangan — {activeGedungTitle}
-                </h2>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  {filtered.length} ruangan {searchQuery ? `(dari ${ruangans.length})` : ''}
-                </p>
-              </div>
-            </div>
-            <div className="overflow-x-auto">
-              {loading ? (
-                <div className="flex items-center justify-center py-20">
-                  <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600" />
-                </div>
-              ) : paged.length === 0 ? (
-                <div className="text-center py-16">
-                  <MapPin className="h-12 w-12 text-slate-300 mx-auto mb-3" />
-                  <h3 className="text-slate-600 font-medium">{searchQuery ? 'Tidak ada ruangan sesuai pencarian' : `Belum ada ruangan di ${activeGedungTitle}`}</h3>
-                  {activeGedungId && !searchQuery && (
-                    <button onClick={openCreateRuangan}
-                      className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium">
-                      <Plus className="h-4 w-4" /> Tambah Ruangan ke Gedung Ini
-                    </button>
-                  )}
-                </div>
-              ) : (
-                <table className="w-full text-sm">
-                  <thead className="bg-gradient-to-r from-slate-50 to-slate-100 border-b border-slate-200">
-                    <tr>
-                      <th className="px-4 py-3 text-xs font-bold text-slate-600 uppercase tracking-wide text-left">No</th>
-                      {viewMode === 'all' && <th className="px-4 py-3 text-xs font-bold text-slate-600 uppercase tracking-wide text-left">Gedung</th>}
-                      <th className="px-4 py-3 text-xs font-bold text-slate-600 uppercase tracking-wide text-left">Kode</th>
-                      <th className="px-4 py-3 text-xs font-bold text-slate-600 uppercase tracking-wide text-left">Nama Ruangan</th>
-                      <th className="px-4 py-3 text-xs font-bold text-slate-600 uppercase tracking-wide text-center">Lantai</th>
-                      <th className="px-4 py-3 text-xs font-bold text-slate-600 uppercase tracking-wide text-center">Luas (m²)</th>
-                      <th className="px-4 py-3 text-xs font-bold text-slate-600 uppercase tracking-wide text-center">Aset</th>
-                      <th className="px-4 py-3 text-xs font-bold text-slate-600 uppercase tracking-wide text-center">Aksi</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {(paged as Ruangan[]).map((r, i) => (
-                      <tr 
-                        key={r.id} 
-                        onClick={() => handleRuanganClick(r)}
-                        className="hover:bg-indigo-50/40 transition-colors group cursor-pointer"
-                      >
-                        <td className="px-4 py-3 text-slate-500 text-xs">{(page - 1) * PER_PAGE + i + 1}</td>
-                        {viewMode === 'all' && (
-                          <td className="px-4 py-3 text-xs font-medium text-slate-700">
-                            {gedungs.find(g => g.id === r.id_gedung)?.nama_gedung ?? '-'}
-                          </td>
-                        )}
-                        <td className="px-4 py-3">
-                          <span className="font-mono text-xs bg-slate-100 text-slate-700 border border-slate-200 px-2 py-0.5 rounded">{r.kode_ruangan ?? '-'}</span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="font-semibold text-slate-900">{r.nama_ruangan}</div>
-                          {r.deskripsi && <div className="text-xs text-slate-400 truncate max-w-[200px]">{r.deskripsi}</div>}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <span className="px-2.5 py-1 bg-blue-100 text-blue-700 text-xs font-bold rounded-lg border border-blue-200">
-                            {r.lantai ?? '-'}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-center text-slate-600 font-medium">{r.luas_ruangan ?? '-'}</td>
-                        <td className="px-4 py-3 text-center">
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); handleRuanganClick(r); }}
-                            className="px-2.5 py-1 bg-purple-100 text-purple-700 text-xs font-bold rounded-lg border border-purple-200 hover:bg-purple-200 transition-colors"
-                          >
-                            {r.asets_count ?? 0} aset
-                          </button>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center justify-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button 
-                              onClick={(e) => { e.stopPropagation(); handleRuanganClick(r); }} 
-                              className="p-1.5 bg-emerald-100 text-emerald-600 rounded-lg hover:bg-emerald-200 transition-colors" 
-                              title="Lihat Aset"
-                            >
-                              <Eye className="h-3.5 w-3.5" />
-                            </button>
-                            <button 
-                              onClick={(e) => { e.stopPropagation(); openEditRuangan(r); }} 
-                              className="p-1.5 bg-indigo-100 text-indigo-600 rounded-lg hover:bg-indigo-200 transition-colors" 
-                              title="Edit"
-                            >
-                              <Edit2 className="h-3.5 w-3.5" />
-                            </button>
-                            <button 
-                              onClick={(e) => { e.stopPropagation(); setDeleteRuanganTarget(r); }} 
-                              className="p-1.5 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors" 
-                              title="Hapus"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
+          {/* Card Grid Ruangan */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-bold text-slate-800 flex items-center gap-2">
+                <MapPin className="h-5 w-5 text-indigo-500" />
+                Daftar Ruangan — {activeGedungTitle}
+                <span className="text-xs font-normal text-slate-400">
+                  ({filtered.length}{searchQuery ? ` dari ${ruangans.length}` : ''} ruangan)
+                </span>
+              </h2>
             </div>
 
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="px-6 py-3 border-t border-slate-100 flex items-center justify-between">
-                <span className="text-xs text-slate-500">Halaman {page} dari {totalPages}</span>
-                <div className="flex gap-1">
-                  <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-                    className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40 transition-colors">
-                    <ChevronLeft className="h-4 w-4 text-slate-600" />
-                  </button>
-                  <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-                    className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40 transition-colors">
-                    <ChevronRight className="h-4 w-4 text-slate-600" />
-                  </button>
-                </div>
+            {loading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="bg-white rounded-2xl border border-slate-100 p-5 animate-pulse">
+                    <div className="w-10 h-10 bg-slate-200 rounded-2xl mb-3" />
+                    <div className="h-4 bg-slate-200 rounded w-1/3 mb-2" />
+                    <div className="h-5 bg-slate-200 rounded w-3/4 mb-3" />
+                    <div className="h-3 bg-slate-200 rounded w-1/2 mt-4 pt-3 border-t border-slate-100" />
+                  </div>
+                ))}
               </div>
+            ) : paged.length === 0 ? (
+              <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-12 text-center">
+                <MapPin className="h-12 w-12 text-slate-300 mx-auto mb-3" />
+                <h3 className="text-base font-bold text-slate-700 mb-1">
+                  {searchQuery ? 'Tidak ada ruangan sesuai pencarian' : `Belum ada ruangan di ${activeGedungTitle}`}
+                </h3>
+                {activeGedungId && !searchQuery && (
+                  <button onClick={openCreateRuangan}
+                    className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 text-xs font-semibold shadow-sm transition-colors">
+                    <Plus className="h-4 w-4" /> Tambah Ruangan ke Gedung Ini
+                  </button>
+                )}
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {(paged as Ruangan[]).map((r, i) => {
+                    const ruanganGradients = [
+                      { gradient: 'from-indigo-500 to-blue-500', bg: 'bg-indigo-50', iconColor: 'text-indigo-600' },
+                      { gradient: 'from-emerald-500 to-teal-500', bg: 'bg-emerald-50', iconColor: 'text-emerald-600' },
+                      { gradient: 'from-violet-500 to-purple-500', bg: 'bg-violet-50', iconColor: 'text-violet-600' },
+                      { gradient: 'from-amber-500 to-orange-400', bg: 'bg-amber-50', iconColor: 'text-amber-600' },
+                      { gradient: 'from-rose-500 to-pink-500', bg: 'bg-rose-50', iconColor: 'text-rose-600' },
+                      { gradient: 'from-cyan-500 to-sky-500', bg: 'bg-cyan-50', iconColor: 'text-cyan-600' },
+                    ];
+                    const color = ruanganGradients[((page - 1) * PER_PAGE + i) % ruanganGradients.length];
+
+                    return (
+                      <div
+                        key={r.id}
+                        onClick={() => handleRuanganClick(r)}
+                        className="relative bg-white overflow-hidden rounded-2xl border border-slate-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 p-5 cursor-pointer flex flex-col justify-between group"
+                      >
+                        {/* Gradient strip top */}
+                        <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${color.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
+
+                        <div>
+                          <div className="flex items-start justify-between mb-3">
+                            <div className={`p-3 rounded-2xl ${color.bg} group-hover:scale-110 transition-transform duration-300`}>
+                              {r.foto_ruangan ? (
+                                <img src={getImageUrl(r.foto_ruangan) || ''} alt={r.nama_ruangan} className="w-5 h-5 object-cover rounded" />
+                              ) : (
+                                <MapPin className={`h-5 w-5 ${color.iconColor}`} />
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${color.bg} ${color.iconColor} border border-slate-100`}>
+                                Lantai {r.lantai ?? '-'}
+                              </span>
+                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-1">
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); openEditRuangan(r); }}
+                                  className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg"
+                                  title="Edit Ruangan"
+                                >
+                                  <Edit2 className="h-3 w-3" />
+                                </button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setDeleteRuanganTarget(r); }}
+                                  className="p-1.5 bg-red-50 hover:bg-red-100 text-red-500 rounded-lg"
+                                  title="Hapus Ruangan"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+
+                          {r.kode_ruangan && (
+                            <p className="text-xs font-semibold text-slate-500 mb-1 font-mono">{r.kode_ruangan}</p>
+                          )}
+                          <p className="text-lg font-black text-slate-900 tracking-tight mb-1 line-clamp-1">{r.nama_ruangan}</p>
+                          <p className="text-[11px] text-slate-400 line-clamp-1">
+                            {r.deskripsi ?? `${r.luas_ruangan ? `${r.luas_ruangan} m²` : 'Luas belum diisi'}`}
+                          </p>
+                          {viewMode === 'all' && (
+                            <p className="text-[10px] text-indigo-500 font-semibold mt-1 line-clamp-1">
+                              {gedungs.find(g => g.id === r.id_gedung)?.nama_gedung ?? ''}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Footer */}
+                        <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-100 text-xs font-semibold text-slate-400 group-hover:text-indigo-600 transition-colors">
+                          <span className="flex items-center gap-1.5">
+                            <Package className="h-3 w-3" />
+                            {r.asets_count ?? 0} Aset
+                          </span>
+                          <ChevronRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between pt-2">
+                    <span className="text-xs text-slate-500">Halaman {page} dari {totalPages}</span>
+                    <div className="flex gap-1">
+                      <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+                        className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40 transition-colors">
+                        <ChevronLeft className="h-4 w-4 text-slate-600" />
+                      </button>
+                      <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+                        className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40 transition-colors">
+                        <ChevronRight className="h-4 w-4 text-slate-600" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </>
@@ -1107,24 +1133,12 @@ export default function GedungDrivePage() {
                           </div>
                           
                           {aset.kondisi && (
-                            <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
-                              aset.kondisi.nama_kondisi.toLowerCase() === 'baik' 
-                                ? 'bg-emerald-100 text-emerald-700' 
-                                : aset.kondisi.nama_kondisi.toLowerCase().includes('rusak')
-                                ? 'bg-red-100 text-red-700'
-                                : 'bg-orange-100 text-orange-700'
-                            }`}>
+                            <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${getKondisiBadge(aset.kondisi.nama_kondisi)}`}>
                               {aset.kondisi.nama_kondisi}
                             </span>
                           )}
                         </div>
 
-                        {aset.kategori && (
-                          <p className="text-xs text-slate-400 mt-2 flex items-center gap-1">
-                            <Layers className="h-3 w-3" />
-                            {aset.kategori.nama_kategori}
-                          </p>
-                        )}
                       </div>
                     </div>
                   ))}
@@ -1540,20 +1554,6 @@ export default function GedungDrivePage() {
                     min="0"
                     className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Kategori</label>
-                  <select
-                    value={asetForm.id_kategori}
-                    onChange={e => setAsetForm(f => ({ ...f, id_kategori: e.target.value }))}
-                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  >
-                    <option value="">Pilih Kategori</option>
-                    {kategoris.map(k => (
-                      <option key={k.id} value={k.id}>{k.nama_kategori}</option>
-                    ))}
-                  </select>
                 </div>
 
                 <div>

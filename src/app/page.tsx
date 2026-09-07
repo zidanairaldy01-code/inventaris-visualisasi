@@ -42,8 +42,9 @@ export default function LandingPage() {
     setIsModalOpen(true);
     setIsLoading(true);
     try {
-      const res = await axios.get('/api/asets');
-      setAsets(res.data.filter((a: any) => a.id_ruangan === ruangan.id));
+      const res = await axios.get('/api/asets?per_page=all');
+      const data = Array.isArray(res.data) ? res.data : (res.data?.data ?? []);
+      setAsets(data.filter((a: any) => a.id_ruangan === ruangan.id));
     } catch (err) {
       console.error(err);
     } finally {

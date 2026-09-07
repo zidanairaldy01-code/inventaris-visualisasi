@@ -54,9 +54,7 @@ export default function AsetFotoModal({ aset, onClose, onUpdate }: Props) {
       formData.append('foto', file);
       formData.append('is_thumbnail', fotos.length === 0 && successCount === 0 ? '1' : '0');
       try {
-        await axios.post(`/api/asets/${aset.id}/fotos`, formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
+        await axios.post(`/api/asets/${aset.id}/fotos`, formData);
         successCount++;
       } catch (err) {
         console.error(err);

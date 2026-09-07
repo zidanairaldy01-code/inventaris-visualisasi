@@ -36,12 +36,14 @@ interface SaranaPrasaranaItem {
   kode: string | null;
   nama_barang: string;
   satuan: string;
+  luas_jumlah?: string | null;
   stok_awal: number;
   stok_masuk: number;
   stok_keluar: number;
   stok_akhir: number;
   nilai_harga_pembelian: number;
   nilai_harga_sekarang: number;
+  kondisi?: string | null;
   keterangan: string | null;
   id_user: number | null;
   id_folder: number | null;
@@ -55,11 +57,13 @@ interface FormData {
   kode: string;
   nama_barang: string;
   satuan: string;
+  luas_jumlah: string;
   stok_awal: string;
   stok_masuk: string;
   stok_keluar: string;
   nilai_harga_pembelian: string;
   nilai_harga_sekarang: string;
+  kondisi: string;
   keterangan: string;
 }
 
@@ -69,17 +73,22 @@ interface PreviewRow {
   luas_jumlah: string;
   nilai_harga_pembelian: number;
   nilai_harga_sekarang: number;
+  kondisi: string;
   keterangan: string;
   satuan: string;
 }
 
 /* ─────────────────────── Helpers ─────────────────────── */
 const kondisiStyle = (k?: string) => {
-  if (!k) return 'bg-slate-100 text-slate-600';
+  if (!k) return 'bg-slate-100 text-slate-600 border border-slate-200';
   const l = k.toLowerCase();
-  if (l.includes('baik')) return 'bg-emerald-100 text-emerald-700';
-  if (l.includes('ringan')) return 'bg-amber-100 text-amber-700';
-  return 'bg-rose-100 text-rose-700';
+  if (l === 'baik') return 'bg-emerald-50 text-emerald-700 border border-emerald-200';
+  if (l === 'cukup baik') return 'bg-sky-50 text-sky-700 border border-sky-200';
+  if (l === 'rusak ringan') return 'bg-amber-50 text-amber-700 border border-amber-200';
+  if (l === 'rusak berat') return 'bg-rose-50 text-rose-700 border border-rose-200';
+  if (l === 'tidak layak pakai') return 'bg-purple-50 text-purple-700 border border-purple-200';
+  if (l.includes('rusak')) return 'bg-rose-50 text-rose-700 border border-rose-200';
+  return 'bg-slate-50 text-slate-700 border border-slate-200';
 };
 
 const formatRupiah = (n: number) =>
@@ -97,11 +106,13 @@ const emptyForm = (): FormData => ({
   kode: '',
   nama_barang: '',
   satuan: 'Unit',
-  stok_awal: '0',
+  luas_jumlah: '',
+  stok_awal: '1',
   stok_masuk: '0',
   stok_keluar: '0',
   nilai_harga_pembelian: '0',
   nilai_harga_sekarang: '0',
+  kondisi: 'Baik',
   keterangan: '',
 });
 
@@ -201,7 +212,8 @@ function parseKekayaanExcel(file: File): Promise<PreviewRow[]> {
         let colLuas     = findCol('luas', 'jumlah', 'vol', 'banyak', 'qty');
         let colBeli     = findCol('pembelian', 'perolehan', 'harga beli', 'nilai beli', 'harga perolehan');
         let colSekarang = findCol('sekarang', 'saat ini', 'harga sekarang', 'nilai sekarang');
-        let colKet      = findCol('ket', 'keterangan', 'catatan', 'kondisi', 'lokasi');
+        let colKondisi  = findCol('kondisi', 'keadaan');
+        let colKet      = findCol('ket', 'keterangan', 'catatan', 'lokasi');
 
         const totalCols = (rows[headerIdx] || []).length;
         if (colJenis === -1 && totalCols >= 2) colJenis = 1;
@@ -238,14 +250,31 @@ function parseKekayaanExcel(file: File): Promise<PreviewRow[]> {
           const skrg      = colSekarang >= 0 ? parseAngka(row[colSekarang]) : 0;
           const ket       = colKet >= 0 ? String(row[colKet] ?? '').trim() : '';
 
+          let kondisi = 'Baik';
+          if (colKondisi >= 0 && row[colKondisi]) {
+            const kVal = String(row[colKondisi]).trim();
+            if (kVal) kondisi = kVal;
+          } else if (ket) {
+            const lk = ket.toLowerCase();
+            if (lk.includes('tidak layak')) kondisi = 'Tidak Layak Pakai';
+            else if (lk.includes('rusak berat')) kondisi = 'Rusak Berat';
+            else if (lk.includes('rusak ringan') || lk.includes('rusak')) kondisi = 'Rusak Ringan';
+            else if (lk.includes('cukup baik')) kondisi = 'Cukup Baik';
+            else if (lk.includes('baik')) kondisi = 'Baik';
+          }
+
+          const satuanMatch = jumlahRaw.match(/[a-zA-Z²³]+/);
+          const satuan = satuanMatch ? satuanMatch[0] : 'Unit';
+
           result.push({
-            no: parseInt(noVal) || (result.length + 1),
+            no: parseInt(noVal) || result.length + 1,
             jenis_kekayaan: jenis,
-            luas_jumlah: jumlahRaw || '1',
+            luas_jumlah: jumlahRaw,
             nilai_harga_pembelian: beli,
             nilai_harga_sekarang: skrg,
+            kondisi,
             keterangan: ket,
-            satuan: 'Unit',
+            satuan,
           });
         }
 
@@ -284,6 +313,7 @@ export default function SaranaPrasaranaPage() {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' | 'warning' }>({ show: false, message: '', type: 'success' });
   const [search, setSearch] = useState('');
+  const [filterKondisi, setFilterKondisi] = useState('all');
   const [refreshing, setRefreshing] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -374,15 +404,20 @@ export default function SaranaPrasaranaPage() {
     // Tidak digunakan — data kategori/ruangan/kondisi tidak relevan untuk sarana & prasarana
   };
 
-  // Filter items by search only (no folder support for sarana prasarana)
+  // Filter items by search and kondisi
   useEffect(() => {
     let result = asets;
+
+    if (filterKondisi !== 'all') {
+      result = result.filter(a => (a.kondisi || 'Baik') === filterKondisi);
+    }
 
     if (search.trim()) {
       const q = search.toLowerCase();
       result = result.filter(a =>
         a.nama_barang.toLowerCase().includes(q) ||
         (a.kode?.toLowerCase().includes(q) ?? false) ||
+        (a.kondisi?.toLowerCase().includes(q) ?? false) ||
         (a.keterangan?.toLowerCase().includes(q) ?? false)
       );
     }
@@ -390,7 +425,7 @@ export default function SaranaPrasaranaPage() {
     setFiltered(result);
     setPage(1);
     setSelectedItemIds(new Set()); // Reset selections on filter change
-  }, [search, asets]);
+  }, [search, filterKondisi, asets]);
 
   /* ── Folder Handlers ── */
   const openAddFolder = () => {
@@ -492,11 +527,13 @@ export default function SaranaPrasaranaPage() {
       kode:                   item.kode || '',
       nama_barang:            item.nama_barang,
       satuan:                 item.satuan,
+      luas_jumlah:            item.luas_jumlah || (item.stok_awal ? `${item.stok_awal} ${item.satuan}` : ''),
       stok_awal:              String(item.stok_awal),
       stok_masuk:             String(item.stok_masuk),
       stok_keluar:            String(item.stok_keluar),
       nilai_harga_pembelian:  String(item.nilai_harga_pembelian ?? 0),
       nilai_harga_sekarang:   String(item.nilai_harga_sekarang ?? 0),
+      kondisi:                item.kondisi || 'Baik',
       keterangan:             item.keterangan || '',
     });
     setFormErrors({});
@@ -508,16 +545,26 @@ export default function SaranaPrasaranaPage() {
     setFormErrors({});
     setSubmitting(true);
     try {
+      let parsedStok = Number(formData.stok_awal) || 0;
+      if (parsedStok === 0 && formData.luas_jumlah) {
+        const match = formData.luas_jumlah.match(/\/ *(\d+)/);
+        if (match) parsedStok = parseInt(match[1]);
+        else if (!isNaN(Number(formData.luas_jumlah))) parsedStok = parseInt(formData.luas_jumlah);
+        else parsedStok = 1;
+      }
+
       const payload = {
         tanggal_pengambilan:    formData.tanggal_pengambilan || null,
         kode:                   formData.kode || null,
         nama_barang:            formData.nama_barang,
         satuan:                 formData.satuan || 'Unit',
-        stok_awal:              Number(formData.stok_awal) || 0,
+        luas_jumlah:            formData.luas_jumlah.trim() || `${parsedStok} ${formData.satuan || 'Unit'}`,
+        stok_awal:              parsedStok,
         stok_masuk:             Number(formData.stok_masuk) || 0,
         stok_keluar:            Number(formData.stok_keluar) || 0,
         nilai_harga_pembelian:  Number(formData.nilai_harga_pembelian) || 0,
         nilai_harga_sekarang:   Number(formData.nilai_harga_sekarang) || 0,
+        kondisi:                formData.kondisi || 'Baik',
         keterangan:             formData.keterangan || null,
       };
 
@@ -626,18 +673,28 @@ export default function SaranaPrasaranaPage() {
     setImportState('importing');
     setImportProgress({ current: 0, total, percent: 10, currentItemName: 'Menyiapkan paket data...' });
 
-    const payloadItems = rows.map(row => ({
-      tanggal_pengambilan:    new Date().toISOString().split('T')[0],
-      kode:                   null,
-      nama_barang:            row.jenis_kekayaan,
-      satuan:                 row.satuan || 'Unit',
-      stok_awal:              parseInt(row.luas_jumlah) || 1,
-      stok_masuk:             0,
-      stok_keluar:            0,
-      nilai_harga_pembelian:  row.nilai_harga_pembelian || 0,
-      nilai_harga_sekarang:   row.nilai_harga_sekarang  || 0,
-      keterangan:             row.keterangan || null,
-    }));
+    const payloadItems = rows.map(row => {
+      let parsedStok = parseInt(row.luas_jumlah) || 0;
+      if (parsedStok === 0 && row.luas_jumlah) {
+        const match = row.luas_jumlah.match(/\/ *(\d+)/);
+        if (match) parsedStok = parseInt(match[1]);
+        else parsedStok = 1;
+      }
+      return {
+        tanggal_pengambilan:    new Date().toISOString().split('T')[0],
+        kode:                   null,
+        nama_barang:            row.jenis_kekayaan,
+        satuan:                 row.satuan || 'Unit',
+        luas_jumlah:            row.luas_jumlah,
+        stok_awal:              parsedStok || 1,
+        stok_masuk:             0,
+        stok_keluar:            0,
+        nilai_harga_pembelian:  row.nilai_harga_pembelian || 0,
+        nilai_harga_sekarang:   row.nilai_harga_sekarang  || 0,
+        kondisi:                row.kondisi || 'Baik',
+        keterangan:             row.keterangan || null,
+      };
+    });
 
     try {
       const CHUNK_SIZE = 150;
@@ -704,7 +761,7 @@ export default function SaranaPrasaranaPage() {
     const ws = XLSX.utils.json_to_sheet(filtered.map((a, i) => ({
       'NO': i + 1,
       'JENIS KEKAYAAN': a.nama_barang,
-      'LUAS/JUMLAH': `${a.stok_akhir} ${a.satuan}`,
+      'LUAS/JUMLAH': a.luas_jumlah || `${a.stok_akhir} ${a.satuan}`,
       'NILAI HARGA PEMBELIAN': a.nilai_harga_pembelian || 0,
       'NILAI HARGA SEKARANG': a.nilai_harga_sekarang || 0,
       'KET': a.keterangan || '',
@@ -870,6 +927,22 @@ export default function SaranaPrasaranaPage() {
             </button>
           )}
         </div>
+
+        {/* Filter Kondisi */}
+        <div className="w-full sm:w-44">
+          <select
+            value={filterKondisi}
+            onChange={(e) => setFilterKondisi(e.target.value)}
+            className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 text-slate-700 cursor-pointer"
+          >
+            <option value="all">Semua Kondisi</option>
+            <option value="Baik">Baik</option>
+            <option value="Cukup Baik">Cukup Baik</option>
+            <option value="Rusak Ringan">Rusak Ringan</option>
+            <option value="Rusak Berat">Rusak Berat</option>
+            <option value="Tidak Layak Pakai">Tidak Layak Pakai</option>
+          </select>
+        </div>
       </div>
 
       {/* FLOATING ACTION BAR FOR BATCH DELETE */}
@@ -995,6 +1068,7 @@ export default function SaranaPrasaranaPage() {
                     )}
                     <th className="px-4 py-3 w-10">No</th>
                     <th className="px-4 py-3">Jenis Kekayaan</th>
+                    <th className="px-4 py-3 text-center">Kondisi</th>
                     <th className="px-4 py-3 text-center">Luas/Jumlah</th>
                     <th className="px-4 py-3 text-right">Nilai Harga Pembelian</th>
                     <th className="px-4 py-3 text-right">Nilai Harga Sekarang</th>
@@ -1023,8 +1097,14 @@ export default function SaranaPrasaranaPage() {
                           {aset.kode && <div className="text-xs font-mono text-slate-400 mt-0.5">{aset.kode}</div>}
                         </td>
                         <td className="px-4 py-3 text-center">
-                          <span className="font-bold text-slate-800">{aset.stok_akhir}</span>
-                          <span className="text-xs text-slate-400 ml-1">{aset.satuan}</span>
+                          <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold ${kondisiStyle(aset.kondisi || undefined)}`}>
+                            {aset.kondisi || 'Baik'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className="font-bold text-slate-800">
+                            {aset.luas_jumlah || (aset.stok_akhir ? `${aset.stok_akhir} ${aset.satuan}` : '-')}
+                          </span>
                         </td>
                         <td className="px-4 py-3 text-right">
                           <span className="text-sm font-semibold text-slate-700">{formatRupiah(aset.nilai_harga_pembelian || 0)}</span>
@@ -1290,6 +1370,7 @@ export default function SaranaPrasaranaPage() {
                             </th>
                             <th className="px-2 sm:px-3 py-2 sm:py-2.5 text-left font-bold text-slate-600 sticky left-10 bg-slate-100 shadow-[2px_0_4px_rgba(0,0,0,0.05)]">No</th>
                             <th className="px-2 sm:px-3 py-2 sm:py-2.5 text-left font-bold text-slate-600">Jenis Kekayaan</th>
+                            <th className="px-2 sm:px-3 py-2 sm:py-2.5 text-center font-bold text-slate-600">Kondisi</th>
                             <th className="px-2 sm:px-3 py-2 sm:py-2.5 text-left font-bold text-slate-600">Luas/Jumlah</th>
                             <th className="px-2 sm:px-3 py-2 sm:py-2.5 text-right font-bold text-blue-700">Nilai Harga Pembelian</th>
                             <th className="px-2 sm:px-3 py-2 sm:py-2.5 text-right font-bold text-emerald-700">Nilai Harga Sekarang</th>
@@ -1311,6 +1392,19 @@ export default function SaranaPrasaranaPage() {
                               {isEditing ? (
                                 <>
                                   <td className="px-2 py-1"><input value={eRow.jenis_kekayaan} onChange={e => setEditingPreviewRow(r => r ? { ...r, jenis_kekayaan: e.target.value } : r)} className="w-40 sm:w-48 border border-amber-300 rounded px-1.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-amber-400" /></td>
+                                  <td className="px-2 py-1">
+                                    <select
+                                      value={eRow.kondisi || 'Baik'}
+                                      onChange={e => setEditingPreviewRow(r => r ? { ...r, kondisi: e.target.value } : r)}
+                                      className="border border-amber-300 rounded px-1.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-amber-400 bg-white"
+                                    >
+                                      <option value="Baik">Baik</option>
+                                      <option value="Cukup Baik">Cukup Baik</option>
+                                      <option value="Rusak Ringan">Rusak Ringan</option>
+                                      <option value="Rusak Berat">Rusak Berat</option>
+                                      <option value="Tidak Layak Pakai">Tidak Layak Pakai</option>
+                                    </select>
+                                  </td>
                                   <td className="px-2 py-1"><input value={eRow.luas_jumlah} onChange={e => setEditingPreviewRow(r => r ? { ...r, luas_jumlah: e.target.value } : r)} className="w-20 sm:w-24 border border-amber-300 rounded px-1.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-amber-400" /></td>
                                   <td className="px-2 py-1"><input type="number" min="0" value={eRow.nilai_harga_pembelian} onChange={e => setEditingPreviewRow(r => r ? { ...r, nilai_harga_pembelian: +e.target.value } : r)} className="w-28 sm:w-32 border border-blue-300 rounded px-1.5 py-1 text-xs text-right focus:outline-none focus:ring-1 focus:ring-blue-400 bg-blue-50" /></td>
                                   <td className="px-2 py-1"><input type="number" min="0" value={eRow.nilai_harga_sekarang} onChange={e => setEditingPreviewRow(r => r ? { ...r, nilai_harga_sekarang: +e.target.value } : r)} className="w-28 sm:w-32 border border-emerald-300 rounded px-1.5 py-1 text-xs text-right focus:outline-none focus:ring-1 focus:ring-emerald-400 bg-emerald-50" /></td>
@@ -1326,6 +1420,11 @@ export default function SaranaPrasaranaPage() {
                                 <>
                                   <td className="px-2 sm:px-3 py-2 font-medium text-slate-900 max-w-[180px] sm:max-w-[220px]">
                                     <div className="truncate">{row.jenis_kekayaan}</div>
+                                  </td>
+                                  <td className="px-2 sm:px-3 py-2 text-center">
+                                    <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold ${kondisiStyle(row.kondisi)}`}>
+                                      {row.kondisi || 'Baik'}
+                                    </span>
                                   </td>
                                   <td className="px-2 sm:px-3 py-2 text-slate-600">{row.luas_jumlah}</td>
                                   <td className="px-2 sm:px-3 py-2 text-right font-semibold text-blue-700">
@@ -1420,17 +1519,29 @@ export default function SaranaPrasaranaPage() {
                   </FormField>
                 </div>
 
-                <FormField label="Luas / Jumlah" required>
-                  <input 
-                    type="number" 
-                    min="0" 
-                    value={formData.stok_awal} 
-                    onChange={e => set('stok_awal', e.target.value)} 
-                    required 
-                    className={inputCls} 
-                  />
-                  {formErrors.stok_awal && <p className="text-xs text-red-500 mt-1">{formErrors.stok_awal}</p>}
-                </FormField>
+                <div className="sm:col-span-2">
+                  <FormField label="Luas / Jumlah" required>
+                    <input 
+                      type="text" 
+                      value={formData.luas_jumlah} 
+                      onChange={e => {
+                        const val = e.target.value;
+                        set('luas_jumlah', val);
+                        const matchUnit = val.match(/[a-zA-Z²³]+/);
+                        if (matchUnit && (!formData.satuan || formData.satuan === 'Unit')) {
+                          set('satuan', matchUnit[0]);
+                        }
+                      }} 
+                      required 
+                      placeholder="Contoh: 10 x 8 / 32 atau 20.400 m2 atau 10 Unit" 
+                      className={inputCls} 
+                    />
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      Mendukung format ukuran dimensi dan unit seperti <code className="text-indigo-600 bg-indigo-50 px-1 rounded font-mono">10 x 8 / 32</code> atau luas <code className="text-indigo-600 bg-indigo-50 px-1 rounded font-mono">20.400 m2</code>.
+                    </p>
+                    {formErrors.luas_jumlah && <p className="text-xs text-red-500 mt-1">{formErrors.luas_jumlah}</p>}
+                  </FormField>
+                </div>
 
                 <FormField label="Satuan" required>
                   <input 
@@ -1469,13 +1580,30 @@ export default function SaranaPrasaranaPage() {
                 </FormField>
 
                 <div className="sm:col-span-2">
+                  <FormField label="Kondisi" required>
+                    <select
+                      value={formData.kondisi}
+                      onChange={e => set('kondisi', e.target.value)}
+                      className={inputCls + ' bg-white cursor-pointer'}
+                    >
+                      <option value="Baik">Baik</option>
+                      <option value="Cukup Baik">Cukup Baik</option>
+                      <option value="Rusak Ringan">Rusak Ringan</option>
+                      <option value="Rusak Berat">Rusak Berat</option>
+                      <option value="Tidak Layak Pakai">Tidak Layak Pakai</option>
+                    </select>
+                    {formErrors.kondisi && <p className="text-xs text-red-500 mt-1">{formErrors.kondisi}</p>}
+                  </FormField>
+                </div>
+
+                <div className="sm:col-span-2">
                   <FormField label="Keterangan (Ket)">
                     <textarea 
                       value={formData.keterangan} 
                       onChange={e => set('keterangan', e.target.value)} 
                       rows={2}
                       className={inputCls + ' resize-none'} 
-                      placeholder="Catatan kondisi, lokasi, dll..." 
+                      placeholder="Catatan tambahan, lokasi, nomor seri, dll..." 
                     />
                     {formErrors.keterangan && <p className="text-xs text-red-500 mt-1">{formErrors.keterangan}</p>}
                   </FormField>

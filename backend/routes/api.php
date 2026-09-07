@@ -3,7 +3,6 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\GedungController;
 use App\Http\Controllers\Api\RuanganController;
-use App\Http\Controllers\Api\KategoriController;
 use App\Http\Controllers\Api\SumberDanaController;
 use App\Http\Controllers\Api\KondisiController;
 use App\Http\Controllers\Api\AsetController;
@@ -23,7 +22,7 @@ use App\Http\Controllers\Api\SaranaPrasaranaController;
 use App\Http\Controllers\Api\DaftarBelanjaController;
 use Illuminate\Support\Facades\Route;
 
-Route::post('/login', [AuthController::class, 'login']);
+Route::post('/login', [AuthController::class, 'login'])->name('login');
 
 // Public Routes for Directory
 Route::get('ruangans', [RuanganController::class, 'index']);
@@ -33,7 +32,6 @@ Route::get('asets/{aset}', [AsetController::class, 'show']);
 Route::get('stats', [AsetController::class, 'publicStats']);
 Route::get('daftar-belanja/summary', [DaftarBelanjaController::class, 'summary']);
 Route::get('gedungs', [GedungController::class, 'index']);
-Route::get('kategoris', [KategoriController::class, 'index']);
 Route::get('sumber-danas', [SumberDanaController::class, 'index']);
 Route::get('servises', [ServisController::class, 'index']);
 Route::get('peminjamans', [PeminjamanController::class, 'index']);
@@ -56,8 +54,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::apiResource('gedungs', GedungController::class)->except(['index']);
     Route::apiResource('ruangans', RuanganController::class)->except(['index', 'show']);
-    Route::apiResource('kategoris', KategoriController::class)->except(['index']);
     Route::apiResource('sumber-danas', SumberDanaController::class);
+    Route::get('kondisis/aset-rusak', [KondisiController::class, 'asetRusak']);
     Route::apiResource('kondisis', KondisiController::class);
 
     Route::post('asets/import', [AsetController::class, 'importExcel']);

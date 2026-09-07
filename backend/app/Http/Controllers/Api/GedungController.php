@@ -10,7 +10,13 @@ class GedungController extends Controller
 {
     public function index()
     {
-        $gedungs = Gedung::with(['ruangans.asets.kategori', 'ruangans.asets.kondisi'])->get();
+        $gedungs = Gedung::with([
+            'ruangans' => function ($q) {
+                $q->where('jenis', 'gedung');
+            },
+            'ruangans.asets.kategori',
+            'ruangans.asets.kondisi'
+        ])->get();
         return response()->json($gedungs);
     }
 

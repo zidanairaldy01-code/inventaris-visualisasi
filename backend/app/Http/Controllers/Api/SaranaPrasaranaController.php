@@ -37,12 +37,14 @@ class SaranaPrasaranaController extends Controller
             'kode'                => 'nullable|string|max:255',
             'nama_barang'         => 'required|string|max:255',
             'satuan'              => 'nullable|string|max:50',
+            'luas_jumlah'         => 'nullable|string|max:100',
             'stok_awal'           => 'nullable|integer|min:0',
             'stok_masuk'          => 'nullable|integer|min:0',
             'stok_keluar'         => 'nullable|integer|min:0',
             'nilai_harga_pembelian' => 'nullable|integer|min:0',
             'nilai_harga_sekarang'  => 'nullable|integer|min:0',
-            'keterangan'          => 'nullable|string',
+            'kondisi'               => 'nullable|string|max:50',
+            'keterangan'            => 'nullable|string',
         ]);
 
         if (array_key_exists('tanggal_pengambilan', $validated) && empty($validated['tanggal_pengambilan'])) {
@@ -55,6 +57,14 @@ class SaranaPrasaranaController extends Controller
 
         if (empty($validated['satuan'])) {
             $validated['satuan'] = 'Unit';
+        }
+
+        if (empty($validated['kondisi'])) {
+            $validated['kondisi'] = 'Baik';
+        }
+
+        if (empty($validated['luas_jumlah']) && isset($validated['stok_awal'])) {
+            $validated['luas_jumlah'] = $validated['stok_awal'] . ' ' . $validated['satuan'];
         }
 
         $validated['stok_awal']   = $validated['stok_awal']   ?? 0;
@@ -79,7 +89,6 @@ class SaranaPrasaranaController extends Controller
     public function show(string $id)
     {
         $item = SaranaPrasarana::with('user')->findOrFail($id);
-
         return response()->json([
             'status' => 'success',
             'data'   => $item,
@@ -94,17 +103,44 @@ class SaranaPrasaranaController extends Controller
         $item = SaranaPrasarana::findOrFail($id);
 
         $validated = $request->validate([
-            'tanggal_pengambilan' => 'sometimes|required|date',
-            'kode'                => 'sometimes|required|string|max:255|unique:sarana_prasaranas,kode,' . $id,
-            'nama_barang'         => 'sometimes|required|string|max:255',
-            'satuan'              => 'sometimes|required|string|max:50',
-            'stok_awal'           => 'sometimes|required|integer|min:0',
-            'stok_masuk'          => 'sometimes|required|integer|min:0',
-            'stok_keluar'         => 'sometimes|required|integer|min:0',
+            'tanggal_pengambilan'   => 'nullable|date',
+            'kode'                  => 'nullable|string|max:255|unique:sarana_prasaranas,kode,' . $id,
+            'nama_barang'           => 'required|string|max:255',
+            'satuan'                => 'nullable|string|max:50',
+            'luas_jumlah'           => 'nullable|string|max:100',
+            'stok_awal'             => 'nullable|integer|min:0',
+            'stok_masuk'            => 'nullable|integer|min:0',
+            'stok_keluar'           => 'nullable|integer|min:0',
             'nilai_harga_pembelian' => 'nullable|integer|min:0',
             'nilai_harga_sekarang'  => 'nullable|integer|min:0',
-            'keterangan'          => 'nullable|string',
+            'kondisi'               => 'nullable|string|max:50',
+            'keterangan'            => 'nullable|string',
         ]);
+
+        // Normalize nullable fields
+        if (array_key_exists('tanggal_pengambilan', $validated) && empty($validated['tanggal_pengambilan'])) {
+            $validated['tanggal_pengambilan'] = null;
+        }
+        if (array_key_exists('kode', $validated) && empty(trim($validated['kode'] ?? ''))) {
+            $validated['kode'] = null;
+        }
+        if (empty($validated['satuan'])) {
+            $validated['satuan'] = $item->satuan ?: 'Unit';
+        }
+        if (empty($validated['kondisi'])) {
+            $validated['kondisi'] = $item->kondisi ?: 'Baik';
+        }
+        if (!array_key_exists('luas_jumlah', $validated) || is_null($validated['luas_jumlah'])) {
+            if (isset($validated['stok_awal'])) {
+                $validated['luas_jumlah'] = $validated['stok_awal'] . ' ' . $validated['satuan'];
+            }
+        }
+
+        $validated['stok_awal']   = $validated['stok_awal']   ?? $item->stok_awal   ?? 0;
+        $validated['stok_masuk']  = $validated['stok_masuk']  ?? $item->stok_masuk  ?? 0;
+        $validated['stok_keluar'] = $validated['stok_keluar'] ?? $item->stok_keluar ?? 0;
+        $validated['nilai_harga_pembelian'] = $validated['nilai_harga_pembelian'] ?? $item->nilai_harga_pembelian ?? 0;
+        $validated['nilai_harga_sekarang']  = $validated['nilai_harga_sekarang']  ?? $item->nilai_harga_sekarang  ?? 0;
 
         $item->update($validated);
 
@@ -114,6 +150,7 @@ class SaranaPrasaranaController extends Controller
             'data'    => $item->fresh()->load('user'),
         ]);
     }
+
 
     /**
      * Remove the specified resource from storage.
@@ -224,6 +261,9 @@ class SaranaPrasaranaController extends Controller
             if (stripos($combined, 'keterangan') !== false || $combined === 'ket') {
                 $columnMap['keterangan'] = $idx;
             }
+            if (stripos($combined, 'kondisi') !== false || stripos($combined, 'keadaan') !== false) {
+                $columnMap['kondisi'] = $idx;
+            }
             if (stripos($combined, 'pembelian') !== false || stripos($combined, 'perolehan') !== false || stripos($combined, 'harga beli') !== false) {
                 $columnMap['nilai_harga_pembelian'] = $idx;
             }
@@ -253,6 +293,9 @@ class SaranaPrasaranaController extends Controller
                                         ? trim($row[$columnMap['satuan']] ?? 'Unit')
                                         : 'Unit';
                     $awalRaw       = $row[$columnMap['stok_awal']    ?? -1] ?? 0;
+                    $luasJumlahRaw = isset($columnMap['stok_awal'])
+                                        ? trim(strval($row[$columnMap['stok_awal']] ?? ''))
+                                        : '';
                     $masukRaw      = $row[$columnMap['stok_masuk']   ?? -1] ?? 0;
                     $keluarRaw     = $row[$columnMap['stok_keluar']  ?? -1] ?? 0;
                     $hargaBeliRaw  = isset($columnMap['nilai_harga_pembelian'])
@@ -264,6 +307,21 @@ class SaranaPrasaranaController extends Controller
                     $keteranganRaw = isset($columnMap['keterangan'])
                                         ? trim($row[$columnMap['keterangan']] ?? '')
                                         : null;
+                    $kondisiRaw    = isset($columnMap['kondisi'])
+                                        ? trim($row[$columnMap['kondisi']] ?? '')
+                                        : '';
+
+                    if (empty($kondisiRaw) && !empty($keteranganRaw)) {
+                        $lowerKet = strtolower($keteranganRaw);
+                        if (str_contains($lowerKet, 'tidak layak')) $kondisiRaw = 'Tidak Layak Pakai';
+                        elseif (str_contains($lowerKet, 'rusak berat')) $kondisiRaw = 'Rusak Berat';
+                        elseif (str_contains($lowerKet, 'rusak ringan') || str_contains($lowerKet, 'rusak')) $kondisiRaw = 'Rusak Ringan';
+                        elseif (str_contains($lowerKet, 'cukup baik')) $kondisiRaw = 'Cukup Baik';
+                        elseif (str_contains($lowerKet, 'baik')) $kondisiRaw = 'Baik';
+                    }
+                    if (empty($kondisiRaw)) {
+                        $kondisiRaw = 'Baik';
+                    }
 
                     if (empty($namaRaw)) {
                         $skipped++;
@@ -272,16 +330,27 @@ class SaranaPrasaranaController extends Controller
 
                     $finalKode = !empty($kodeRaw) ? $kodeRaw : null;
 
+                    $parsedAwal = $this->parseNumber($awalRaw);
+                    if ($parsedAwal === 0 && preg_match('/\/|\bx\b|m2/i', $luasJumlahRaw)) {
+                        if (preg_match('/\/ *(\d+)/', $luasJumlahRaw, $m)) {
+                            $parsedAwal = (int) $m[1];
+                        } else {
+                            $parsedAwal = 1;
+                        }
+                    }
+
                     $data = [
                         'tanggal_pengambilan'   => !empty($tanggalRaw) ? $this->parseDate($tanggalRaw) : null,
                         'kode'                  => $finalKode,
                         'nama_barang'           => $namaRaw,
                         'satuan'                => $satuanRaw ?: 'Unit',
-                        'stok_awal'             => $this->parseNumber($awalRaw),
+                        'luas_jumlah'           => !empty($luasJumlahRaw) ? $luasJumlahRaw : ($parsedAwal . ' ' . $satuanRaw),
+                        'stok_awal'             => $parsedAwal,
                         'stok_masuk'            => $this->parseNumber($masukRaw),
                         'stok_keluar'           => $this->parseNumber($keluarRaw),
                         'nilai_harga_pembelian' => $this->parseNumber($hargaBeliRaw),
                         'nilai_harga_sekarang'  => $this->parseNumber($hargaSkrgRaw),
+                        'kondisi'               => $kondisiRaw,
                         'keterangan'            => $keteranganRaw ?: null,
                         'id_user'               => $request->user()?->id,
                     ];
@@ -362,16 +431,32 @@ class SaranaPrasaranaController extends Controller
         try {
             foreach ($items as $item) {
                 // Map data dari format aset ke format sarana_prasarana
+                $luasStr = $item['luas_jumlah'] ?? null;
+                $stokAwal = isset($item['stok_awal']) ? (int) $item['stok_awal'] : 0;
+                if ($stokAwal === 0 && !empty($luasStr)) {
+                    if (preg_match('/\/ *(\d+)/', $luasStr, $m)) {
+                        $stokAwal = (int) $m[1];
+                    } elseif (is_numeric($luasStr)) {
+                        $stokAwal = (int) $luasStr;
+                    } elseif (isset($item['jumlah']) && is_numeric($item['jumlah'])) {
+                        $stokAwal = (int) $item['jumlah'];
+                    } else {
+                        $stokAwal = 1;
+                    }
+                }
+
                 $data = [
-                    'tanggal_pengambilan' => $item['tanggal_perolehan'] ?? null,
-                    'kode'                => $item['kode_aset'] ?? null,
+                    'tanggal_pengambilan' => $item['tanggal_perolehan'] ?? $item['tanggal_pengambilan'] ?? null,
+                    'kode'                => $item['kode_aset'] ?? $item['kode'] ?? null,
                     'nama_barang'         => $item['nama_barang'] ?? $item['nama_aset'] ?? 'Item',
                     'satuan'              => $item['satuan'] ?? 'Unit',
-                    'stok_awal'           => $item['stok_awal'] ?? ($item['luas_jumlah'] ? (int) $item['luas_jumlah'] : ($item['jumlah'] ?? 0)),
+                    'luas_jumlah'         => !empty($luasStr) ? $luasStr : ($stokAwal . ' ' . ($item['satuan'] ?? 'Unit')),
+                    'stok_awal'           => $stokAwal,
                     'stok_masuk'          => $item['stok_masuk'] ?? 0,
                     'stok_keluar'         => $item['stok_keluar'] ?? 0,
                     'nilai_harga_pembelian' => $item['nilai_harga_pembelian'] ?? 0,
                     'nilai_harga_sekarang'  => $item['nilai_harga_sekarang']  ?? 0,
+                    'kondisi'               => $item['kondisi'] ?? 'Baik',
                     'keterangan'          => $item['keterangan'] ?? null,
                     'id_user'             => $request->user()?->id,
                 ];

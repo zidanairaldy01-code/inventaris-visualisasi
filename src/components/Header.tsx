@@ -116,19 +116,22 @@ export default function Header({ onMenuClick }: HeaderProps) {
         ]);
 
         const q = query.toLowerCase();
-        const matchedAsets = asetRes.data.filter((a: any) =>
-          a.nama_aset.toLowerCase().includes(q) ||
+        const rawAsets = Array.isArray(asetRes.data) ? asetRes.data : (asetRes.data?.data ?? []);
+        const matchedAsets = rawAsets.filter((a: any) =>
+          a.nama_aset?.toLowerCase().includes(q) ||
           (a.kode_aset && a.kode_aset.toLowerCase().includes(q)) ||
           (a.kategori?.nama_kategori && a.kategori.nama_kategori.toLowerCase().includes(q))
         ).slice(0, 5);
 
-        const matchedRuangans = ruanganRes.data.filter((r: any) =>
-          r.nama_ruangan.toLowerCase().includes(q) ||
+        const rawRuangans = Array.isArray(ruanganRes.data) ? ruanganRes.data : (ruanganRes.data?.data ?? []);
+        const matchedRuangans = rawRuangans.filter((r: any) =>
+          r.nama_ruangan?.toLowerCase().includes(q) ||
           (r.gedung?.nama_gedung && r.gedung.nama_gedung.toLowerCase().includes(q))
         ).slice(0, 4);
 
-        const matchedGedungs = gedungRes.data.filter((g: any) =>
-          g.nama_gedung.toLowerCase().includes(q)
+        const rawGedungs = Array.isArray(gedungRes.data) ? gedungRes.data : (gedungRes.data?.data ?? []);
+        const matchedGedungs = rawGedungs.filter((g: any) =>
+          g.nama_gedung?.toLowerCase().includes(q)
         ).slice(0, 3);
 
         setResults({ asets: matchedAsets, ruangans: matchedRuangans, gedungs: matchedGedungs });
@@ -264,21 +267,28 @@ export default function Header({ onMenuClick }: HeaderProps) {
                   <div>
                     <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center">
                       <MapPin className="h-3 w-3 mr-1.5 text-emerald-500" />
-                      Ruangan Workshop ({results.ruangans.length})
+                      Data Ruangan ({results.ruangans.length})
                     </div>
                     <div className="space-y-0.5 mt-1">
                       {results.ruangans.map((ruangan) => (
                         <div
                           key={ruangan.id}
-                          onClick={() => handleSelectResult('/dashboard/ruangan')}
+                          onClick={() => handleSelectResult(ruangan.jenis === 'workshop' ? '/dashboard/ruangan' : '/dashboard/gedung')}
                           className="flex items-center justify-between px-3 py-2 rounded-xl hover:bg-emerald-50/60 cursor-pointer transition-colors group"
                         >
                           <div>
-                            <p className="text-xs font-semibold text-slate-800 group-hover:text-emerald-600">
-                              {ruangan.nama_ruangan}
-                            </p>
+                            <div className="flex items-center gap-1.5">
+                              <p className="text-xs font-semibold text-slate-800 group-hover:text-emerald-600">
+                                {ruangan.nama_ruangan}
+                              </p>
+                              <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                                ruangan.jenis === 'workshop' ? 'bg-emerald-100 text-emerald-700' : 'bg-indigo-100 text-indigo-700'
+                              }`}>
+                                {ruangan.jenis === 'workshop' ? 'Workshop' : 'Gedung'}
+                              </span>
+                            </div>
                             <p className="text-[10px] text-slate-400">
-                              {ruangan.gedung?.nama_gedung || 'Gedung Utama'} · Lt. {ruangan.lantai || '1'}
+                              {ruangan.gedung?.nama_gedung || (ruangan.jenis === 'workshop' ? 'Mandiri' : 'Gedung Utama')} · Lt. {ruangan.lantai || '1'}
                             </p>
                           </div>
                         </div>

@@ -8,22 +8,37 @@ use Illuminate\Http\Request;
 
 class RuanganController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return response()->json(Ruangan::with(['gedung', 'asets'])->get());
+        $query = Ruangan::with(['gedung', 'asets']);
+
+        if ($request->filled('jenis')) {
+            $query->where('jenis', $request->query('jenis'));
+        }
+
+        if ($request->filled('id_gedung')) {
+            $query->where('id_gedung', $request->query('id_gedung'));
+        }
+
+        return response()->json($query->get());
     }
 
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'id_gedung' => 'required|exists:gedungs,id',
+            'id_gedung' => 'nullable|exists:gedungs,id',
             'nama_ruangan' => 'required|string|max:255',
+            'jenis' => 'nullable|in:gedung,workshop',
             'kode_ruangan' => 'nullable|string|max:50',
             'lantai' => 'nullable|string|max:50',
             'luas_ruangan' => 'nullable|string|max:50',
             'deskripsi' => 'nullable|string',
             'foto_ruangan' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
         ]);
+
+        if (empty($validated['jenis'])) {
+            $validated['jenis'] = !empty($validated['id_gedung']) ? 'gedung' : 'workshop';
+        }
 
         if ($request->hasFile('foto_ruangan')) {
             $path = $request->file('foto_ruangan')->store('ruangan', 'public');
@@ -45,8 +60,9 @@ class RuanganController extends Controller
         $ruangan = Ruangan::findOrFail($id);
         
         $validated = $request->validate([
-            'id_gedung' => 'required|exists:gedungs,id',
+            'id_gedung' => 'nullable|exists:gedungs,id',
             'nama_ruangan' => 'required|string|max:255',
+            'jenis' => 'nullable|in:gedung,workshop',
             'kode_ruangan' => 'nullable|string|max:50',
             'lantai' => 'nullable|string|max:50',
             'luas_ruangan' => 'nullable|string|max:50',

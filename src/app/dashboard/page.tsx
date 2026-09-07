@@ -2,222 +2,420 @@
 
 import { useEffect, useState } from 'react';
 import axios from '@/lib/axios';
-import { Package, Map, Building2, FileText, ArrowUpRight, TrendingUp, Activity, DollarSign, Layers, ShoppingCart } from 'lucide-react';
+import {
+  Package, Building2, Warehouse, ArrowUpRight,
+  TrendingUp, DollarSign, Layers, ShoppingCart,
+  Handshake, Wrench, Clock, ChevronRight, FileText,
+  ShieldAlert, Sparkles
+} from 'lucide-react';
 import Link from 'next/link';
 
-const formatRupiah = (n: number) =>
+const formatRupiah = (n: number | null | undefined) =>
   new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n || 0);
 
 interface StatsData {
   total_item: number;
   total_unit: number;
   total_nilai: number;
-  per_kategori: Record<string, { jumlah: number; nilai: number }>;
   total_ruangan: number;
+  total_ruangan_all: number;
+  total_ruangan_gedung: number;
+  total_ruangan_workshop: number;
   total_gedung: number;
-  total_kategori: number;
   total_belanja: number;
   total_item_belanja: number;
   total_nilai_pembelian_sarana: number;
   total_nilai_sekarang_sarana: number;
   total_item_sarana: number;
+  total_peminjaman_aktif: number;
+  total_servis_proses: number;
+}
+
+interface HistoryItem {
+  id: number;
+  aksi: string;
+  keterangan: string;
+  tanggal: string;
+  aset?: { nama_aset: string };
+  user?: { name: string };
 }
 
 const defaultStats: StatsData = {
-  total_item: 0, total_unit: 0, total_nilai: 0, per_kategori: {},
-  total_ruangan: 0, total_gedung: 0, total_kategori: 0,
-  total_belanja: 0, total_item_belanja: 0,
-  total_nilai_pembelian_sarana: 0, total_nilai_sekarang_sarana: 0, total_item_sarana: 0,
+  total_item: 0,
+  total_unit: 0,
+  total_nilai: 0,
+  total_ruangan: 0,
+  total_ruangan_all: 0,
+  total_ruangan_gedung: 0,
+  total_ruangan_workshop: 0,
+  total_gedung: 0,
+  total_belanja: 0,
+  total_item_belanja: 0,
+  total_nilai_pembelian_sarana: 0,
+  total_nilai_sekarang_sarana: 0,
+  total_item_sarana: 0,
+  total_peminjaman_aktif: 0,
+  total_servis_proses: 0,
 };
 
 export default function DashboardPage() {
   const [data, setData] = useState<StatsData>(defaultStats);
+  const [histories, setHistories] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [greeting, setGreeting] = useState('');
 
   useEffect(() => {
-    axios.get('/api/stats')
-      .then(res => setData({ ...defaultStats, ...res.data }))
+    const hour = new Date().getHours();
+    if (hour >= 4 && hour < 11) setGreeting('Selamat Pagi');
+    else if (hour >= 11 && hour < 15) setGreeting('Selamat Siang');
+    else if (hour >= 15 && hour < 18) setGreeting('Selamat Sore');
+    else setGreeting('Selamat Malam');
+
+    Promise.all([
+      axios.get('/api/stats'),
+      axios.get('/api/histories').catch(() => ({ data: [] })),
+    ])
+      .then(([statsRes, historyRes]) => {
+        setData({ ...defaultStats, ...statsRes.data });
+        const rawHistory = Array.isArray(historyRes.data) ? historyRes.data : (historyRes.data?.data ?? []);
+        setHistories(rawHistory.slice(0, 5));
+      })
       .catch(err => {
         console.error('Gagal memuat statistik', err);
-        setError('Gagal memuat data dashboard');
+        setError('Gagal memuat data statistik dashboard');
       })
       .finally(() => setLoading(false));
   }, []);
 
   const statCards = [
-    { name: 'Jenis Aset',       value: data.total_item,     icon: Package,   href: '/dashboard/aset',     gradient: 'from-blue-600 to-indigo-600',   bg: 'bg-blue-50',    iconColor: 'text-blue-600',   badge: 'Item'  },
-    { name: 'Ruangan Workshop', value: data.total_ruangan,  icon: Map,       href: '/dashboard/ruangan',  gradient: 'from-emerald-500 to-teal-500',  bg: 'bg-emerald-50', iconColor: 'text-emerald-600', badge: 'Ruang' },
-    { name: 'Total Gedung',     value: data.total_gedung,   icon: Building2, href: '/dashboard/gedung',   gradient: 'from-violet-600 to-purple-600', bg: 'bg-violet-50',  iconColor: 'text-violet-600',  badge: 'Unit'  },
-    { name: 'Kategori Aset',    value: data.total_kategori, icon: FileText,  href: '/dashboard/kategori', gradient: 'from-orange-500 to-amber-500',  bg: 'bg-orange-50',  iconColor: 'text-orange-600',  badge: 'Jenis' },
+    {
+      name: 'Sarana & Prasarana',
+      value: data.total_item_sarana,
+      sub: 'Item aset sekolah',
+      icon: Package,
+      href: '/dashboard/sarana-prasarana',
+      gradient: 'from-blue-600 to-indigo-600',
+      bg: 'bg-blue-50',
+      iconColor: 'text-blue-600',
+      badge: 'Sarana',
+    },
+    {
+      name: 'Ruangan Workshop',
+      value: data.total_ruangan_workshop,
+      sub: 'Ruang bengkel mandiri',
+      icon: Warehouse,
+      href: '/dashboard/ruangan',
+      gradient: 'from-emerald-500 to-teal-500',
+      bg: 'bg-emerald-50',
+      iconColor: 'text-emerald-600',
+      badge: 'Workshop',
+    },
+    {
+      name: 'Master Gedung',
+      value: data.total_gedung,
+      sub: `${data.total_ruangan_gedung} Ruangan gedung`,
+      icon: Building2,
+      href: '/dashboard/gedung',
+      gradient: 'from-violet-600 to-purple-600',
+      bg: 'bg-violet-50',
+      iconColor: 'text-violet-600',
+      badge: 'Gedung',
+    },
+    {
+      name: 'Peminjaman Aktif',
+      value: data.total_peminjaman_aktif,
+      sub: 'Barang sedang dipinjam',
+      icon: Handshake,
+      href: '/dashboard/peminjaman',
+      gradient: 'from-amber-500 to-orange-500',
+      bg: 'bg-amber-50',
+      iconColor: 'text-amber-600',
+      badge: 'Sirkulasi',
+    },
+    {
+      name: 'Servis & Perbaikan',
+      value: data.total_servis_proses,
+      sub: 'Dalam proses perbaikan',
+      icon: Wrench,
+      href: '/dashboard/servis',
+      gradient: 'from-rose-500 to-red-500',
+      bg: 'bg-rose-50',
+      iconColor: 'text-rose-600',
+      badge: 'Servis',
+    },
   ];
 
   return (
-    <div className="space-y-6 sm:space-y-8 animate-fadeInUp">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Ikhtisar Sistem</h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">Pantau seluruh aset sekolah dalam satu tampilan.</p>
-        </div>
-        <div className="flex items-center space-x-2 px-3 py-1.5 bg-indigo-50 rounded-xl border border-indigo-100 w-fit">
-          <Activity className="h-3.5 w-3.5 text-indigo-500" />
-          <span className="text-xs font-semibold text-indigo-600">Sistem Aktif</span>
+    <div className="space-y-6 sm:space-y-8 animate-fadeIn">
+      {/* ── Welcome & Status Banner ── */}
+      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-6 sm:p-8 shadow-xl text-white relative overflow-hidden border border-slate-800">
+        <div className="absolute top-0 right-0 w-80 h-80 bg-blue-600/15 rounded-full blur-3xl pointer-events-none -translate-y-16 translate-x-16" />
+        <div className="absolute bottom-0 left-1/3 w-64 h-64 bg-emerald-600/10 rounded-full blur-3xl pointer-events-none translate-y-16" />
+
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="px-2.5 py-1 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full text-xs font-semibold flex items-center gap-1.5 backdrop-blur-sm">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                SIM Aset Aktif &amp; Terhubung
+              </span>
+              <span className="text-xs text-slate-400">SMK PGRI Telagasari</span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-white">
+              {greeting}, Administrator
+            </h1>
+            <p className="text-sm text-slate-300 mt-1 max-w-2xl leading-relaxed">
+              Selamat datang di pusat kendali aset dan inventaris. Pantau kondisi barang, sirkulasi peminjaman, serta ruangan workshop dan gedung secara terpadu.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <Link
+              href="/dashboard/peminjaman"
+              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-1.5"
+            >
+              <Handshake className="h-4 w-4" />
+              Catat Peminjaman
+            </Link>
+            <Link
+              href="/dashboard/laporan"
+              className="px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white border border-white/15 rounded-xl text-xs font-semibold backdrop-blur-sm transition-all flex items-center gap-1.5"
+            >
+              <FileText className="h-4 w-4 text-slate-300" />
+              Laporan Rekap
+            </Link>
+          </div>
         </div>
       </div>
 
       {error && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-600">{error}</div>
+        <div className="p-4 bg-red-50 border border-red-200 rounded-2xl text-sm text-red-600 flex items-center gap-2">
+          <ShieldAlert className="h-5 w-5 shrink-0 text-red-500" />
+          <span>{error}</span>
+        </div>
       )}
 
-      {/* Value Summary Banner */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      {/* ── Financial & Physical Metric Cards (Top Row) ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Total Nilai Pembelian Sarana */}
-        <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-5 text-white relative overflow-hidden shadow-lg shadow-blue-500/20">
+        <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-5 text-white relative overflow-hidden shadow-lg shadow-blue-500/20 flex flex-col justify-between">
           <div className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full pointer-events-none" />
-          <div className="relative z-10">
-            <div className="flex items-center space-x-2 mb-3">
-              <DollarSign className="h-4 w-4 text-blue-200" />
-              <p className="text-xs font-semibold text-blue-200 uppercase tracking-wider">Total Nilai Pembelian</p>
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center space-x-2">
+                <div className="p-2 bg-white/20 rounded-xl">
+                  <DollarSign className="h-4 w-4 text-white" />
+                </div>
+                <p className="text-[11px] font-bold text-blue-100 uppercase tracking-wider">Nilai Beli Sarana</p>
+              </div>
+              <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full font-semibold">Aktif</span>
             </div>
-            {loading ? <div className="h-8 w-32 bg-white/20 rounded-lg skeleton" /> : (
-              <p className="text-xl sm:text-2xl font-extrabold tracking-tight">{formatRupiah(data.total_nilai_pembelian_sarana)}</p>
+            {loading ? (
+              <div className="h-8 w-36 bg-white/20 rounded-lg animate-pulse" />
+            ) : (
+              <p className="text-xl sm:text-2xl font-black tracking-tight">{formatRupiah(data.total_nilai_pembelian_sarana)}</p>
             )}
-            <p className="text-xs text-blue-200 mt-1">{data.total_item_sarana} item sarana &amp; prasarana</p>
           </div>
+          <p className="text-xs text-blue-200 mt-2 font-medium">
+            Akumulasi nilai awal {data.total_item_sarana} item sarana
+          </p>
         </div>
 
-        {/* Total Nilai Pembelian */}
-        <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl p-5 text-white relative overflow-hidden shadow-lg shadow-emerald-500/20">
+        {/* Total Nilai Belanja Pengadaan */}
+        <div className="bg-gradient-to-br from-emerald-600 to-teal-700 rounded-2xl p-5 text-white relative overflow-hidden shadow-lg shadow-emerald-500/20 flex flex-col justify-between">
           <div className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full pointer-events-none" />
-          <div className="relative z-10">
-            <div className="flex items-center space-x-2 mb-3">
-              <ShoppingCart className="h-4 w-4 text-emerald-200" />
-              <p className="text-xs font-semibold text-emerald-200 uppercase tracking-wider">Total Nilai Pembelian</p>
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center space-x-2">
+                <div className="p-2 bg-white/20 rounded-xl">
+                  <ShoppingCart className="h-4 w-4 text-white" />
+                </div>
+                <p className="text-[11px] font-bold text-emerald-100 uppercase tracking-wider">Total Belanja</p>
+              </div>
+              <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full font-semibold">Pengadaan</span>
             </div>
-            {loading ? <div className="h-8 w-32 bg-white/20 rounded-lg skeleton" /> : (
-              <p className="text-xl sm:text-2xl font-extrabold tracking-tight">{formatRupiah(data.total_belanja)}</p>
+            {loading ? (
+              <div className="h-8 w-36 bg-white/20 rounded-lg animate-pulse" />
+            ) : (
+              <p className="text-xl sm:text-2xl font-black tracking-tight">{formatRupiah(data.total_belanja)}</p>
             )}
-            <p className="text-xs text-emerald-200 mt-1">{data.total_item_belanja} item dalam daftar belanja</p>
           </div>
+          <p className="text-xs text-emerald-200 mt-2 font-medium">
+            Dari {data.total_item_belanja} daftar rincian belanja
+          </p>
         </div>
 
-        {/* Total Unit */}
-        <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
-          <div className="flex items-center space-x-2 mb-3">
-            <Layers className="h-4 w-4 text-emerald-500" />
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Unit Aset</p>
-          </div>
-          {loading ? <div className="h-8 w-24 skeleton rounded-lg" /> : (
-            <div>
-              <p className="text-2xl sm:text-3xl font-extrabold text-slate-900">{data.total_unit.toLocaleString('id-ID')}</p>
-              <p className="text-xs text-slate-400 mt-1">Unit dari {data.total_item} jenis aset</p>
+        {/* Nilai Harga Sekarang */}
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center space-x-2">
+                <div className="p-2 bg-amber-50 rounded-xl text-amber-600">
+                  <TrendingUp className="h-4 w-4" />
+                </div>
+                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Nilai Sekarang</p>
+              </div>
+              <span className="text-[10px] bg-amber-50 text-amber-700 font-bold px-2 py-0.5 rounded-full border border-amber-200">Kondisi</span>
             </div>
-          )}
-        </div>
-
-        {/* Nilai Harga Sekarang Sarana */}
-        <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
-          <div className="flex items-center space-x-2 mb-3">
-            <TrendingUp className="h-4 w-4 text-amber-500" />
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Nilai Harga Sekarang</p>
-          </div>
-          {loading ? <div className="h-8 w-24 skeleton rounded-lg" /> : (
-            <div>
-              <p className="text-xl sm:text-2xl font-extrabold text-slate-900">
+            {loading ? (
+              <div className="h-8 w-32 bg-slate-100 rounded-lg animate-pulse" />
+            ) : (
+              <p className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
                 {formatRupiah(data.total_nilai_sekarang_sarana)}
               </p>
-              <p className="text-xs text-slate-400 mt-1">Harga terkini sarana &amp; prasarana</p>
-            </div>
-          )}
+            )}
+          </div>
+          <p className="text-xs text-slate-400 mt-2">
+            Estimasi nilai aset sarana saat ini
+          </p>
         </div>
-      </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-5">
-        {statCards.map((item, index) => (
-          <Link key={item.name} href={item.href} className="block group" style={{ animationDelay: `${index * 80}ms` }}>
-            <div className="relative bg-white overflow-hidden rounded-2xl border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 p-5 cursor-pointer">
-              <div className={`absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r ${item.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
-              <div className="flex items-start justify-between mb-4">
-                <div className={`p-2.5 rounded-xl ${item.bg} group-hover:scale-110 transition-transform duration-300`}>
-                  <item.icon className={`h-5 w-5 ${item.iconColor}`} />
+        {/* Total Unit Fisik */}
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center space-x-2">
+                <div className="p-2 bg-purple-50 rounded-xl text-purple-600">
+                  <Layers className="h-4 w-4" />
                 </div>
-                <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-lg ${item.bg} ${item.iconColor}`}>
-                  {item.badge}
-                </span>
+                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Total Fisik Unit</p>
               </div>
-              <div>
-                <p className="text-xs font-medium text-slate-400 mb-1">{item.name}</p>
-                {loading ? <div className="h-8 w-16 skeleton rounded-lg" /> : (
-                  <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">{item.value}</p>
-                )}
-              </div>
-              <div className="flex items-center mt-3 text-xs text-slate-400 group-hover:text-blue-500 transition-colors">
-                <span>Lihat detail</span>
-                <ArrowUpRight className="h-3 w-3 ml-1 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-              </div>
+              <span className="text-[10px] bg-purple-50 text-purple-700 font-bold px-2 py-0.5 rounded-full border border-purple-200">Inventaris</span>
             </div>
-          </Link>
-        ))}
+            {loading ? (
+              <div className="h-8 w-24 bg-slate-100 rounded-lg animate-pulse" />
+            ) : (
+              <p className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                {data.total_unit.toLocaleString('id-ID')} <span className="text-sm font-semibold text-slate-500">Unit</span>
+              </p>
+            )}
+          </div>
+          <p className="text-xs text-slate-400 mt-2">
+            Tersebar di seluruh ruangan &amp; gedung
+          </p>
+        </div>
       </div>
 
-      {/* Per Kategori Table */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-100 shadow-sm p-5 sm:p-6">
-          <h3 className="text-sm sm:text-base font-bold text-slate-800 mb-5 flex items-center">
-            <Package className="h-4 w-4 mr-2 text-blue-500" />
-            Nilai Aset per Kategori
-          </h3>
-          {loading ? (
-            <div className="space-y-3">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-10 skeleton rounded-xl" />)}</div>
-          ) : Object.keys(data.per_kategori).length === 0 ? (
-            <p className="text-xs text-slate-400 text-center py-6">Belum ada data aset.</p>
-          ) : (
-            <div className="space-y-3">
-              {Object.entries(data.per_kategori).map(([nama, d]) => {
-                const pct = data.total_nilai > 0 ? Math.round((d.nilai / data.total_nilai) * 100) : 0;
-                return (
-                  <div key={nama} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                    <div className="w-full sm:w-32 shrink-0">
-                      <p className="text-xs font-semibold text-slate-700 truncate">{nama}</p>
-                      <p className="text-[11px] text-slate-400">{d.jumlah} jenis</p>
-                    </div>
-                    <div className="flex-1 bg-slate-100 rounded-full h-2 overflow-hidden">
-                      <div className="h-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 transition-all duration-500" style={{ width: `${pct}%` }} />
-                    </div>
-                    <div className="w-full sm:w-24 text-left sm:text-right shrink-0">
-                      <p className="text-xs font-bold text-slate-700">{formatRupiah(d.nilai)}</p>
-                      <p className="text-[10px] text-slate-400">{pct}%</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Quick Actions */}
-        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-900 rounded-2xl shadow-lg p-5 sm:p-6 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600 rounded-full opacity-10 blur-2xl -translate-y-8 translate-x-8 pointer-events-none" />
-          <div className="relative z-10">
-            <p className="text-xs font-bold text-white mb-1">Aksi Cepat</p>
-            <p className="text-xs text-slate-400 mb-5">Navigasi ke menu yang sering digunakan.</p>
-            <div className="space-y-2">
-              {[
-                { label: 'Sarana & Prasarana', href: '/dashboard/sarana-prasarana' },
-                { label: 'Data Inventaris',     href: '/dashboard/inventaris' },
-                { label: 'Data Gedung',         href: '/dashboard/gedung' },
-                { label: 'Ruangan Workshop',    href: '/dashboard/ruangan' },
-              ].map((action) => (
-                <Link key={action.label} href={action.href} className="flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/10 transition-all duration-200 group">
-                  <span className="text-xs font-medium text-slate-200 group-hover:text-white transition-colors">{action.label}</span>
-                  <ArrowUpRight className="h-3.5 w-3.5 text-slate-400 group-hover:text-white group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
-                </Link>
-              ))}
-            </div>
+      {/* ── Core Section: 6 Navigational Quick-Stats ── */}
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-indigo-600" />
+              Pusat Manajemen Aset &amp; Lokasi
+            </h2>
+            <p className="text-xs text-slate-500">Akses cepat ke masing-masing modul pengelolaan</p>
           </div>
         </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {statCards.map((item, index) => {
+            const Icon = item.icon;
+            return (
+              <Link key={item.name} href={item.href} className="block group">
+                <div className="relative bg-white overflow-hidden rounded-2xl border border-slate-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 p-5 cursor-pointer flex flex-col justify-between h-full">
+                  <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${item.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
+                  
+                  <div>
+                    <div className="flex items-start justify-between mb-3">
+                      <div className={`p-3 rounded-2xl ${item.bg} group-hover:scale-110 transition-transform duration-300`}>
+                        <Icon className={`h-5 w-5 ${item.iconColor}`} />
+                      </div>
+                      <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${item.bg} ${item.iconColor} border border-slate-100`}>
+                        {item.badge}
+                      </span>
+                    </div>
+                    <p className="text-xs font-semibold text-slate-500 mb-1">{item.name}</p>
+                    {loading ? (
+                      <div className="h-8 w-20 bg-slate-100 rounded-lg animate-pulse mb-1" />
+                    ) : (
+                      <p className="text-2xl font-black text-slate-900 tracking-tight mb-1">{item.value}</p>
+                    )}
+                    <p className="text-[11px] text-slate-400">{item.sub}</p>
+                  </div>
+
+                  <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-100 text-xs font-semibold text-slate-400 group-hover:text-indigo-600 transition-colors">
+                    <span>Buka Modul</span>
+                    <ArrowUpRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                  </div>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── Recent Activities (full-width) ── */}
+      <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2">
+              <Clock className="h-4 w-4 text-emerald-600" />
+              Riwayat Aktivitas Terkini
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">Catatan transaksi dan sirkulasi terbaru</p>
+          </div>
+          <Link
+            href="/dashboard/history"
+            className="text-xs font-bold text-emerald-600 hover:text-emerald-700"
+          >
+            Semua
+          </Link>
+        </div>
+
+        {loading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="h-16 bg-slate-100 rounded-xl animate-pulse" />
+            ))}
+          </div>
+        ) : histories.length === 0 ? (
+          <div className="py-12 text-center text-slate-400 text-xs">
+            <Clock className="h-8 w-8 mx-auto mb-2 opacity-40" />
+            Belum ada catatan riwayat transaksi.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {histories.map((h) => {
+              const isPinjam = h.aksi === 'PEMINJAMAN';
+              const isServis = h.aksi === 'SERVIS';
+
+              return (
+                <div
+                  key={h.id}
+                  className="p-3 rounded-2xl bg-slate-50 hover:bg-slate-100/80 transition-colors border border-slate-100 text-xs"
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span
+                      className={`px-2 py-0.5 rounded-md font-bold text-[10px] ${
+                        isPinjam
+                          ? 'bg-amber-100 text-amber-800'
+                          : isServis
+                          ? 'bg-rose-100 text-rose-800'
+                          : 'bg-blue-100 text-blue-800'
+                      }`}
+                    >
+                      {h.aksi}
+                    </span>
+                    <span className="text-[10px] text-slate-400">
+                      {h.tanggal ? new Date(h.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : '—'}
+                    </span>
+                  </div>
+                  <p className="font-semibold text-slate-800 line-clamp-1">{h.aset?.nama_aset || 'Aset'}</p>
+                  <p className="text-slate-500 text-[11px] line-clamp-1 mt-0.5">{h.keterangan}</p>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        <Link
+          href="/dashboard/history"
+          className="mt-4 w-full py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5"
+        >
+          Lihat Log Riwayat Lengkap <ChevronRight className="h-3.5 w-3.5" />
+        </Link>
       </div>
     </div>
   );
