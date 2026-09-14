@@ -101,6 +101,16 @@ const formatRupiahShort = (n: number) => {
   return `Rp ${n}`;
 };
 
+const normalizeKondisi = (val?: string | null): string => {
+  if (!val) return 'Baik';
+  const l = val.trim().toLowerCase();
+  if (l.includes('tidak layak')) return 'Tidak Layak Pakai';
+  if (l.includes('rusak berat')) return 'Rusak Berat';
+  if (l.includes('rusak ringan') || l.includes('rusak')) return 'Rusak Ringan';
+  if (l.includes('cukup baik')) return 'Cukup Baik';
+  return 'Baik';
+};
+
 const emptyForm = (): FormData => ({
   tanggal_pengambilan: '',
   kode: '',
@@ -536,7 +546,7 @@ export default function SaranaPrasaranaPage() {
       stok_keluar:            String(item.stok_keluar),
       nilai_harga_pembelian:  String(item.nilai_harga_pembelian ?? 0),
       nilai_harga_sekarang:   String(item.nilai_harga_sekarang ?? 0),
-      kondisi:                item.kondisi || 'Baik',
+      kondisi:                normalizeKondisi(item.kondisi),
       keterangan:             item.keterangan || '',
     });
     setFormErrors({});
@@ -1407,7 +1417,7 @@ export default function SaranaPrasaranaPage() {
                                       onChange={e => setEditingPreviewRow(r => r ? { ...r, kondisi: e.target.value } : r)}
                                       className="border border-amber-300 rounded px-1.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-amber-400 bg-white"
                                     >
-                                      <option value="Baik">Baik</option>
+                                      <option value="Baik">Baik (Default)</option>
                                       <option value="Cukup Baik">Cukup Baik</option>
                                       <option value="Rusak Ringan">Rusak Ringan</option>
                                       <option value="Rusak Berat">Rusak Berat</option>
@@ -1589,18 +1599,21 @@ export default function SaranaPrasaranaPage() {
                 </FormField>
 
                 <div className="sm:col-span-2">
-                  <FormField label="Kondisi" required>
+                  <FormField label="Kondisi Aset" required>
                     <select
-                      value={formData.kondisi}
+                      value={formData.kondisi || 'Baik'}
                       onChange={e => set('kondisi', e.target.value)}
                       className={inputCls + ' bg-white cursor-pointer'}
                     >
-                      <option value="Baik">Baik</option>
+                      <option value="Baik">Baik (Default)</option>
                       <option value="Cukup Baik">Cukup Baik</option>
                       <option value="Rusak Ringan">Rusak Ringan</option>
                       <option value="Rusak Berat">Rusak Berat</option>
                       <option value="Tidak Layak Pakai">Tidak Layak Pakai</option>
                     </select>
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      Kondisi awal otomatis diset &quot;Baik&quot;. Anda dapat mengubahnya jika aset memiliki kondisi lain.
+                    </p>
                     {formErrors.kondisi && <p className="text-xs text-red-500 mt-1">{formErrors.kondisi}</p>}
                   </FormField>
                 </div>

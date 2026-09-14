@@ -6,7 +6,8 @@ import axios from '@/lib/axios';
 import Cookies from 'js-cookie';
 import {
   Bell, Search, UserCircle, ChevronDown, Package, MapPin, Building2,
-  X, Loader2, Menu, User, KeyRound, LogOut, ShieldCheck, ChevronRight
+  X, Loader2, Menu, User, KeyRound, LogOut, ShieldCheck, ChevronRight,
+  AlertTriangle, CheckCheck, CheckCircle2, Clock, Trash2, ExternalLink
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -14,6 +15,29 @@ interface SearchResult {
   asets: any[];
   ruangans: any[];
   gedungs: any[];
+}
+
+interface NotifikasiItem {
+  id: number;
+  tipe: string;
+  judul: string;
+  pesan: string;
+  data?: {
+    distribusi_id?: number;
+    sarana_prasarana_id?: number;
+    nama_barang?: string;
+    kode_barang?: string;
+    kondisi?: string;
+    catatan?: string;
+    ruangan_id?: number;
+    nama_ruangan?: string;
+    nama_gedung?: string;
+    wakapro_id?: number;
+    wakapro_nama?: string;
+    link_url?: string;
+  };
+  is_read: boolean;
+  created_at: string;
 }
 
 interface HeaderProps {
@@ -29,6 +53,12 @@ export default function Header({ onMenuClick }: HeaderProps) {
   // User Dropdown State
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
+
+  // Notification States
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifications, setNotifications] = useState<NotifikasiItem[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const notifMenuRef = useRef<HTMLDivElement>(null);
 
   // Search States
   const [query, setQuery] = useState('');
@@ -82,10 +112,73 @@ export default function Header({ onMenuClick }: HeaderProps) {
       ) {
         setUserMenuOpen(false);
       }
+      if (
+        notifMenuRef.current && !notifMenuRef.current.contains(e.target as Node)
+      ) {
+        setNotifOpen(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Fetch Notifications
+  const fetchNotifications = async () => {
+    try {
+      const res = await axios.get('/api/notifikasis?limit=15');
+      if (res.data?.status === 'success') {
+        setNotifications(res.data.data || []);
+        setUnreadCount(res.data.unread_count || 0);
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 15000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const markNotificationRead = async (id: number) => {
+    try {
+      await axios.put(`/api/notifikasis/${id}/read`);
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const markAllNotificationsRead = async () => {
+    try {
+      await axios.put('/api/notifikasis/read-all');
+      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+      setUnreadCount(0);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const deleteNotification = async (id: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await axios.delete(`/api/notifikasis/${id}`);
+      setNotifications(prev => prev.filter(n => n.id !== id));
+      fetchNotifications();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const timeAgo = (dateStr: string) => {
+    const diff = Math.floor((new Date().getTime() - new Date(dateStr).getTime()) / 1000);
+    if (diff < 60) return 'Baru saja';
+    if (diff < 3600) return `${Math.floor(diff / 60)} mnt lalu`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)} jam lalu`;
+    return `${Math.floor(diff / 86400)} hari lalu`;
+  };
 
   const handleLogout = async () => {
     try {
@@ -345,11 +438,209 @@ export default function Header({ onMenuClick }: HeaderProps) {
           <span className="text-xs font-semibold text-emerald-600">{time} WIB</span>
         </div>
 
-        {/* Notification */}
-        <button className="relative p-2 rounded-xl hover:bg-slate-100 transition-colors text-slate-500 hover:text-slate-700">
-          <Bell className="h-4.5 w-4.5" style={{ width: '18px', height: '18px' }} />
-          <span className="absolute top-1.5 right-1.5 block h-1.5 w-1.5 rounded-full bg-red-500 ring-1 ring-white" />
-        </button>
+        {/* Notification Bell Dropdown */}
+        <div className="relative" ref={notifMenuRef}>
+          <button
+            onClick={() => {
+              setNotifOpen(!notifOpen);
+              if (!notifOpen) fetchNotifications();
+            }}
+            className={`relative p-2 rounded-xl transition-all ${
+              notifOpen ? 'bg-indigo-50 text-indigo-600' : 'hover:bg-slate-100 text-slate-500 hover:text-slate-700'
+            }`}
+            title="Pemberitahuan Kerusakan Aset Workshop"
+          >
+            <Bell className={`h-4.5 w-4.5 transition-transform ${unreadCount > 0 ? 'text-amber-500' : ''}`} style={{ width: '18px', height: '18px' }} />
+            {unreadCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 flex h-4.5 min-w-[18px] items-center justify-center px-1 rounded-full bg-rose-500 text-[10px] font-bold text-white shadow-sm ring-2 ring-white animate-pulse">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+          </button>
+
+          {/* Notification Dropdown Panel */}
+          {notifOpen && (
+            <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white rounded-2xl border border-slate-200/90 shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+              {/* Header */}
+              <div className="p-3.5 bg-gradient-to-r from-slate-900 to-indigo-950 text-white flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className={`p-1.5 rounded-lg border ${
+                    user?.role === 'wakapro'
+                      ? 'bg-blue-500/20 text-blue-300 border-blue-500/30'
+                      : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                  }`}>
+                    {user?.role === 'wakapro' ? <Bell className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold leading-tight">
+                      {user?.role === 'wakapro' ? 'Pemberitahuan Workshop' : 'Laporan Kerusakan Aset'}
+                    </h4>
+                    <p className="text-[10px] text-slate-300">
+                      {user?.role === 'wakapro' ? 'Notifikasi Khusus Workshop Anda' : 'Notifikasi dari Wakapro Workshop'}
+                    </p>
+                  </div>
+                </div>
+                {unreadCount > 0 && (
+                  <button
+                    onClick={markAllNotificationsRead}
+                    className="text-[11px] text-indigo-200 hover:text-white flex items-center gap-1 font-semibold transition-colors bg-white/10 hover:bg-white/20 px-2 py-1 rounded-lg"
+                    title="Tandai semua sudah dibaca"
+                  >
+                    <CheckCheck className="h-3 w-3" />
+                    <span>Tandai dibaca</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Notification List */}
+              <div className="max-h-[360px] overflow-y-auto divide-y divide-slate-100">
+                {notifications.length === 0 ? (
+                  <div className="p-6 text-center space-y-2">
+                    <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
+                      <CheckCircle2 className="h-5 w-5" />
+                    </div>
+                    <p className="text-xs font-semibold text-slate-700">
+                      {user?.role === 'wakapro' ? 'Tidak Ada Notifikasi Baru' : 'Tidak Ada Laporan Baru'}
+                    </p>
+                    <p className="text-[11px] text-slate-400 max-w-xs mx-auto leading-relaxed">
+                      {user?.role === 'wakapro'
+                        ? 'Belum ada pengiriman aset baru maupun pemberitahuan khusus untuk workshop Anda.'
+                        : 'Semua aset di seluruh workshop terpantau aman dan belum ada laporan kerusakan dari Wakapro.'}
+                    </p>
+                  </div>
+                ) : (
+                  notifications.map((notif) => {
+                    const kondisi = notif.data?.kondisi || '';
+                    const isDamageNotif = notif.tipe === 'kerusakan_aset_workshop';
+                    const isSevere = kondisi.toLowerCase().includes('berat') || kondisi.toLowerCase().includes('tidak layak');
+
+                    return (
+                      <div
+                        key={notif.id}
+                        onClick={() => {
+                          if (!notif.is_read) markNotificationRead(notif.id);
+                          setNotifOpen(false);
+                          if (notif.data?.link_url) {
+                            router.push(notif.data.link_url);
+                          } else if (user?.role === 'wakapro') {
+                            router.push('/wakapro/inventaris');
+                          } else {
+                            router.push('/dashboard/kondisi');
+                          }
+                        }}
+                        className={`p-3.5 transition-all cursor-pointer hover:bg-slate-50 relative group flex gap-3 items-start ${
+                          !notif.is_read ? 'bg-amber-50/40 border-l-4 border-l-amber-500' : 'border-l-4 border-l-transparent'
+                        }`}
+                      >
+                        {/* Icon */}
+                        <div className={`p-2 rounded-xl flex-shrink-0 mt-0.5 ${
+                          isDamageNotif
+                            ? isSevere ? 'bg-rose-100 text-rose-600' : 'bg-amber-100 text-amber-700'
+                            : 'bg-blue-100 text-blue-600'
+                        }`}>
+                          {isDamageNotif ? <AlertTriangle className="h-4 w-4" /> : <Package className="h-4 w-4" />}
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-1 mb-1">
+                            <span className="text-xs font-bold text-slate-800 truncate">
+                              {notif.data?.nama_barang || notif.judul}
+                            </span>
+                            <span className="text-[10px] text-slate-400 whitespace-nowrap flex items-center gap-1">
+                              <Clock className="h-2.5 w-2.5" />
+                              {timeAgo(notif.created_at)}
+                            </span>
+                          </div>
+
+                          <p className="text-[11px] text-slate-600 mb-1 leading-snug">
+                            {notif.pesan}
+                          </p>
+
+                          {/* Lokasi Workshop / Badges */}
+                          <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                            {notif.data?.nama_ruangan && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                {notif.data.nama_ruangan}
+                              </span>
+                            )}
+                            {kondisi && (
+                              <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold border ${
+                                isSevere 
+                                  ? 'bg-rose-50 text-rose-700 border-rose-200' 
+                                  : 'bg-amber-50 text-amber-700 border-amber-200'
+                              }`}>
+                                {kondisi}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center justify-between text-[10px] text-slate-400 mt-1">
+                            {notif.data?.wakapro_nama ? (
+                              <span>Pelapor: <strong className="text-slate-600 font-semibold">{notif.data.wakapro_nama}</strong></span>
+                            ) : (
+                              <span>Sistem Notifikasi Terpadu</span>
+                            )}
+                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button
+                                onClick={(e) => deleteNotification(notif.id, e)}
+                                className="p-1 text-slate-400 hover:text-rose-500 rounded hover:bg-slate-100"
+                                title="Hapus notifikasi"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="p-2.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs">
+                {user?.role === 'wakapro' ? (
+                  <>
+                    <Link
+                      href="/wakapro/bast"
+                      onClick={() => setNotifOpen(false)}
+                      className="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors px-2 py-1 rounded-lg hover:bg-blue-50/50"
+                    >
+                      <span>Verifikasi &amp; BAST</span>
+                      <ExternalLink className="h-3 w-3" />
+                    </Link>
+                    <Link
+                      href="/wakapro/inventaris"
+                      onClick={() => setNotifOpen(false)}
+                      className="text-xs text-slate-500 hover:text-slate-800 px-2 py-1 rounded-lg hover:bg-slate-100 transition-colors"
+                    >
+                      Inventaris Workshop
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <Link
+                      href="/dashboard/kondisi"
+                      onClick={() => setNotifOpen(false)}
+                      className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 transition-colors px-2 py-1 rounded-lg hover:bg-indigo-50/50"
+                    >
+                      <span>Buka Monitoring Kondisi Aset</span>
+                      <ExternalLink className="h-3 w-3" />
+                    </Link>
+                    <Link
+                      href="/dashboard/ruangan"
+                      onClick={() => setNotifOpen(false)}
+                      className="text-xs text-slate-500 hover:text-slate-800 px-2 py-1 rounded-lg hover:bg-slate-100 transition-colors"
+                    >
+                      Daftar Workshop
+                    </Link>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* User profile dropdown container */}
         <div className="relative" ref={userMenuRef}>

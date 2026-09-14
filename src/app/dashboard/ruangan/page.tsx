@@ -392,7 +392,10 @@ export default function RuanganWorkshopPage() {
   /* ── ASET WORKSHOP CRUD HANDLERS ── */
   const openCreateAsetModal = () => {
     setEditAsetTarget(null);
-    setAsetForm(emptyAsetForm());
+    const form = emptyAsetForm();
+    const baikId = kondisis.find(k => k.nama_kondisi.toLowerCase() === 'baik')?.id;
+    if (baikId) form.id_kondisi = String(baikId);
+    setAsetForm(form);
     setAsetFoto(null);
     setAsetFotoPreview(null);
     setShowAsetModal(true);
@@ -410,7 +413,7 @@ export default function RuanganWorkshopPage() {
       jumlah: String(aset.jumlah ?? 1),
       satuan: aset.satuan || 'Unit',
       harga_perolehan: aset.harga_perolehan ? String(aset.harga_perolehan) : '',
-      id_kondisi: aset.id_kondisi ? String(aset.id_kondisi) : (aset.kondisi?.id ? String(aset.kondisi.id) : ''),
+      id_kondisi: aset.id_kondisi ? String(aset.id_kondisi) : (aset.kondisi?.id ? String(aset.kondisi.id) : String(kondisis.find(k => k.nama_kondisi.toLowerCase() === 'baik')?.id ?? 1)),
       deskripsi: aset.deskripsi ?? '',
     });
     setAsetFoto(null);
@@ -1276,15 +1279,17 @@ export default function RuanganWorkshopPage() {
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-1.5">Kondisi</label>
                   <select
-                    value={asetForm.id_kondisi}
+                    value={asetForm.id_kondisi || String(kondisis.find(k => k.nama_kondisi.toLowerCase() === 'baik')?.id ?? 1)}
                     onChange={e => setAsetForm(f => ({ ...f, id_kondisi: e.target.value }))}
                     className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400"
                   >
-                    <option value="">Pilih Kondisi</option>
                     {kondisis.map(k => (
-                      <option key={k.id} value={k.id}>{k.nama_kondisi}</option>
+                      <option key={k.id} value={k.id}>{k.nama_kondisi}{k.nama_kondisi.toLowerCase() === 'baik' ? ' (Default)' : ''}</option>
                     ))}
                   </select>
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Kondisi awal otomatis diset &quot;Baik&quot;. Anda dapat mengubahnya jika perlu.
+                  </p>
                 </div>
               </div>
 

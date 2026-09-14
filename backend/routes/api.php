@@ -22,6 +22,7 @@ use App\Http\Controllers\Api\SaranaPrasaranaController;
 use App\Http\Controllers\Api\DaftarBelanjaController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\DistribusiAsetController;
+use App\Http\Controllers\Api\NotifikasiController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login'])->name('login');
@@ -124,4 +125,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('distribusi-asets/{id}/konfirmasi', [DistribusiAsetController::class, 'konfirmasi']);
     Route::get('distribusi-asets/{id}/surat-jalan', [DistribusiAsetController::class, 'cetakSuratJalan']);
     Route::get('distribusi-asets/{id}/bast', [DistribusiAsetController::class, 'cetakBast']);
+
+    // Notifikasi Sistem
+    Route::get('notifikasis', [NotifikasiController::class, 'index']);
+    Route::put('notifikasis/read-all', [NotifikasiController::class, 'markAllRead']);
+    Route::put('notifikasis/{id}/read', [NotifikasiController::class, 'markRead']);
+    Route::delete('notifikasis/{id}', [NotifikasiController::class, 'destroy']);
 });

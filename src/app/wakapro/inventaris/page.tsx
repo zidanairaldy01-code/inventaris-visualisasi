@@ -112,7 +112,11 @@ export default function InventarisWorkshopPage() {
         catatan: catatan.trim() || null,
       })
 
-      success('Kondisi aset berhasil diperbarui')
+      const isDamaged = ['Rusak Ringan', 'Rusak Berat', 'Tidak Layak Pakai'].includes(selectedKondisi);
+      success(isDamaged 
+        ? 'Kondisi aset berhasil diperbarui & laporan kerusakan dikirimkan ke Admin' 
+        : 'Kondisi aset berhasil diperbarui'
+      )
       closeEditModal()
       fetchInventaris() // Refresh data
     } catch (err: any) {
@@ -548,6 +552,19 @@ export default function InventarisWorkshopPage() {
                   <option value="Tidak Layak Pakai">Tidak Layak Pakai</option>
                 </select>
               </div>
+
+              {/* Banner Info Notifikasi Otomatis ke Admin jika Rusak */}
+              {['Rusak Ringan', 'Rusak Berat', 'Tidak Layak Pakai'].includes(selectedKondisi) && (
+                <div className="p-3.5 bg-amber-50 border border-amber-200/80 rounded-xl flex items-start gap-2.5 text-xs text-amber-800 animate-fadeIn">
+                  <AlertTriangle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-bold text-amber-900">Notifikasi Otomatis ke Administrator</p>
+                    <p className="text-[11px] text-amber-700 mt-0.5 leading-relaxed">
+                      Laporan kerusakan aset ini akan langsung dikirimkan ke panel Admin beserta nama workshop ({ruangan?.nama_ruangan || 'Workshop'}).
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* Catatan / Keterangan */}
               <div>

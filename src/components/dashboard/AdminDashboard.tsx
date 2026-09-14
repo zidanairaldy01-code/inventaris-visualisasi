@@ -1,10 +1,13 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import axios from '@/lib/axios';
 import {
   Package, Building2, Warehouse, ArrowUpRight, TrendingUp,
   DollarSign, Layers, ShoppingCart, Handshake, Wrench, Clock,
-  ChevronRight, FileText, Sparkles, Plus, Users, ArrowRight, ShieldCheck
+  ChevronRight, FileText, Sparkles, Plus, Users, ArrowRight, ShieldCheck,
+  AlertTriangle
 } from 'lucide-react';
 
 const formatRupiah = (n: number | null | undefined) =>
@@ -47,6 +50,22 @@ export default function AdminDashboard({
   recentSarana,
   loading
 }: AdminDashboardProps) {
+  const [unreadDamagedNotifs, setUnreadDamagedNotifs] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchNotifs = async () => {
+      try {
+        const res = await axios.get('/api/notifikasis?unread_only=true&limit=5');
+        if (res.data?.status === 'success') {
+          setUnreadDamagedNotifs(res.data.data || []);
+        }
+      } catch {
+        // ignore
+      }
+    };
+    fetchNotifs();
+  }, []);
+
   return (
     <div className="space-y-6 sm:space-y-8 animate-fadeIn pb-12">
       {/* ── Banner Master Admin ── */}
@@ -88,6 +107,41 @@ export default function AdminDashboard({
           </div>
         </div>
       </div>
+
+      {/* ── Alert Notifikasi Kerusakan Workshop (Jika ada laporan dari Wakapro) ── */}
+      {unreadDamagedNotifs.length > 0 && (
+        <div className="bg-gradient-to-r from-amber-500/10 via-rose-500/10 to-amber-500/10 border-2 border-amber-300/80 rounded-2xl p-4 sm:p-5 shadow-sm animate-fadeIn">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="p-2.5 bg-amber-500 text-white rounded-xl shadow-md flex-shrink-0 animate-bounce">
+                <AlertTriangle className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-sm sm:text-base font-bold text-slate-900">
+                    Perhatian: {unreadDamagedNotifs.length} Laporan Kerusakan Aset di Workshop
+                  </h3>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700 border border-rose-200 animate-pulse">
+                    Perlu Tindak Lanjut
+                  </span>
+                </div>
+                <p className="text-xs text-slate-600 mt-1">
+                  Laporan terbaru: <strong className="text-slate-800">{unreadDamagedNotifs[0].data?.nama_barang || unreadDamagedNotifs[0].judul}</strong> di <strong className="text-slate-800">{unreadDamagedNotifs[0].data?.nama_ruangan || 'Workshop'}</strong> ({unreadDamagedNotifs[0].data?.kondisi || 'Rusak'}) oleh {unreadDamagedNotifs[0].data?.wakapro_nama || 'Wakapro'}.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <Link
+                href="/dashboard/kondisi"
+                className="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5"
+              >
+                <span>Buka Monitoring Kerusakan</span>
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── 4 KPI Main Stats ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">

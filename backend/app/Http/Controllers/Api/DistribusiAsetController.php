@@ -8,6 +8,7 @@ use App\Models\SaranaPrasarana;
 use App\Models\Ruangan;
 use App\Models\User;
 use App\Models\History;
+use App\Models\Notifikasi;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -228,6 +229,40 @@ class DistribusiAsetController extends Controller
                 // Abaikan jika history opsional
             }
 
+            // Kirim notifikasi terkhususkan HANYA untuk Wakapro workshop penerima
+            try {
+                $countResults = count($results);
+                $namaRuang = Ruangan::find($ruanganTujuanId)?->nama_ruangan ?? 'Workshop';
+                $existingDistNotif = Notifikasi::where('tipe', 'distribusi_masuk')
+                    ->where('target_ruangan_id', $ruanganTujuanId)
+                    ->where('is_read', false)
+                    ->first();
+
+                if ($existingDistNotif) {
+                    $existingDistNotif->update([
+                        'judul' => "Pengiriman Aset Baru ke Workshop",
+                        'pesan' => "Petugas {$user->nama_lengkap} menambahkan pengiriman aset ke {$namaRuang}. Terdapat item yang menunggu verifikasi dan BAST.",
+                        'updated_at' => Carbon::now(),
+                    ]);
+                } else {
+                    Notifikasi::create([
+                        'target_role'       => 'wakapro',
+                        'target_user_id'    => $wakapro ? $wakapro->id : null,
+                        'target_ruangan_id' => $ruanganTujuanId,
+                        'tipe'              => 'distribusi_masuk',
+                        'judul'             => "Pengiriman Aset Baru ({$countResults} Item)",
+                        'pesan'             => "Petugas {$user->nama_lengkap} mengirimkan {$countResults} item barang ke {$namaRuang}. Silakan periksa fisik barang dan lakukan konfirmasi BAST.",
+                        'data'              => [
+                            'ruangan_id' => $ruanganTujuanId,
+                            'link_url'   => '/wakapro/bast',
+                        ],
+                        'is_read'           => false,
+                    ]);
+                }
+            } catch (\Exception $e) {
+                // Jangan gagalkan transaksi jika notifikasi gagal
+            }
+
             return $results;
         });
 
@@ -325,6 +360,43 @@ class DistribusiAsetController extends Controller
             ]);
 
             $message = 'Konfirmasi pengiriman aset ditolak dengan catatan.';
+        }
+
+        // Cek sisa aset yang menunggu konfirmasi di ruangan ini; jika 0, tandai notifikasi distribusi masuk sebagai selesai/dibaca
+        try {
+            $sisaMenunggu = DistribusiAset::where('ruangan_tujuan_id', $distribusi->ruangan_tujuan_id)
+                ->where('status', 'menunggu_konfirmasi')
+                ->count();
+
+            if ($sisaMenunggu === 0) {
+                Notifikasi::where('tipe', 'distribusi_masuk')
+                    ->where('target_ruangan_id', $distribusi->ruangan_tujuan_id)
+                    ->where('is_read', false)
+                    ->update(['is_read' => true]);
+            }
+
+            // Notifikasi ke Admin bahwa Wakapro telah memproses serah terima
+            $namaBarang = $distribusi->saranaPrasarana?->nama_barang ?? 'Aset';
+            $namaRuang  = $distribusi->ruanganTujuan?->nama_ruangan ?? 'Workshop';
+            $statusText = $validated['aksi'] === 'terima' ? 'menerima' : 'menolak';
+
+            Notifikasi::create([
+                'target_role'        => 'admin',
+                'target_user_id'     => null,
+                'target_ruangan_id'  => $distribusi->ruangan_tujuan_id,
+                'tipe'               => 'konfirmasi_distribusi',
+                'judul'              => "Konfirmasi BAST: {$namaBarang}",
+                'pesan'              => "Wakapro {$user->nama_lengkap} ({$namaRuang}) telah {$statusText} distribusi aset \"{$namaBarang}\"." . (!empty($validated['catatan_penerimaan']) ? " Catatan: \"{$validated['catatan_penerimaan']}\"" : ""),
+                'data'               => [
+                    'distribusi_id' => $distribusi->id,
+                    'aksi'          => $validated['aksi'],
+                    'ruangan_id'    => $distribusi->ruangan_tujuan_id,
+                    'link_url'      => '/dashboard/distribusi-aset',
+                ],
+                'is_read'            => false,
+            ]);
+        } catch (\Exception $e) {
+            // Abaikan agar tidak menggagalkan response
         }
 
         $distribusi->load(['saranaPrasarana', 'ruanganTujuan.gedung', 'petugasPengirim', 'wakaproPenerima']);
@@ -580,7 +652,7 @@ class DistribusiAsetController extends Controller
         $user = $request->user();
         
         // Cari distribusi item
-        $distribusi = DistribusiAset::with('saranaPrasarana')->findOrFail($id);
+        $distribusi = DistribusiAset::with(['saranaPrasarana', 'ruanganTujuan.gedung'])->findOrFail($id);
         
         // Validasi: Hanya wakapro yang punya ruangan ini yang bisa update
         if ($user->role === 'wakapro') {
@@ -614,6 +686,77 @@ class DistribusiAsetController extends Controller
                 ]);
             } catch (\Exception $e) {
                 // History logging is optional, don't fail the request if it errors
+            }
+
+            // Notifikasi ke Admin jika aset minimal mengalami Kerusakan Ringan
+            $isDamaged = in_array($validated['kondisi'], ['Rusak Ringan', 'Rusak Berat', 'Tidak Layak Pakai'])
+                || stripos($validated['kondisi'], 'rusak') !== false
+                || stripos($validated['kondisi'], 'tidak layak') !== false;
+
+            if ($isDamaged) {
+                try {
+                    $namaBarang  = $distribusi->saranaPrasarana->nama_barang ?? 'Barang Workshop';
+                    $namaRuangan = $distribusi->ruanganTujuan?->nama_ruangan ?? 'Workshop';
+                    $namaGedung  = $distribusi->ruanganTujuan?->gedung?->nama_gedung ?? null;
+                    $pelapor     = $user ? $user->nama_lengkap : 'Wakapro';
+
+                    // Cek apakah sudah ada notifikasi kerusakan yang belum dibaca untuk aset/distribusi ini agar tidak dobel / menumpuk
+                    $existingNotif = Notifikasi::where('tipe', 'kerusakan_aset_workshop')
+                        ->where('is_read', false)
+                        ->where('target_role', 'admin')
+                        ->where(function ($q) use ($distribusi) {
+                            $q->where('data->distribusi_id', $distribusi->id)
+                              ->orWhere('data->sarana_prasarana_id', $distribusi->sarana_prasarana_id);
+                        })
+                        ->first();
+
+                    $notifPayload = [
+                        'target_role'        => 'admin',
+                        'target_user_id'     => null,
+                        'target_ruangan_id'  => $distribusi->ruangan_tujuan_id,
+                        'tipe'               => 'kerusakan_aset_workshop',
+                        'judul'              => "Laporan Kerusakan Aset: {$namaBarang}",
+                        'pesan'              => "Wakapro {$pelapor} melaporkan aset \"{$namaBarang}\" di {$namaRuangan} dalam kondisi \"{$validated['kondisi']}\"" . (!empty($validated['catatan']) ? ": \"{$validated['catatan']}\"" : "."),
+                        'data'               => [
+                            'distribusi_id'       => $distribusi->id,
+                            'sarana_prasarana_id' => $distribusi->sarana_prasarana_id,
+                            'nama_barang'         => $namaBarang,
+                            'kode_barang'         => $distribusi->saranaPrasarana->kode ?? '-',
+                            'kondisi'             => $validated['kondisi'],
+                            'catatan'             => $validated['catatan'] ?? null,
+                            'ruangan_id'          => $distribusi->ruangan_tujuan_id,
+                            'nama_ruangan'        => $namaRuangan,
+                            'nama_gedung'         => $namaGedung,
+                            'wakapro_id'          => $user?->id,
+                            'wakapro_nama'        => $pelapor,
+                            'link_url'            => '/dashboard/kondisi',
+                        ],
+                        'is_read'            => false,
+                    ];
+
+                    if ($existingNotif) {
+                        // Perbarui notifikasi lama agar tidak menumpuk dobel
+                        $existingNotif->update($notifPayload);
+                    } else {
+                        Notifikasi::create($notifPayload);
+                    }
+                } catch (\Exception $e) {
+                    // Jangan gagalkan request jika notifikasi gagal disimpan
+                }
+            } else {
+                // Jika kondisi aset sudah kembali "Baik" / tidak rusak, tandai notifikasi kerusakan lama sebagai sudah dibaca / diselesaikan
+                try {
+                    Notifikasi::where('tipe', 'kerusakan_aset_workshop')
+                        ->where('is_read', false)
+                        ->where('target_role', 'admin')
+                        ->where(function ($q) use ($distribusi) {
+                            $q->where('data->distribusi_id', $distribusi->id)
+                              ->orWhere('data->sarana_prasarana_id', $distribusi->sarana_prasarana_id);
+                        })
+                        ->update(['is_read' => true]);
+                } catch (\Exception $e) {
+                    // abaikan
+                }
             }
         }
         

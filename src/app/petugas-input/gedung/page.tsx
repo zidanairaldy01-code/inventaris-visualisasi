@@ -176,7 +176,7 @@ export default function GedungDrivePage() {
     jumlah: '1',
     satuan: 'Unit',
     harga_perolehan: '',
-    id_kondisi: '',
+    id_kondisi: '1',
     deskripsi: '',
   });
   const [savingAset, setSavingAset] = useState(false);
@@ -506,7 +506,7 @@ export default function GedungDrivePage() {
       jumlah: String(a.jumlah),
       satuan: a.satuan,
       harga_perolehan: a.harga_perolehan ? String(a.harga_perolehan) : '',
-      id_kondisi: String(a.kondisi?.id ?? ''),
+      id_kondisi: String(a.kondisi?.id || a.id_kondisi || kondisiList.find(k => k.nama_kondisi.toLowerCase() === 'baik')?.id || 1),
       deskripsi: '',
     });
     setAsetFoto(null);
@@ -1559,15 +1559,17 @@ export default function GedungDrivePage() {
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Kondisi</label>
                   <select
-                    value={asetForm.id_kondisi}
+                    value={asetForm.id_kondisi || String(kondisiList.find(k => k.nama_kondisi.toLowerCase() === 'baik')?.id ?? 1)}
                     onChange={e => setAsetForm(f => ({ ...f, id_kondisi: e.target.value }))}
                     className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   >
-                    <option value="">Pilih Kondisi</option>
                     {kondisiList.map(k => (
-                      <option key={k.id} value={k.id}>{k.nama_kondisi}</option>
+                      <option key={k.id} value={k.id}>{k.nama_kondisi}{k.nama_kondisi.toLowerCase() === 'baik' ? ' (Default)' : ''}</option>
                     ))}
                   </select>
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Kondisi awal otomatis diset &quot;Baik&quot;. Anda dapat mengubahnya jika perlu.
+                  </p>
                 </div>
 
                 <div className="col-span-2">
