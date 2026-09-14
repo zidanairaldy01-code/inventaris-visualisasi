@@ -54,6 +54,11 @@ class KondisiController extends Controller
         $kondisiFilter = $request->query('kondisi', 'all');
         $lokasiFilter  = $request->query('lokasi', 'all');
         $search        = $request->query('search', '');
+        
+        // Get current user untuk filtering wakapro
+        $user = $request->user();
+        $isWakapro = $user && $user->role === 'wakapro';
+        $ruanganId = $isWakapro ? $user->ruangan_id : null;
 
         // 1. Aset dari Gedung / Workshop
         $asetQuery = \App\Models\Aset::with(['kondisi', 'ruangan.gedung', 'kategori', 'folder'])
@@ -61,6 +66,27 @@ class KondisiController extends Controller
                 $q->where('nama_kondisi', 'like', '%rusak%')
                   ->orWhere('nama_kondisi', 'like', '%tidak layak%');
             });
+        
+        // FILTER WAKAPRO: Hanya aset di ruangan workshop mereka
+        if ($isWakapro) {
+            if (!$ruanganId) {
+                // Wakapro belum ditentukan ruangan → return empty
+                return response()->json([
+                    'status' => 'success',
+                    'warning' => 'Anda belum ditentukan ruangan workshop. Silakan hubungi admin untuk assignment ruangan.',
+                    'summary' => [
+                        'total_rusak'       => 0,
+                        'rusak_ringan'      => 0,
+                        'rusak_berat'       => 0,
+                        'tidak_layak_pakai' => 0,
+                    ],
+                    'data' => [],
+                ]);
+            }
+            
+            // Filter hanya aset di ruangan workshop wakapro
+            $asetQuery->where('id_ruangan', $ruanganId);
+        }
 
         if ($kondisiFilter !== 'all') {
             $asetQuery->whereHas('kondisi', function ($q) use ($kondisiFilter) {
@@ -106,9 +132,9 @@ class KondisiController extends Controller
             ];
         });
 
-        // 2. Sarana & Prasarana
+        // 2. Sarana & Prasarana (SKIP untuk wakapro - mereka tidak manage sarana prasarana)
         $spItems = collect();
-        if ($lokasiFilter === 'all' || $lokasiFilter === 'sarana_prasarana') {
+        if (!$isWakapro && ($lokasiFilter === 'all' || $lokasiFilter === 'sarana_prasarana')) {
             $spQuery = \App\Models\SaranaPrasarana::with('folder')
                 ->where(function ($q) {
                     $q->where('kondisi', 'like', '%rusak%')
@@ -157,23 +183,41 @@ class KondisiController extends Controller
             })->values();
         }
 
-        // Summary counts
-        $allTotal = \App\Models\Aset::whereHas('kondisi', function ($q) {
-            $q->where('nama_kondisi', 'like', '%rusak%')
-              ->orWhere('nama_kondisi', 'like', '%tidak layak%');
-        })->count() + \App\Models\SaranaPrasarana::where(function ($q) {
-            $q->where('kondisi', 'like', '%rusak%')
-              ->orWhere('kondisi', 'like', '%tidak layak%');
-        })->count();
+        // Summary counts (filtered untuk wakapro)
+        if ($isWakapro && $ruanganId) {
+            $allTotal = \App\Models\Aset::where('id_ruangan', $ruanganId)
+                ->whereHas('kondisi', function ($q) {
+                    $q->where('nama_kondisi', 'like', '%rusak%')
+                      ->orWhere('nama_kondisi', 'like', '%tidak layak%');
+                })->count();
 
-        $countRingan = \App\Models\Aset::whereHas('kondisi', fn($q) => $q->where('nama_kondisi', 'Rusak Ringan'))->count()
-                     + \App\Models\SaranaPrasarana::where('kondisi', 'Rusak Ringan')->count();
+            $countRingan = \App\Models\Aset::where('id_ruangan', $ruanganId)
+                ->whereHas('kondisi', fn($q) => $q->where('nama_kondisi', 'Rusak Ringan'))->count();
 
-        $countBerat  = \App\Models\Aset::whereHas('kondisi', fn($q) => $q->where('nama_kondisi', 'Rusak Berat'))->count()
-                     + \App\Models\SaranaPrasarana::where('kondisi', 'Rusak Berat')->count();
+            $countBerat = \App\Models\Aset::where('id_ruangan', $ruanganId)
+                ->whereHas('kondisi', fn($q) => $q->where('nama_kondisi', 'Rusak Berat'))->count();
 
-        $countTidakLayak = \App\Models\Aset::whereHas('kondisi', fn($q) => $q->where('nama_kondisi', 'Tidak Layak Pakai'))->count()
-                         + \App\Models\SaranaPrasarana::where('kondisi', 'Tidak Layak Pakai')->count();
+            $countTidakLayak = \App\Models\Aset::where('id_ruangan', $ruanganId)
+                ->whereHas('kondisi', fn($q) => $q->where('nama_kondisi', 'Tidak Layak Pakai'))->count();
+        } else {
+            // Summary untuk admin/petugas/wakasek (semua data)
+            $allTotal = \App\Models\Aset::whereHas('kondisi', function ($q) {
+                $q->where('nama_kondisi', 'like', '%rusak%')
+                  ->orWhere('nama_kondisi', 'like', '%tidak layak%');
+            })->count() + \App\Models\SaranaPrasarana::where(function ($q) {
+                $q->where('kondisi', 'like', '%rusak%')
+                  ->orWhere('kondisi', 'like', '%tidak layak%');
+            })->count();
+
+            $countRingan = \App\Models\Aset::whereHas('kondisi', fn($q) => $q->where('nama_kondisi', 'Rusak Ringan'))->count()
+                         + \App\Models\SaranaPrasarana::where('kondisi', 'Rusak Ringan')->count();
+
+            $countBerat  = \App\Models\Aset::whereHas('kondisi', fn($q) => $q->where('nama_kondisi', 'Rusak Berat'))->count()
+                         + \App\Models\SaranaPrasarana::where('kondisi', 'Rusak Berat')->count();
+
+            $countTidakLayak = \App\Models\Aset::whereHas('kondisi', fn($q) => $q->where('nama_kondisi', 'Tidak Layak Pakai'))->count()
+                             + \App\Models\SaranaPrasarana::where('kondisi', 'Tidak Layak Pakai')->count();
+        }
 
         return response()->json([
             'status' => 'success',

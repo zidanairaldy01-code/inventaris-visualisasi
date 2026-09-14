@@ -104,11 +104,11 @@ export default function AdminDashboard({
             <div className="h-8 w-20 bg-slate-100 rounded-lg animate-pulse" />
           ) : (
             <p className="text-2xl font-black text-slate-900 tracking-tight">
-              {stats.total_item_sarana.toLocaleString('id-ID')}{' '}
+              {(stats?.total_item_sarana || 0).toLocaleString('id-ID')}{' '}
               <span className="text-sm font-semibold text-slate-500">Jenis</span>
             </p>
           )}
-          <p className="text-xs text-slate-400 mt-1">Total {stats.total_unit.toLocaleString('id-ID')} unit barang fisik</p>
+          <p className="text-xs text-slate-400 mt-1">Total {(stats?.total_unit || 0).toLocaleString('id-ID')} unit barang fisik</p>
         </div>
 
         <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
@@ -124,7 +124,7 @@ export default function AdminDashboard({
             <div className="h-8 w-28 bg-slate-100 rounded-lg animate-pulse" />
           ) : (
             <p className="text-xl sm:text-2xl font-black text-emerald-600 tracking-tight">
-              {formatRupiah(stats.total_nilai_pembelian_sarana)}
+              {formatRupiah(stats?.total_nilai_pembelian_sarana)}
             </p>
           )}
           <p className="text-xs text-slate-400 mt-1">Total nilai pengadaan sarana</p>
@@ -143,11 +143,11 @@ export default function AdminDashboard({
             <div className="h-8 w-20 bg-slate-100 rounded-lg animate-pulse" />
           ) : (
             <p className="text-2xl font-black text-slate-900 tracking-tight">
-              {stats.total_ruangan_all || stats.total_ruangan}{' '}
+              {stats?.total_ruangan_all || stats?.total_ruangan || 0}{' '}
               <span className="text-sm font-semibold text-slate-500">Ruangan</span>
             </p>
           )}
-          <p className="text-xs text-slate-400 mt-1">{stats.total_gedung} Gedung &amp; 5 Workshop Jurusan</p>
+          <p className="text-xs text-slate-400 mt-1">{stats?.total_gedung || 0} Gedung &amp; 5 Workshop Jurusan</p>
         </div>
 
         <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
@@ -163,10 +163,10 @@ export default function AdminDashboard({
             <div className="h-8 w-24 bg-slate-100 rounded-lg animate-pulse" />
           ) : (
             <p className="text-xl sm:text-2xl font-black text-purple-700 tracking-tight">
-              {formatRupiah(stats.total_belanja)}
+              {formatRupiah(stats?.total_belanja)}
             </p>
           )}
-          <p className="text-xs text-slate-400 mt-1">{stats.total_item_belanja} usulan rencana belanja</p>
+          <p className="text-xs text-slate-400 mt-1">{stats?.total_item_belanja || 0} usulan rencana belanja</p>
         </div>
       </div>
 

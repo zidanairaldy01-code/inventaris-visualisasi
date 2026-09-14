@@ -20,6 +20,7 @@ interface NavItem {
   badge?: string;
   badgeColor?: string;
   roles?: string[];
+  dynamicHref?: boolean;
 }
 
 const groups = [
@@ -32,30 +33,31 @@ const groups = [
 ];
 
 const navigation: NavItem[] = [
-  // Menu Utama
-  { name: 'Dashboard',          href: '/dashboard',                  icon: LayoutDashboard,    group: 'main' },
+  // Menu Utama - This will be overridden based on role in render
+  { name: 'Dashboard',          href: '/dashboard',                  icon: LayoutDashboard,    group: 'main', dynamicHref: true },
 
   // Distribusi & Serah Terima
-  { name: 'Distribusi & BAST',  href: '/dashboard/distribusi',       icon: Truck,              group: 'distribusi', roles: ['super_admin', 'petugas'] },
-  { name: 'Penerimaan Barang',  href: '/dashboard/penerimaan',       icon: Inbox,              group: 'distribusi', roles: ['super_admin', 'wakapro'] },
+  { name: 'Distribusi & BAST',    href: '/dashboard/distribusi',          icon: Truck,              group: 'distribusi', roles: ['super_admin', 'petugas'], dynamicHref: true },
+  { name: 'Penerimaan Barang',    href: '/dashboard/penerimaan',          icon: Inbox,              group: 'distribusi', roles: ['super_admin', 'wakapro'], dynamicHref: true },
 
   // Inventaris & Pengadaan
-  { name: 'Sarana & Prasarana', href: '/dashboard/sarana-prasarana', icon: Package,            group: 'inventaris', roles: ['super_admin', 'petugas', 'wakasek'] },
-  { name: 'Inventaris',         href: '/dashboard/inventaris',       icon: ClipboardList,      group: 'inventaris', roles: ['super_admin', 'petugas', 'wakasek'] },
-  { name: 'Sumber Dana',        href: '/dashboard/sumber-dana',      icon: Wallet,             group: 'inventaris', roles: ['super_admin', 'petugas', 'wakasek'] },
+  { name: 'Inventaris Workshop',  href: '/wakapro/inventaris',            icon: Warehouse,          group: 'inventaris', roles: ['wakapro'] },
+  { name: 'Sarana & Prasarana',   href: '/dashboard/sarana-prasarana',    icon: Package,            group: 'inventaris', roles: ['super_admin', 'petugas', 'wakasek'], dynamicHref: true },
+  { name: 'Inventaris',           href: '/dashboard/inventaris',          icon: ClipboardList,      group: 'inventaris', roles: ['super_admin', 'petugas', 'wakasek'], dynamicHref: true },
+  { name: 'Sumber Dana',          href: '/dashboard/sumber-dana',         icon: Wallet,             group: 'inventaris', roles: ['super_admin', 'petugas', 'wakasek'], dynamicHref: true },
 
   // Sirkulasi & Layanan
-  { name: 'Peminjaman Aset',    href: '/dashboard/peminjaman',       icon: Handshake,          group: 'layanan' },
-  { name: 'Servis & Perbaikan', href: '/dashboard/servis',           icon: Wrench,             group: 'layanan' },
+  { name: 'Peminjaman Aset',    href: '/dashboard/peminjaman',       icon: Handshake,          group: 'layanan', dynamicHref: true },
+  { name: 'Servis & Perbaikan', href: '/dashboard/servis',           icon: Wrench,             group: 'layanan', dynamicHref: true },
 
   // Data Master
-  { name: 'Master Gedung',      href: '/dashboard/gedung',           icon: Building2,          group: 'master',     roles: ['super_admin', 'petugas'] },
-  { name: 'Ruangan Workshop',   href: '/dashboard/ruangan',          icon: Warehouse,          group: 'master',     roles: ['super_admin', 'petugas'] },
-  { name: 'Kondisi Aset',       href: '/dashboard/kondisi',          icon: SlidersHorizontal,  group: 'master' },
+  { name: 'Master Gedung',      href: '/dashboard/gedung',           icon: Building2,          group: 'master',     roles: ['super_admin', 'petugas'], dynamicHref: true },
+  { name: 'Ruangan Workshop',   href: '/dashboard/ruangan',          icon: Warehouse,          group: 'master',     roles: ['super_admin', 'petugas'], dynamicHref: true },
+  { name: 'Kondisi Aset',       href: '/dashboard/kondisi',          icon: SlidersHorizontal,  group: 'master', dynamicHref: true },
 
   // Laporan & Pengaturan
-  { name: 'Riwayat Aktivitas',  href: '/dashboard/history',          icon: History,            group: 'laporan',    roles: ['super_admin', 'petugas', 'wakasek'] },
-  { name: 'Laporan',            href: '/dashboard/laporan',          icon: BarChart3,          group: 'laporan' },
+  { name: 'Riwayat Aktivitas',  href: '/dashboard/history',          icon: History,            group: 'laporan',    roles: ['super_admin', 'petugas', 'wakasek'], dynamicHref: true },
+  { name: 'Laporan',            href: '/dashboard/laporan',          icon: BarChart3,          group: 'laporan', dynamicHref: true },
   { name: 'Kelola Pengguna',    href: '/dashboard/users',            icon: Users,              group: 'laporan',    roles: ['super_admin'] },
 ];
 
@@ -64,17 +66,95 @@ interface SidebarProps {
   onClose: () => void;
 }
 
+// Helper function: Transform href based on role
+function getHrefForRole(href: string, role: string, isDynamic?: boolean): string {
+  if (!isDynamic) {
+    return href;
+  }
+
+  // For Dashboard link, redirect to role-specific dashboard
+  if (href === '/dashboard' || href === '/dashboard/') {
+    if (role === 'petugas') return '/petugas-input';
+    if (role === 'wakapro') return '/wakapro';
+    if (role === 'wakasek') return '/wakasek';
+    return href; // super_admin stays at /dashboard
+  }
+
+  // For wakapro role, map all accessible routes to /wakapro/...
+  if (role === 'wakapro') {
+    if (href === '/dashboard/penerimaan') return '/wakapro/penerimaan';
+    if (href === '/dashboard/peminjaman') return '/wakapro/peminjaman';
+    if (href === '/dashboard/servis') return '/wakapro/servis';
+    if (href === '/dashboard/kondisi') return '/wakapro/kondisi';
+    if (href === '/dashboard/laporan') return '/wakapro/laporan';
+  }
+
+  // For petugas role, map all accessible routes to /petugas-input/...
+  if (role === 'petugas') {
+    if (href === '/dashboard/distribusi') return '/petugas-input/distribusi';
+    if (href === '/dashboard/sarana-prasarana') return '/petugas-input/sarana-prasarana';
+    if (href === '/dashboard/inventaris') return '/petugas-input/inventaris';
+    if (href === '/dashboard/sumber-dana') return '/petugas-input/sumber-dana';
+    if (href === '/dashboard/peminjaman') return '/petugas-input/peminjaman';
+    if (href === '/dashboard/servis') return '/petugas-input/servis';
+    if (href === '/dashboard/gedung') return '/petugas-input/gedung';
+    if (href === '/dashboard/ruangan') return '/petugas-input/ruangan';
+    if (href === '/dashboard/kondisi') return '/petugas-input/kondisi';
+    if (href === '/dashboard/history') return '/petugas-input/history';
+    if (href === '/dashboard/laporan') return '/petugas-input/laporan';
+  }
+
+  // For wakasek role, map all accessible routes to /wakasek/...
+  if (role === 'wakasek') {
+    if (href === '/dashboard/sarana-prasarana') return '/wakasek/sarana-prasarana';
+    if (href === '/dashboard/inventaris') return '/wakasek/inventaris';
+    if (href === '/dashboard/sumber-dana') return '/wakasek/sumber-dana';
+    if (href === '/dashboard/peminjaman') return '/wakasek/peminjaman';
+    if (href === '/dashboard/servis') return '/wakasek/servis';
+    if (href === '/dashboard/kondisi') return '/wakasek/kondisi';
+    if (href === '/dashboard/history') return '/wakasek/history';
+    if (href === '/dashboard/laporan') return '/wakasek/laporan';
+  }
+
+  return href; // super_admin stays at /dashboard/...
+}
+
+// Helper: Get base path prefix for a given role
+function getBasePath(role: string): string {
+  if (role === 'petugas') return '/petugas-input';
+  if (role === 'wakapro') return '/wakapro';
+  if (role === 'wakasek') return '/wakasek';
+  return '/dashboard';
+}
+
+// Helper: Detect role from pathname
+function detectRoleFromPathname(pathname: string | null): string {
+  if (!pathname) return 'super_admin';
+  
+  if (pathname.startsWith('/petugas-input')) return 'petugas';
+  if (pathname.startsWith('/wakapro')) return 'wakapro';
+  if (pathname.startsWith('/wakasek')) return 'wakasek';
+  
+  return 'super_admin';
+}
+
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const [isInventarisOpen, setIsInventarisOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const [roleFromPath, setRoleFromPath] = useState<string>('super_admin');
 
+  // Detect role immediately from pathname
   useEffect(() => {
+    const detectedRole = detectRoleFromPathname(pathname);
+    setRoleFromPath(detectedRole);
+    
     if (pathname?.includes('/inventaris')) {
       setIsInventarisOpen(true);
     }
   }, [pathname]);
 
+  // Fetch user info (for display only, role already known from pathname)
   useEffect(() => {
     axios.get('/api/user')
       .then(res => setUser(res.data))
@@ -103,6 +183,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         <SidebarContent
           pathname={pathname}
           user={user}
+          roleFromPath={roleFromPath}
           isInventarisOpen={isInventarisOpen}
           setIsInventarisOpen={setIsInventarisOpen}
           handleLogout={handleLogout}
@@ -126,6 +207,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         <SidebarContent
           pathname={pathname}
           user={user}
+          roleFromPath={roleFromPath}
           isInventarisOpen={isInventarisOpen}
           setIsInventarisOpen={setIsInventarisOpen}
           handleLogout={handleLogout}
@@ -139,6 +221,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 function SidebarContent({
   pathname,
   user,
+  roleFromPath,
   isInventarisOpen,
   setIsInventarisOpen,
   handleLogout,
@@ -146,6 +229,7 @@ function SidebarContent({
 }: {
   pathname: string | null;
   user: any;
+  roleFromPath: string;
   isInventarisOpen: boolean;
   setIsInventarisOpen: (open: boolean) => void;
   handleLogout: () => void;
@@ -196,10 +280,9 @@ function SidebarContent({
       {/* ── Main Navigation List ── */}
       <div className="flex-1 overflow-y-auto py-3 px-3 space-y-4 relative z-10 scrollbar-none">
         {groups.map((group) => {
-          const userRole = user?.role || 'petugas';
           const items = navigation.filter((n) => {
             if (n.group !== group.key) return false;
-            if (n.roles && !n.roles.includes(userRole)) return false;
+            if (n.roles && !n.roles.includes(roleFromPath)) return false;
             return true;
           });
           if (items.length === 0) return null;
@@ -216,7 +299,15 @@ function SidebarContent({
                 {items.map((item) => {
                   // Special handle for Inventaris dropdown
                   if (item.name === 'Inventaris') {
-                    const isInvActive = pathname?.includes('/dashboard/inventaris');
+                    const basePath = getBasePath(roleFromPath);
+                    const invBase = `${basePath}/inventaris`;
+                    const isInvActive = pathname?.includes('/inventaris');
+
+                    const subItems = [
+                      { label: 'Rekap Belanja',     href: `${invBase}/rekap-belanja`, dot: 'bg-indigo-400' },
+                      { label: 'Daftar Belanja',    href: `${invBase}/belanja`,       dot: 'bg-teal-400' },
+                      { label: 'Inventaris Gudang', href: `${invBase}/gudang`,        dot: 'bg-amber-400' },
+                    ];
 
                     return (
                       <div key="inventaris-dropdown" className="space-y-0.5">
@@ -246,14 +337,10 @@ function SidebarContent({
 
                         {isInventarisOpen && (
                           <div className="ml-4 mt-1 space-y-0.5 border-l border-slate-700/60 pl-2">
-                            {[
-                              { label: 'Rekap Belanja', href: '/dashboard/inventaris/rekap-belanja', dot: 'bg-indigo-400' },
-                              { label: 'Daftar Belanja', href: '/dashboard/inventaris/belanja',      dot: 'bg-teal-400' },
-                              { label: 'Inventaris Gudang', href: '/dashboard/inventaris/gudang',   dot: 'bg-amber-400' },
-                            ].map((sub) => {
+                            {subItems.map((sub) => {
                               const isSubActive =
                                 pathname === sub.href ||
-                                (sub.href === '/dashboard/inventaris/rekap-belanja' && pathname === '/dashboard/inventaris');
+                                (sub.href.endsWith('/rekap-belanja') && pathname === invBase);
 
                               return (
                                 <Link
@@ -279,16 +366,19 @@ function SidebarContent({
                     );
                   }
 
-                  const isActive =
-                    pathname === item.href ||
-                    (item.href !== '/dashboard' && pathname?.startsWith(item.href));
-
                   const Icon = item.icon;
+                  const finalHref = getHrefForRole(item.href, roleFromPath, item.dynamicHref);
+
+                  const isActive =
+                    pathname === finalHref ||
+                    (finalHref !== '/dashboard' && finalHref !== '/petugas-input' &&
+                     finalHref !== '/wakapro' && finalHref !== '/wakasek' &&
+                     pathname?.startsWith(finalHref));
 
                   return (
                     <Link
                       key={item.name}
-                      href={item.href}
+                      href={finalHref}
                       onClick={onLinkClick}
                       className={`group flex items-center px-3 py-2 text-xs font-medium rounded-xl transition-all duration-200 relative ${
                         isActive
@@ -319,32 +409,44 @@ function SidebarContent({
 
       {/* ── Footer: Profile & Logout ── */}
       <div className="p-3 border-t border-white/5 flex-shrink-0 space-y-1.5 bg-slate-950/40 relative z-10">
-        {/* User Card */}
-        <Link
-          href="/dashboard/profil"
-          onClick={onLinkClick}
-          className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-white/5 transition-colors group"
-        >
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold shadow flex-shrink-0">
-            {user?.name ? user.name.charAt(0).toUpperCase() : <User className="h-4 w-4" />}
-          </div>
-          <div className="truncate flex-1">
-            <p className="text-xs font-semibold text-slate-200 group-hover:text-white truncate">
-              {user?.nama_lengkap || user?.name || 'Administrator'}
-            </p>
-            <div className="flex items-center gap-1 mt-0.5">
-              <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30 uppercase tracking-wider">
-                {user?.role ? user.role.replace('_', ' ') : 'Petugas'}
-              </span>
-              {user?.ruangan && (
-                <span className="text-[9px] text-slate-400 truncate">
-                  • {user.ruangan.nama_ruangan}
-                </span>
-              )}
-            </div>
-          </div>
-          <ChevronRight className="h-3 w-3 text-slate-500 group-hover:text-slate-300 flex-shrink-0" />
-        </Link>
+        {/* Helper: Get profil URL based on current role */}
+        {(() => {
+          const getProfilUrl = (role: string): string => {
+            if (role === 'petugas') return '/petugas-input/profil';
+            if (role === 'wakapro') return '/wakapro/profil';
+            if (role === 'wakasek') return '/wakasek/profil';
+            return '/dashboard/profil';
+          };
+          const profilUrl = getProfilUrl(roleFromPath);
+
+          return (
+            <Link
+              href={profilUrl}
+              onClick={onLinkClick}
+              className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-white/5 transition-colors group"
+            >
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold shadow flex-shrink-0">
+                {user?.name ? user.name.charAt(0).toUpperCase() : <User className="h-4 w-4" />}
+              </div>
+              <div className="truncate flex-1">
+                <p className="text-xs font-semibold text-slate-200 group-hover:text-white truncate">
+                  {user?.nama_lengkap || user?.name || 'Administrator'}
+                </p>
+                <div className="flex items-center gap-1 mt-0.5">
+                  <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30 uppercase tracking-wider">
+                    {user?.role ? user.role.replace('_', ' ') : 'Petugas'}
+                  </span>
+                  {user?.ruangan && (
+                    <span className="text-[9px] text-slate-400 truncate">
+                      • {user.ruangan.nama_ruangan}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <ChevronRight className="h-3 w-3 text-slate-500 group-hover:text-slate-300 flex-shrink-0" />
+            </Link>
+          );
+        })()}
 
         {/* Logout Button */}
         <button

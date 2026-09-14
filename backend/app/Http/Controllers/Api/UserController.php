@@ -46,8 +46,15 @@ class UserController extends Controller
             'email'        => 'required|string|email|max:255|unique:users,email',
             'password'     => 'required|string|min:6',
             'role'         => ['required', Rule::in(['super_admin', 'petugas', 'wakasek', 'wakapro'])],
-            'ruangan_id'   => 'nullable|exists:ruangans,id',
+            'ruangan_id'   => [
+                'nullable',
+                'exists:ruangans,id',
+                // Wajib diisi jika role wakapro
+                Rule::requiredIf(fn() => $request->input('role') === 'wakapro'),
+            ],
             'status'       => 'boolean',
+        ], [
+            'ruangan_id.required' => 'Akun Wakapro wajib memiliki ruangan bengkel yang dibawahi.',
         ]);
 
         $validated['password'] = Hash::make($validated['password']);
@@ -86,8 +93,15 @@ class UserController extends Controller
             'email'        => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
             'password'     => 'nullable|string|min:6',
             'role'         => ['required', Rule::in(['super_admin', 'petugas', 'wakasek', 'wakapro'])],
-            'ruangan_id'   => 'nullable|exists:ruangans,id',
+            'ruangan_id'   => [
+                'nullable',
+                'exists:ruangans,id',
+                // Wajib diisi jika role wakapro
+                Rule::requiredIf(fn() => $request->input('role') === 'wakapro'),
+            ],
             'status'       => 'boolean',
+        ], [
+            'ruangan_id.required' => 'Akun Wakapro wajib memiliki ruangan bengkel yang dibawahi.',
         ]);
 
         if (!empty($validated['password'])) {

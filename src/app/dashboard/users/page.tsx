@@ -8,6 +8,13 @@ import {
   Lock, CheckCircle2, Eye, EyeOff
 } from 'lucide-react';
 import Link from 'next/link';
+import { useIsMobile } from '@/hooks/useMediaQuery';
+import { 
+  MobileCard, 
+  MobileCardHeader, 
+  MobileCardRow, 
+  MobileCardActions 
+} from '@/components/MobileCard';
 
 interface UserItem {
   id: number;
@@ -24,7 +31,19 @@ interface UserItem {
   };
 }
 
+// Helper functions
+const getRoleInfo = (role: string) => {
+  const roles = {
+    super_admin: { label: 'Super Admin', color: 'bg-purple-600', badge: 'bg-purple-50 text-purple-700 border-purple-200' },
+    petugas: { label: 'Petugas Input', color: 'bg-blue-600', badge: 'bg-blue-50 text-blue-700 border-blue-200' },
+    wakasek: { label: 'Wakasek Sarpras', color: 'bg-emerald-600', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+    wakapro: { label: 'Wakapro Bengkel', color: 'bg-amber-600', badge: 'bg-amber-50 text-amber-800 border-amber-200' },
+  };
+  return roles[role as keyof typeof roles] || { label: role, color: 'bg-slate-600', badge: 'bg-slate-50 text-slate-700 border-slate-200' };
+};
+
 export default function UsersPage() {
+  const isMobile = useIsMobile();
   const [users, setUsers] = useState<UserItem[]>([]);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -239,133 +258,240 @@ export default function UsersPage() {
         </div>
       </div>
 
-      {/* ── User Table ── */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
-              <tr>
-                <th className="py-3.5 px-4">Pengguna</th>
-                <th className="py-3.5 px-4">Username &amp; Email</th>
-                <th className="py-3.5 px-4">Peran (Role)</th>
-                <th className="py-3.5 px-4">Penugasan Bengkel</th>
-                <th className="py-3.5 px-4">Status</th>
-                <th className="py-3.5 px-4 text-right">Aksi</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 font-medium">
-              {loading ? (
-                <tr>
-                  <td colSpan={6} className="py-12 text-center text-slate-400">
-                    <div className="inline-block animate-spin rounded-full h-6 w-6 border-2 border-blue-600 border-t-transparent mb-2" />
-                    <p>Memuat data pengguna...</p>
-                  </td>
-                </tr>
-              ) : users.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="py-12 text-center text-slate-400">
-                    <Users className="h-8 w-8 mx-auto mb-2 opacity-30 text-slate-400" />
-                    Tidak ada pengguna yang sesuai dengan pencarian.
-                  </td>
-                </tr>
-              ) : (
-                users.map((u) => {
-                  const isSuper = u.role === 'super_admin';
-                  const isPetugas = u.role === 'petugas';
-                  const isWakasek = u.role === 'wakasek';
-                  const isWakapro = u.role === 'wakapro';
+      {/* ── User Table / Mobile Cards ── */}
+      {isMobile ? (
+        /* Mobile Card View */
+        <div className="space-y-3">
+          {loading ? (
+            Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="bg-white border border-slate-200 rounded-xl p-4 animate-pulse">
+                <div className="h-4 bg-slate-100 rounded w-3/4 mb-3" />
+                <div className="h-3 bg-slate-100 rounded w-1/2 mb-2" />
+                <div className="h-3 bg-slate-100 rounded w-2/3" />
+              </div>
+            ))
+          ) : users.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-12 text-center">
+              <Users className="h-12 w-12 mx-auto mb-3 text-slate-300" />
+              <p className="font-semibold text-slate-600 text-sm">Tidak ada pengguna</p>
+              <p className="text-xs mt-1 text-slate-400">Tidak ada yang sesuai pencarian</p>
+            </div>
+          ) : (
+            users.map((u) => {
+              const roleInfo = getRoleInfo(u.role);
+              const isWakapro = u.role === 'wakapro';
 
-                  return (
-                    <tr key={u.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-3.5 px-4">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs shadow-sm ${isSuper ? 'bg-purple-600 text-white' : isPetugas ? 'bg-blue-600 text-white' : isWakasek ? 'bg-emerald-600 text-white' : 'bg-amber-600 text-white'}`}>
-                            {u.nama_lengkap.charAt(0).toUpperCase()}
+              return (
+                <MobileCard key={u.id}>
+                  <MobileCardHeader
+                    title={u.nama_lengkap}
+                    subtitle={`@${u.username}`}
+                    badge={
+                      <span className={`px-2 py-1 rounded-full text-[10px] font-bold border ${roleInfo.badge}`}>
+                        {roleInfo.label}
+                      </span>
+                    }
+                    icon={
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs shadow-sm text-white ${roleInfo.color}`}>
+                        {u.nama_lengkap.charAt(0).toUpperCase()}
+                      </div>
+                    }
+                  />
+
+                  <div className="space-y-2">
+                    <MobileCardRow
+                      label="Email"
+                      value={<span className="text-[11px]">{u.email}</span>}
+                    />
+                    <MobileCardRow
+                      label="Status"
+                      value={
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${u.status ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                          {u.status ? '✓ Aktif' : 'Nonaktif'}
+                        </span>
+                      }
+                    />
+                    {u.ruangan && (
+                      <MobileCardRow
+                        label="Workshop"
+                        value={
+                          <span className="font-semibold text-blue-700 flex items-center gap-1 justify-end">
+                            <Building2 className="h-3 w-3" />
+                            {u.ruangan.nama_ruangan}
+                          </span>
+                        }
+                      />
+                    )}
+                    {isWakapro && !u.ruangan && (
+                      <div className="text-[10px] text-red-600 font-bold italic flex items-center gap-1 bg-red-50 p-2 rounded-lg border border-red-200">
+                        <AlertCircle className="h-3 w-3 shrink-0" />
+                        <span>Belum ditentukan — distribusi tidak akan tampil!</span>
+                      </div>
+                    )}
+                    {u.id === currentUser?.id && (
+                      <div className="text-[10px] text-blue-600 font-semibold bg-blue-50 p-2 rounded-lg text-center">
+                        👤 Akun Anda
+                      </div>
+                    )}
+                  </div>
+
+                  <MobileCardActions>
+                    <button
+                      onClick={() => handleOpenEditModal(u)}
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:scale-95 transition-all text-xs font-bold shadow-sm"
+                    >
+                      <Edit className="h-3.5 w-3.5" />
+                      Edit
+                    </button>
+                    {u.id !== currentUser?.id && (
+                      <button
+                        onClick={() => setUserToDelete(u)}
+                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 active:scale-95 transition-all text-xs font-bold shadow-sm"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Hapus
+                      </button>
+                    )}
+                  </MobileCardActions>
+                </MobileCard>
+              );
+            })
+          )}
+        </div>
+      ) : (
+        /* Desktop Table View */
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
+                <tr>
+                  <th className="py-3.5 px-4">Pengguna</th>
+                  <th className="py-3.5 px-4">Username &amp; Email</th>
+                  <th className="py-3.5 px-4">Peran (Role)</th>
+                  <th className="py-3.5 px-4">Penugasan Bengkel</th>
+                  <th className="py-3.5 px-4">Status</th>
+                  <th className="py-3.5 px-4 text-right">Aksi</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 font-medium">
+                {loading ? (
+                  <tr>
+                    <td colSpan={6} className="py-12 text-center text-slate-400">
+                      <div className="inline-block animate-spin rounded-full h-6 w-6 border-2 border-blue-600 border-t-transparent mb-2" />
+                      <p>Memuat data pengguna...</p>
+                    </td>
+                  </tr>
+                ) : users.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-12 text-center text-slate-400">
+                      <Users className="h-8 w-8 mx-auto mb-2 opacity-30 text-slate-400" />
+                      Tidak ada pengguna yang sesuai dengan pencarian.
+                    </td>
+                  </tr>
+                ) : (
+                  users.map((u) => {
+                    const isSuper = u.role === 'super_admin';
+                    const isPetugas = u.role === 'petugas';
+                    const isWakasek = u.role === 'wakasek';
+                    const isWakapro = u.role === 'wakapro';
+
+                    return (
+                      <tr key={u.id} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="py-3.5 px-4">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs shadow-sm ${isSuper ? 'bg-purple-600 text-white' : isPetugas ? 'bg-blue-600 text-white' : isWakasek ? 'bg-emerald-600 text-white' : 'bg-amber-600 text-white'}`}>
+                              {u.nama_lengkap.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <p className="font-bold text-slate-900">{u.nama_lengkap}</p>
+                              {u.id === currentUser?.id && (
+                                <span className="text-[10px] text-blue-600 font-semibold">(Akun Anda)</span>
+                              )}
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-bold text-slate-900">{u.nama_lengkap}</p>
-                            {u.id === currentUser?.id && (
-                              <span className="text-[10px] text-blue-600 font-semibold">(Akun Anda)</span>
+                        </td>
+
+                        <td className="py-3.5 px-4 text-slate-600">
+                          <p className="font-mono text-[11px] text-slate-800">{u.username}</p>
+                          <p className="text-[10px] text-slate-400">{u.email}</p>
+                        </td>
+
+                        <td className="py-3.5 px-4">
+                          {isSuper && (
+                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200">
+                              Super Admin
+                            </span>
+                          )}
+                          {isPetugas && (
+                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                              Petugas Input
+                            </span>
+                          )}
+                          {isWakasek && (
+                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              Wakasek Sarpras
+                            </span>
+                          )}
+                          {isWakapro && (
+                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                              Wakapro Bengkel
+                            </span>
+                          )}
+                        </td>
+
+                        <td className="py-3.5 px-4 text-slate-600">
+                          {u.ruangan ? (
+                            <div className="flex items-center gap-1.5 font-semibold text-blue-700">
+                              <Building2 className="h-3.5 w-3.5 text-blue-500" />
+                              <span>{u.ruangan.nama_ruangan}</span>
+                            </div>
+                          ) : isWakapro ? (
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[10px] text-red-600 font-bold italic flex items-center gap-1">
+                                <AlertCircle className="h-3 w-3 shrink-0" />
+                                Belum ditentukan — distribusi tidak akan tampil!
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-[10px] text-slate-400">-</span>
+                          )}
+                        </td>
+
+                        <td className="py-3.5 px-4">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${u.status ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                            {u.status ? 'Aktif' : 'Nonaktif'}
+                          </span>
+                        </td>
+
+                        <td className="py-3.5 px-4 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <button
+                              onClick={() => handleOpenEditModal(u)}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                              title="Edit Pengguna"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </button>
+                            {u.id !== currentUser?.id && (
+                              <button
+                                onClick={() => setUserToDelete(u)}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                title="Hapus Pengguna"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
                             )}
                           </div>
-                        </div>
-                      </td>
-
-                      <td className="py-3.5 px-4 text-slate-600">
-                        <p className="font-mono text-[11px] text-slate-800">{u.username}</p>
-                        <p className="text-[10px] text-slate-400">{u.email}</p>
-                      </td>
-
-                      <td className="py-3.5 px-4">
-                        {isSuper && (
-                          <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200">
-                            Super Admin
-                          </span>
-                        )}
-                        {isPetugas && (
-                          <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                            Petugas Input
-                          </span>
-                        )}
-                        {isWakasek && (
-                          <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                            Wakasek Sarpras
-                          </span>
-                        )}
-                        {isWakapro && (
-                          <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
-                            Wakapro Bengkel
-                          </span>
-                        )}
-                      </td>
-
-                      <td className="py-3.5 px-4 text-slate-600">
-                        {u.ruangan ? (
-                          <div className="flex items-center gap-1.5 font-semibold text-blue-700">
-                            <Building2 className="h-3.5 w-3.5 text-blue-500" />
-                            <span>{u.ruangan.nama_ruangan}</span>
-                          </div>
-                        ) : isWakapro ? (
-                          <span className="text-[10px] text-amber-600 italic">Belum ditentukan</span>
-                        ) : (
-                          <span className="text-[10px] text-slate-400">-</span>
-                        )}
-                      </td>
-
-                      <td className="py-3.5 px-4">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${u.status ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
-                          {u.status ? 'Aktif' : 'Nonaktif'}
-                        </span>
-                      </td>
-
-                      <td className="py-3.5 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <button
-                            onClick={() => handleOpenEditModal(u)}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                            title="Edit Pengguna"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </button>
-                          {u.id !== currentUser?.id && (
-                            <button
-                              onClick={() => setUserToDelete(u)}
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                              title="Hapus Pengguna"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* ── MODAL TAMBAH / EDIT PENGGUNA ── */}
       {isModalOpen && (
@@ -480,7 +606,7 @@ export default function UsersPage() {
                   </label>
                   <select
                     value={formData.role}
-                    onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, role: e.target.value, ruangan_id: '' })}
                     className="w-full px-3.5 py-2 text-xs border border-slate-200 rounded-xl bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-medium"
                   >
                     <option value="petugas">Petugas Input</option>
@@ -490,41 +616,45 @@ export default function UsersPage() {
                   </select>
                 </div>
 
-                {formData.role === 'wakapro' ? (
-                  <div>
-                    <label className="block text-xs font-bold text-amber-800 mb-1.5">
-                      Ruangan Bengkel yang Dibawahi *
-                    </label>
-                    <select
-                      value={formData.ruangan_id}
-                      onChange={(e) => setFormData({ ...formData, ruangan_id: e.target.value })}
-                      required
-                      className="w-full px-3.5 py-2 text-xs border border-amber-300 rounded-xl bg-amber-50/50 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 font-medium text-slate-800"
-                    >
-                      <option value="">-- Pilih Bengkel --</option>
-                      {ruangans.map((r) => (
-                        <option key={r.id} value={r.id}>
-                          {r.nama_ruangan} ({r.jenis || 'Ruangan'})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                ) : (
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                      Status Akun
-                    </label>
-                    <select
-                      value={formData.status ? '1' : '0'}
-                      onChange={(e) => setFormData({ ...formData, status: e.target.value === '1' })}
-                      className="w-full px-3.5 py-2 text-xs border border-slate-200 rounded-xl bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-medium"
-                    >
-                      <option value="1">Aktif</option>
-                      <option value="0">Nonaktif</option>
-                    </select>
-                  </div>
-                )}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Status Akun
+                  </label>
+                  <select
+                    value={formData.status ? '1' : '0'}
+                    onChange={(e) => setFormData({ ...formData, status: e.target.value === '1' })}
+                    className="w-full px-3.5 py-2 text-xs border border-slate-200 rounded-xl bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-medium"
+                  >
+                    <option value="1">Aktif</option>
+                    <option value="0">Nonaktif</option>
+                  </select>
+                </div>
               </div>
+
+              {formData.role === 'wakapro' && (
+                <div>
+                  <label className="block text-xs font-bold text-amber-800 mb-1.5">
+                    Ruangan Bengkel yang Dibawahi <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={formData.ruangan_id}
+                    onChange={(e) => setFormData({ ...formData, ruangan_id: e.target.value })}
+                    required
+                    className="w-full px-3.5 py-2 text-xs border border-amber-300 rounded-xl bg-amber-50/50 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 font-medium text-slate-800"
+                  >
+                    <option value="">-- Pilih Bengkel / Workshop --</option>
+                    {ruangans.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.nama_ruangan} ({r.jenis || 'Ruangan'})
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[10px] text-amber-700 mt-1.5 flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3 shrink-0" />
+                    Wajib diisi — digunakan untuk membatasi data distribusi yang dapat dilihat wakapro ini.
+                  </p>
+                </div>
+              )}
 
               <div className="pt-3 flex items-center justify-end gap-2 border-t border-slate-100">
                 <button

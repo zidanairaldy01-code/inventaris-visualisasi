@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import axios from '@/lib/axios';
 import Cookies from 'js-cookie';
 import {
@@ -22,6 +22,7 @@ interface HeaderProps {
 
 export default function Header({ onMenuClick }: HeaderProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [user, setUser] = useState<any>(null);
   const [time, setTime] = useState<string>('');
 
@@ -151,6 +152,16 @@ export default function Header({ onMenuClick }: HeaderProps) {
     router.push(path);
   };
 
+  // Helper: Detect role from pathname untuk profil link yang tepat
+  const getProfilUrl = (pathname: string | null): string => {
+    if (!pathname) return '/dashboard/profil';
+    if (pathname.startsWith('/petugas-input')) return '/petugas-input/profil';
+    if (pathname.startsWith('/wakapro')) return '/wakapro/profil';
+    if (pathname.startsWith('/wakasek')) return '/wakasek/profil';
+    return '/dashboard/profil';
+  };
+
+  const profilBaseUrl = getProfilUrl(pathname);
   const hasResults = results.asets.length > 0 || results.ruangans.length > 0 || results.gedungs.length > 0;
   const today = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -385,7 +396,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
               {/* Menu Links */}
               <div className="p-1.5 space-y-0.5">
                 <Link
-                  href="/dashboard/profil"
+                  href={profilBaseUrl}
                   onClick={() => setUserMenuOpen(false)}
                   className="flex items-center justify-between px-3 py-2 text-xs font-medium text-slate-700 rounded-xl hover:bg-blue-50 hover:text-blue-600 transition-colors group"
                 >
@@ -399,7 +410,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
                 </Link>
 
                 <Link
-                  href="/dashboard/profil?tab=password"
+                  href={`${profilBaseUrl}?tab=password`}
                   onClick={() => setUserMenuOpen(false)}
                   className="flex items-center justify-between px-3 py-2 text-xs font-medium text-slate-700 rounded-xl hover:bg-indigo-50 hover:text-indigo-600 transition-colors group"
                 >

@@ -27,12 +27,15 @@ class DistribusiAsetController extends Controller
             'wakaproPenerima',
         ]);
 
-        // Jika Wakapro, batasi hanya ruangan miliknya
+        // Jika Wakapro, batasi HANYA ruangan miliknya berdasarkan ruangan_id
+        // Jika ruangan_id belum di-assign, kembalikan data kosong (bukan fallback ke wakapro_penerima_id
+        // karena itu bisa menyebabkan wakapro melihat distribusi milik workshop lain)
         if ($user->role === 'wakapro') {
             if ($user->ruangan_id) {
                 $query->where('ruangan_tujuan_id', $user->ruangan_id);
             } else {
-                $query->where('wakapro_penerima_id', $user->id);
+                // Ruangan belum di-assign — kembalikan kosong agar tidak bocor ke data workshop lain
+                return response()->json([]);
             }
         }
 
@@ -129,6 +132,141 @@ class DistribusiAsetController extends Controller
     }
 
     /**
+     * Bulk store - Distribusi banyak aset sekaligus
+     */
+    public function bulkStore(Request $request)
+    {
+        $validated = $request->validate([
+            'ruangan_tujuan_id'   => 'required|exists:ruangans,id',
+            'catatan_pengiriman'  => 'nullable|string',
+            'items'               => 'required|array|min:1',
+            'items.*.sarana_prasarana_id' => 'nullable|exists:sarana_prasaranas,id',
+            'items.*.jumlah'      => 'required|integer|min:1',
+            // Data untuk barang baru jika sarana_prasarana_id tidak ada
+            'items.*.nama_barang' => 'nullable|string',
+            'items.*.satuan'      => 'nullable|string',
+            'items.*.kondisi'     => 'nullable|string|in:Baik,Rusak Ringan,Rusak Berat',
+            'items.*.keterangan'  => 'nullable|string',
+        ]);
+
+        $user = $request->user();
+        $ruanganTujuanId = $validated['ruangan_tujuan_id'];
+
+        // Cari Wakapro yang bertanggung jawab atas ruangan tujuan jika ada
+        $wakapro = User::where('role', 'wakapro')
+            ->where('ruangan_id', $ruanganTujuanId)
+            ->first();
+
+        $distribusiResults = DB::transaction(function () use ($validated, $user, $wakapro, $ruanganTujuanId) {
+            $results = [];
+            $prefix = 'SJ-' . date('Ym') . '-';
+
+            foreach ($validated['items'] as $item) {
+                // Jika sarana_prasarana_id tidak ada, buat data barang baru
+                if (empty($item['sarana_prasarana_id'])) {
+                    if (empty($item['nama_barang'])) {
+                        continue; // Skip jika nama barang kosong
+                    }
+
+                    // Generate kode otomatis untuk barang baru
+                    $kodePrefix = 'BRG-' . date('Ym') . '-';
+                    $countBarang = SaranaPrasarana::where('kode', 'like', "{$kodePrefix}%")->count();
+                    $kode = $kodePrefix . str_pad($countBarang + 1, 4, '0', STR_PAD_LEFT);
+
+                    $saranaNew = SaranaPrasarana::create([
+                        'kode'         => $kode,
+                        'nama_barang'  => $item['nama_barang'],
+                        'satuan'       => $item['satuan'] ?? 'Unit',
+                        'stok_awal'    => $item['jumlah'],
+                        'stok_masuk'   => 0,
+                        'stok_keluar'  => 0,
+                        'kondisi'      => $item['kondisi'] ?? 'Baik',
+                        'keterangan'   => $item['keterangan'] ?? 'Input manual saat distribusi',
+                        'id_user'      => $user->id,
+                    ]);
+
+                    $saranaId = $saranaNew->id;
+                } else {
+                    $saranaId = $item['sarana_prasarana_id'];
+                }
+
+                // Generate Nomor Surat Jalan untuk setiap item
+                $countThisMonth = DistribusiAset::where('nomor_surat_jalan', 'like', "{$prefix}%")->count();
+                $nomorSuratJalan = $prefix . str_pad($countThisMonth + 1, 4, '0', STR_PAD_LEFT);
+
+                $distribusi = DistribusiAset::create([
+                    'nomor_surat_jalan'   => $nomorSuratJalan,
+                    'sarana_prasarana_id' => $saranaId,
+                    'ruangan_tujuan_id'   => $ruanganTujuanId,
+                    'petugas_pengirim_id' => $user->id,
+                    'wakapro_penerima_id' => $wakapro ? $wakapro->id : null,
+                    'jumlah'              => $item['jumlah'],
+                    'tanggal_kirim'       => Carbon::today(),
+                    'status'              => 'menunggu_konfirmasi',
+                    'catatan_pengiriman'  => $validated['catatan_pengiriman'] ?? null,
+                ]);
+
+                // Update lokasi ruangan pada sarana prasarana
+                $sarana = SaranaPrasarana::find($saranaId);
+                if ($sarana) {
+                    $sarana->update(['id_ruangan' => $ruanganTujuanId]);
+                }
+
+                $distribusi->load(['saranaPrasarana', 'ruanganTujuan.gedung', 'petugasPengirim', 'wakaproPenerima']);
+                $results[] = $distribusi;
+            }
+
+            // Catat history aktivitas jika model History aktif
+            try {
+                History::create([
+                    'user_id'    => $user->id,
+                    'aksi'       => 'Distribusi Bulk Aset',
+                    'keterangan' => "Distribusi " . count($results) . " item barang ke workshop.",
+                    'tanggal'    => Carbon::now(),
+                ]);
+            } catch (\Exception $e) {
+                // Abaikan jika history opsional
+            }
+
+            return $results;
+        });
+
+        return response()->json([
+            'message' => count($distribusiResults) . ' item barang berhasil didistribusikan ke workshop.',
+            'data'    => $distribusiResults,
+        ], 201);
+    }
+
+    /**
+     * Pencarian barang untuk autocomplete
+     */
+    public function searchBarang(Request $request)
+    {
+        $search = $request->get('q', '');
+        
+        $results = SaranaPrasarana::where(function ($query) use ($search) {
+            $query->where('nama_barang', 'like', "%{$search}%")
+                  ->orWhere('kode', 'like', "%{$search}%");
+        })
+        ->with('folder')
+        ->limit(20)
+        ->get()
+        ->map(function ($item) {
+            return [
+                'id'           => $item->id,
+                'kode'         => $item->kode,
+                'nama_barang'  => $item->nama_barang,
+                'satuan'       => $item->satuan,
+                'stok_akhir'   => $item->stok_akhir,
+                'kondisi'      => $item->kondisi,
+                'folder_nama'  => $item->folder ? $item->folder->nama_folder : null,
+            ];
+        });
+
+        return response()->json($results);
+    }
+
+    /**
      * Konfirmasi penerimaan aset oleh Wakapro (atau Super Admin)
      */
     public function konfirmasi(Request $request, $id)
@@ -136,11 +274,18 @@ class DistribusiAsetController extends Controller
         $distribusi = DistribusiAset::findOrFail($id);
         $user = $request->user();
 
-        // Validasi hak akses
-        if ($user->role === 'wakapro' && $user->ruangan_id && $distribusi->ruangan_tujuan_id != $user->ruangan_id) {
-            return response()->json([
-                'message' => 'Anda tidak memiliki hak untuk mengonfirmasi barang ruangan lain.',
-            ], 403);
+        // Validasi hak akses: wakapro hanya boleh konfirmasi distribusi ke ruangannya sendiri
+        if ($user->role === 'wakapro') {
+            if (!$user->ruangan_id) {
+                return response()->json([
+                    'message' => 'Akun Anda belum terhubung ke ruangan manapun. Hubungi administrator.',
+                ], 403);
+            }
+            if ($distribusi->ruangan_tujuan_id != $user->ruangan_id) {
+                return response()->json([
+                    'message' => 'Anda tidak memiliki hak untuk mengonfirmasi barang ruangan lain.',
+                ], 403);
+            }
         }
 
         $validated = $request->validate([
@@ -291,14 +436,7 @@ class DistribusiAsetController extends Controller
         $user = $request->user();
         $ruanganId = $user ? $user->ruangan_id : null;
 
-        // Jika ruangan belum diassign, fallback ke workshop pertama
-        if (!$ruanganId) {
-            $firstWs = Ruangan::where('jenis', 'workshop')->first();
-            $ruanganId = $firstWs ? $firstWs->id : null;
-        }
-
-        $ruangan = $ruanganId ? Ruangan::with('gedung')->find($ruanganId) : null;
-
+        // Jika ruangan belum diassign, kembalikan empty stats — jangan fallback ke workshop lain
         if (!$ruanganId) {
             return response()->json([
                 'ruangan'             => null,
@@ -310,10 +448,11 @@ class DistribusiAsetController extends Controller
                 'menunggu_list'       => [],
                 'aset_list'           => [],
                 'distribusi_terbaru'  => [],
+                'warning'             => 'Akun Anda belum terhubung ke ruangan manapun. Hubungi administrator.',
             ]);
         }
 
-        // Ambil semua distribusi ke ruangan ini
+        $ruangan = Ruangan::with('gedung')->find($ruanganId);
         $semuaDistribusi = DistribusiAset::with([
             'saranaPrasarana',
             'ruanganTujuan.gedung',
@@ -357,6 +496,130 @@ class DistribusiAsetController extends Controller
             'menunggu_list'       => $menunggu->values(),
             'aset_list'           => $diterima->values(),
             'distribusi_terbaru'  => $semuaDistribusi->take(6)->values(),
+        ]);
+    }
+
+    /**
+     * Inventaris lengkap workshop milik wakapro yang sedang login.
+     * Hanya menampilkan aset yang sudah berstatus 'diterima' (sudah BAST)
+     * dari distribusi ke ruangan wakapro ini.
+     */
+    public function inventarisWorkshop(Request $request)
+    {
+        $user = $request->user();
+
+        if (!$user->ruangan_id) {
+            return response()->json([
+                'ruangan'  => null,
+                'items'    => [],
+                'summary'  => ['total_unit' => 0, 'total_jenis' => 0, 'kondisi_baik' => 0, 'kondisi_rusak' => 0],
+                'warning'  => 'Akun Anda belum terhubung ke ruangan manapun. Hubungi administrator.',
+            ]);
+        }
+
+        $ruangan = Ruangan::with('gedung')->find($user->ruangan_id);
+
+        $query = DistribusiAset::with([
+            'saranaPrasarana',
+            'petugasPengirim',
+            'wakaproPenerima',
+        ])
+        ->where('ruangan_tujuan_id', $user->ruangan_id)
+        ->where('status', 'diterima'); // Hanya yang sudah diterima via BAST
+
+        // Filter kondisi
+        if ($request->filled('kondisi')) {
+            $query->whereHas('saranaPrasarana', function ($q) use ($request) {
+                $q->where('kondisi', $request->kondisi);
+            });
+        }
+
+        // Pencarian
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->whereHas('saranaPrasarana', function ($q) use ($search) {
+                $q->where('nama_barang', 'like', "%{$search}%")
+                  ->orWhere('kode', 'like', "%{$search}%");
+            });
+        }
+
+        $items = $query->latest('tanggal_terima')->latest('id')->get();
+
+        // Hitung summary
+        $totalUnit   = (int) $items->sum('jumlah');
+        $totalJenis  = $items->pluck('sarana_prasarana_id')->unique()->count();
+        $kondisiBaik = 0;
+        $kondisiRusak = 0;
+        foreach ($items as $item) {
+            $k = $item->saranaPrasarana?->kondisi ?? 'Baik';
+            if ($k === 'Baik') {
+                $kondisiBaik += (int) $item->jumlah;
+            } else {
+                $kondisiRusak += (int) $item->jumlah;
+            }
+        }
+
+        return response()->json([
+            'ruangan' => $ruangan,
+            'items'   => $items->values(),
+            'summary' => [
+                'total_unit'   => $totalUnit,
+                'total_jenis'  => $totalJenis,
+                'kondisi_baik' => $kondisiBaik,
+                'kondisi_rusak'=> $kondisiRusak,
+            ],
+        ]);
+    }
+
+    /**
+     * Wakapro update kondisi aset di inventaris workshop mereka
+     * (untuk laporan kerusakan/service)
+     */
+    public function updateKondisiInventaris(Request $request, $id)
+    {
+        $user = $request->user();
+        
+        // Cari distribusi item
+        $distribusi = DistribusiAset::with('saranaPrasarana')->findOrFail($id);
+        
+        // Validasi: Hanya wakapro yang punya ruangan ini yang bisa update
+        if ($user->role === 'wakapro') {
+            if (!$user->ruangan_id || $distribusi->ruangan_tujuan_id != $user->ruangan_id) {
+                return response()->json([
+                    'message' => 'Anda tidak memiliki akses untuk mengubah kondisi aset ini.'
+                ], 403);
+            }
+        }
+        
+        $validated = $request->validate([
+            'kondisi' => 'required|in:Baik,Cukup Baik,Rusak Ringan,Rusak Berat,Tidak Layak Pakai',
+            'catatan' => 'nullable|string|max:500',
+        ]);
+        
+        // Update kondisi di sarana_prasarana (sumber data)
+        if ($distribusi->saranaPrasarana) {
+            $oldKondisi = $distribusi->saranaPrasarana->kondisi;
+            $distribusi->saranaPrasarana->update([
+                'kondisi' => $validated['kondisi'],
+                'keterangan' => $validated['catatan'] ?? $distribusi->saranaPrasarana->keterangan,
+            ]);
+            
+            // Log history (using correct History model fields)
+            try {
+                History::create([
+                    'id_user' => $user->id,
+                    'aksi' => 'Update Kondisi Aset',
+                    'keterangan' => "Wakapro {$user->nama_lengkap} mengubah kondisi aset {$distribusi->saranaPrasarana->nama_barang} dari {$oldKondisi} menjadi {$validated['kondisi']}",
+                    'tanggal' => Carbon::now(),
+                ]);
+            } catch (\Exception $e) {
+                // History logging is optional, don't fail the request if it errors
+            }
+        }
+        
+        return response()->json([
+            'message' => 'Kondisi aset berhasil diperbarui',
+            'data' => $distribusi->fresh(['saranaPrasarana']),
         ]);
     }
 

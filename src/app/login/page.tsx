@@ -22,9 +22,24 @@ export default function LoginPage() {
 
     try {
       const response = await axios.post('/api/login', { username, password });
-      if (response.data.access_token) {
+      if (response.data.access_token && response.data.user) {
         Cookies.set('auth_token', response.data.access_token, { expires: 7 });
-        router.push('/dashboard');
+        
+        // Redirect based on user role
+        const userRole = response.data.user.role;
+        let redirectPath = '/dashboard';
+        
+        if (userRole === 'petugas') {
+          redirectPath = '/petugas-input';
+        } else if (userRole === 'wakapro') {
+          redirectPath = '/wakapro';
+        } else if (userRole === 'wakasek') {
+          redirectPath = '/wakasek';
+        } else {
+          redirectPath = '/dashboard';
+        }
+        
+        router.push(redirectPath);
       }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Login gagal. Periksa kembali username dan password Anda.');

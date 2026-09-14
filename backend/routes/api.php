@@ -109,8 +109,18 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('stats/petugas', [DistribusiAsetController::class, 'statsPetugas']);
     Route::get('stats/wakapro', [DistribusiAsetController::class, 'statsWakapro']);
     Route::get('stats/wakasek', [DistribusiAsetController::class, 'statsWakasek']);
+    Route::get('workshop/inventaris', [DistribusiAsetController::class, 'inventarisWorkshop']);
+    Route::put('workshop/inventaris/{id}/kondisi', [DistribusiAsetController::class, 'updateKondisiInventaris']);
+    
+    // IMPORTANT: Specific routes MUST come BEFORE parameterized routes
+    Route::get('distribusi-asets/search-barang', [DistribusiAsetController::class, 'searchBarang']);
+    Route::post('distribusi-asets/bulk', [DistribusiAsetController::class, 'bulkStore']);
+    
+    // General CRUD routes
     Route::get('distribusi-asets', [DistribusiAsetController::class, 'index']);
     Route::post('distribusi-asets', [DistribusiAsetController::class, 'store']);
+    
+    // Parameterized routes MUST come AFTER specific routes
     Route::post('distribusi-asets/{id}/konfirmasi', [DistribusiAsetController::class, 'konfirmasi']);
     Route::get('distribusi-asets/{id}/surat-jalan', [DistribusiAsetController::class, 'cetakSuratJalan']);
     Route::get('distribusi-asets/{id}/bast', [DistribusiAsetController::class, 'cetakBast']);

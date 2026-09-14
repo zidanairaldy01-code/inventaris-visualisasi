@@ -1,219 +1,161 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import axios from '@/lib/axios';
-import WakaproDashboard from '@/components/dashboard/WakaproDashboard';
-import WakasekDashboard from '@/components/dashboard/WakasekDashboard';
-import PetugasDashboard from '@/components/dashboard/PetugasDashboard';
+import Cookies from 'js-cookie';
 import AdminDashboard from '@/components/dashboard/AdminDashboard';
 
-interface StatsData {
-  total_item: number;
-  total_unit: number;
-  total_nilai: number;
-  total_ruangan: number;
-  total_ruangan_all: number;
-  total_ruangan_gedung: number;
-  total_ruangan_workshop: number;
-  total_gedung: number;
-  total_belanja: number;
-  total_item_belanja: number;
-  total_nilai_pembelian_sarana: number;
-  total_nilai_sekarang_sarana: number;
-  total_item_sarana: number;
-  total_peminjaman_aktif: number;
-  total_servis_proses: number;
-}
-
-interface PetugasStats {
-  total_diinput: number;
-  input_bulan_ini: number;
-  menunggu_konfirmasi: number;
-  selesai_serah_terima: number;
-  distribusi_terbaru: any[];
-  input_terbaru: any[];
-  sebaran_bengkel: { nama_ruangan: string; total_aset: number }[];
-}
-
-interface WakaproStats {
-  ruangan: any;
-  total_unit: number;
-  total_item_jenis: number;
-  kondisi_baik: number;
-  kondisi_rusak: number;
-  menunggu_konfirmasi: number;
-  menunggu_list: any[];
-  aset_list: any[];
-  distribusi_terbaru: any[];
-}
-
-interface WakasekStats {
-  total_unit_bengkel: number;
-  total_baik: number;
-  total_rusak: number;
-  rasio_kelaikan: number;
-  total_bast_sah: number;
-  total_surat_jalan: number;
-  bengkel_list: {
-    id: number;
-    nama_ruangan: string;
-    kode_ruangan: string;
-    nama_gedung: string;
-    wakapro: string;
-    total_unit: number;
-    kondisi_baik: number;
-    kondisi_rusak: number;
-    kesiapan_persen: number;
-  }[];
-  bast_terbaru: any[];
-}
-
-const defaultStats: StatsData = {
-  total_item: 0,
-  total_unit: 0,
-  total_nilai: 0,
-  total_ruangan: 0,
-  total_ruangan_all: 0,
-  total_ruangan_gedung: 0,
-  total_ruangan_workshop: 0,
-  total_gedung: 0,
-  total_belanja: 0,
-  total_item_belanja: 0,
-  total_nilai_pembelian_sarana: 0,
-  total_nilai_sekarang_sarana: 0,
-  total_item_sarana: 0,
-  total_peminjaman_aktif: 0,
-  total_servis_proses: 0,
-};
-
-const defaultPetugasStats: PetugasStats = {
-  total_diinput: 0,
-  input_bulan_ini: 0,
-  menunggu_konfirmasi: 0,
-  selesai_serah_terima: 0,
-  distribusi_terbaru: [],
-  input_terbaru: [],
-  sebaran_bengkel: [],
-};
-
-const defaultWakaproStats: WakaproStats = {
-  ruangan: null,
-  total_unit: 0,
-  total_item_jenis: 0,
-  kondisi_baik: 0,
-  kondisi_rusak: 0,
-  menunggu_konfirmasi: 0,
-  menunggu_list: [],
-  aset_list: [],
-  distribusi_terbaru: [],
-};
-
-const defaultWakasekStats: WakasekStats = {
-  total_unit_bengkel: 0,
-  total_baik: 0,
-  total_rusak: 0,
-  rasio_kelaikan: 100,
-  total_bast_sah: 0,
-  total_surat_jalan: 0,
-  bengkel_list: [],
-  bast_terbaru: [],
-};
-
 export default function DashboardPage() {
+  const router = useRouter();
+  const [isChecking, setIsChecking] = useState(true);
   const [user, setUser] = useState<any>(null);
-  const [data, setData] = useState<StatsData>(defaultStats);
-  const [petugasStats, setPetugasStats] = useState<PetugasStats>(defaultPetugasStats);
-  const [wakaproStats, setWakaproStats] = useState<WakaproStats>(defaultWakaproStats);
-  const [wakasekStats, setWakasekStats] = useState<WakasekStats>(defaultWakasekStats);
-  const [histories, setHistories] = useState<any[]>([]);
+  const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [greeting, setGreeting] = useState('');
-
-  const fetchAllStats = () => {
-    setLoading(true);
-    const hour = new Date().getHours();
-    if (hour >= 4 && hour < 11) setGreeting('Selamat Pagi');
-    else if (hour >= 11 && hour < 15) setGreeting('Selamat Siang');
-    else if (hour >= 15 && hour < 18) setGreeting('Selamat Sore');
-    else setGreeting('Selamat Malam');
-
-    Promise.all([
-      axios.get('/api/user').catch(() => ({ data: null })),
-      axios.get('/api/stats').catch(() => ({ data: defaultStats })),
-      axios.get('/api/stats/petugas').catch(() => ({ data: defaultPetugasStats })),
-      axios.get('/api/stats/wakapro').catch(() => ({ data: defaultWakaproStats })),
-      axios.get('/api/stats/wakasek').catch(() => ({ data: defaultWakasekStats })),
-      axios.get('/api/histories').catch(() => ({ data: [] })),
-    ])
-      .then(([userRes, statsRes, petugasStatsRes, wakaproStatsRes, wakasekStatsRes, historyRes]) => {
-        setUser(userRes.data);
-        setData({ ...defaultStats, ...statsRes.data });
-        setPetugasStats({ ...defaultPetugasStats, ...petugasStatsRes.data });
-        setWakaproStats({ ...defaultWakaproStats, ...wakaproStatsRes.data });
-        setWakasekStats({ ...defaultWakasekStats, ...wakasekStatsRes.data });
-        const rawHistory = Array.isArray(historyRes.data) ? historyRes.data : (historyRes.data?.data ?? []);
-        setHistories(rawHistory.slice(0, 5));
-      })
-      .catch(err => {
-        console.error('Gagal memuat statistik dashboard', err);
-      })
-      .finally(() => setLoading(false));
-  };
 
   useEffect(() => {
-    fetchAllStats();
+    checkUserAndLoadData();
   }, []);
 
-  const isPetugas = user?.role === 'petugas';
-  const isWakapro = user?.role === 'wakapro';
-  const isWakasek = user?.role === 'wakasek';
+  const checkUserAndLoadData = async () => {
+    try {
+      const token = Cookies.get('auth_token');
+      if (!token) {
+        console.log('No token found, redirecting to login...');
+        router.push('/login');
+        return;
+      }
 
-  // 1. Dedicated Dashboard for Wakapro (Kepala Bengkel Jurusan)
-  if (isWakapro) {
+      console.log('Token found, fetching user data...');
+      const userRes = await axios.get('/api/user');
+      const role = userRes.data?.role;
+      
+      console.log('Dashboard: User role detected:', role);
+      setUser(userRes.data);
+
+      // Redirect non-super_admin users to their dashboards
+      if (role === 'petugas') {
+        console.log('Redirecting to petugas dashboard...');
+        router.push('/petugas-input');
+        return;
+      } else if (role === 'wakapro') {
+        console.log('Redirecting to wakapro dashboard...');
+        router.push('/wakapro');
+        return;
+      } else if (role === 'wakasek') {
+        console.log('Redirecting to wakasek dashboard...');
+        router.push('/wakasek');
+        return;
+      } else if (role === 'super_admin') {
+        // Super admin stays here - load dashboard data
+        console.log('Loading super admin dashboard...');
+        setIsChecking(false);
+        await loadDashboardData();
+      } else {
+        // Unknown role - redirect to login
+        console.warn('Unknown role:', role);
+        Cookies.remove('auth_token');
+        router.push('/login');
+      }
+    } catch (err: any) {
+      console.error('Error checking user role:', err);
+      console.error('Error status:', err.response?.status);
+      
+      // If 401, token is invalid
+      if (err.response?.status === 401) {
+        console.log('Token invalid (401), clearing and redirecting to login...');
+        Cookies.remove('auth_token');
+        router.push('/login');
+      } else {
+        // Other errors, still redirect to login for safety
+        console.log('Unknown error, redirecting to login...');
+        Cookies.remove('auth_token');
+        router.push('/login');
+      }
+    }
+  };
+
+  const loadDashboardData = async () => {
+    setLoading(true);
+    
+    // For now, just use default stats to avoid 401 errors
+    // TODO: Create proper admin stats endpoint in backend
+    setStats(getDefaultStats());
+    setLoading(false);
+    
+    /* Commented out until backend stats endpoint is fixed
+    try {
+      const statsRes = await axios.get('/api/stats').catch(() => null);
+      
+      if (statsRes?.data) {
+        setStats(statsRes.data);
+      } else {
+        await loadFallbackStats();
+      }
+    } catch (error: any) {
+      console.error('Error loading dashboard data:', error);
+      setStats(getDefaultStats());
+    } finally {
+      setLoading(false);
+    }
+    */
+  };
+
+  const getDefaultStats = () => ({
+    total_item: 0,
+    total_unit: 0,
+    total_nilai: 0,
+    total_ruangan: 0,
+    total_ruangan_all: 0,
+    total_ruangan_gedung: 0,
+    total_ruangan_workshop: 0,
+    total_gedung: 0,
+    total_belanja: 0,
+    total_item_belanja: 0,
+    total_nilai_pembelian_sarana: 0,
+    total_nilai_sekarang_sarana: 0,
+    total_item_sarana: 0,
+    total_peminjaman_aktif: 0,
+    total_servis_proses: 0,
+  });
+
+  // Show loading state while checking
+  if (isChecking) {
     return (
-      <WakaproDashboard
-        user={user}
-        wakaproStats={wakaproStats}
-        loading={loading}
-        onRefresh={fetchAllStats}
-      />
+      <div className="h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50/20 to-indigo-50/20">
+        <div className="text-center">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 mb-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-600 border-t-transparent" />
+          </div>
+          <p className="text-gray-600 text-sm font-medium">Memproses akun Anda...</p>
+        </div>
+      </div>
     );
   }
 
-  // 2. Dedicated Dashboard for Wakasek (Executive Monitoring Sarpras)
-  if (isWakasek) {
+  // Super admin dashboard
+  if (user?.role === 'super_admin') {
+    const greeting = (() => {
+      const hour = new Date().getHours();
+      if (hour < 11) return 'Selamat Pagi';
+      if (hour < 15) return 'Selamat Siang';
+      if (hour < 18) return 'Selamat Sore';
+      return 'Selamat Malam';
+    })();
+
     return (
-      <WakasekDashboard
+      <AdminDashboard
         user={user}
         greeting={greeting}
-        wakasekStats={wakasekStats}
+        stats={stats || getDefaultStats()}
+        recentActivity={[]}
+        recentBelanja={[]}
+        recentSarana={[]}
         loading={loading}
       />
     );
   }
 
-  // 3. Dedicated Dashboard for Petugas Input Sarpras
-  if (isPetugas) {
-    return (
-      <PetugasDashboard
-        user={user}
-        greeting={greeting}
-        petugasStats={petugasStats}
-        loading={loading}
-      />
-    );
-  }
-
-  // 4. Dedicated Master Dashboard for Super Admin & Admin
-  return (
-    <AdminDashboard
-      user={user}
-      greeting={greeting}
-      stats={data}
-      recentActivity={histories}
-      recentBelanja={[]}
-      recentSarana={wakaproStats.aset_list || []}
-      loading={loading}
-    />
-  );
+  // Fallback
+  return null;
 }
