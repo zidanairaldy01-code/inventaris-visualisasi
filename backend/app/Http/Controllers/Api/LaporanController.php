@@ -7,6 +7,7 @@ use App\Models\Aset;
 use App\Models\Servis;
 use App\Models\Peminjaman;
 use App\Models\History;
+use App\Models\DistribusiAset;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -149,6 +150,111 @@ class LaporanController extends Controller
                 'tanggal_kembali_rencana' => $p->tanggal_kembali_rencana,
                 'tanggal_kembali_aktual'  => $p->tanggal_kembali_aktual,
                 'status'                  => $p->status,
+            ]),
+        ]);
+    }
+
+    /**
+     * Laporan penerimaan barang: riwayat distribusi yang sudah diproses (diterima/ditolak)
+     * Khusus wakapro — data dibatasi sesuai ruangan miliknya.
+     * Mendukung seleksi ID spesifik untuk export parsial.
+     */
+    public function penerimaan(Request $request)
+    {
+        $request->validate([
+            'dari'   => 'nullable|date',
+            'sampai' => 'nullable|date|after_or_equal:dari',
+            'status' => 'nullable|in:diterima,ditolak,semua',
+            'search' => 'nullable|string|max:255',
+            'ids'    => 'nullable|array',
+            'ids.*'  => 'integer',
+        ]);
+
+        $user = $request->user();
+
+        $query = DistribusiAset::with([
+            'saranaPrasarana',
+            'ruanganTujuan.gedung',
+            'petugasPengirim',
+        ])->whereIn('status', ['diterima', 'ditolak']);
+
+        // Batasi data ke ruangan milik wakapro yang login
+        if ($user->role === 'wakapro') {
+            if ($user->ruangan_id) {
+                $query->where('ruangan_tujuan_id', $user->ruangan_id);
+            } else {
+                return response()->json([
+                    'periode'   => ['dari' => $request->dari, 'sampai' => $request->sampai],
+                    'ringkasan' => ['total_diterima' => 0, 'total_ditolak' => 0, 'total_barang' => 0],
+                    'data'      => [],
+                ]);
+            }
+        }
+
+        // Filter status
+        $statusFilter = $request->status ?? 'semua';
+        if ($statusFilter !== 'semua') {
+            $query->where('status', $statusFilter);
+        }
+
+        // Filter rentang tanggal (berdasarkan tanggal_terima)
+        if ($request->filled('dari')) {
+            $query->whereDate('tanggal_terima', '>=', $request->dari);
+        }
+        if ($request->filled('sampai')) {
+            $query->whereDate('tanggal_terima', '<=', $request->sampai);
+        }
+
+        // Filter pencarian
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('nomor_surat_jalan', 'like', "%{$search}%")
+                  ->orWhere('nomor_bast', 'like', "%{$search}%")
+                  ->orWhereHas('saranaPrasarana', function ($sq) use ($search) {
+                      $sq->where('nama_barang', 'like', "%{$search}%")
+                         ->orWhere('kode', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        // Filter seleksi ID spesifik (untuk export parsial)
+        if ($request->filled('ids') && is_array($request->ids) && count($request->ids) > 0) {
+            $query->whereIn('id', $request->ids);
+        }
+
+        $items = $query->orderBy('tanggal_terima', 'desc')->orderBy('id', 'desc')->get();
+
+        $totalDiterima = $items->where('status', 'diterima')->count();
+        $totalDitolak  = $items->where('status', 'ditolak')->count();
+        $totalBarang   = $items->where('status', 'diterima')->sum('jumlah');
+
+        return response()->json([
+            'periode' => [
+                'dari'   => $request->dari,
+                'sampai' => $request->sampai,
+            ],
+            'ringkasan' => [
+                'total_diterima' => $totalDiterima,
+                'total_ditolak'  => $totalDitolak,
+                'total_barang'   => $totalBarang,
+            ],
+            'data' => $items->map(fn($d) => [
+                'id'                 => $d->id,
+                'status'             => $d->status,
+                'nomor_surat_jalan'  => $d->nomor_surat_jalan,
+                'nomor_bast'         => $d->nomor_bast,
+                'nama_barang'        => $d->saranaPrasarana?->nama_barang,
+                'kode_barang'        => $d->saranaPrasarana?->kode,
+                'jumlah'             => $d->jumlah,
+                'kondisi_diterima'   => $d->saranaPrasarana?->kondisi,
+                'pengirim'           => $d->petugasPengirim?->nama_lengkap,
+                'ruangan'            => $d->ruanganTujuan?->nama_ruangan,
+                'gedung'             => $d->ruanganTujuan?->gedung?->nama_gedung,
+                'tanggal_kirim'      => $d->tanggal_kirim?->format('Y-m-d'),
+                'tanggal_terima'     => $d->tanggal_terima?->format('Y-m-d'),
+                'catatan_pengiriman' => $d->catatan_pengiriman,
+                'catatan_penerimaan' => $d->catatan_penerimaan,
             ]),
         ]);
     }

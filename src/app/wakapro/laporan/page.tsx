@@ -488,8 +488,7 @@ export default function LaporanPage() {
       {/* Empty State (belum generate) */}
       {!result && !loading && !error && (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-16 text-center">
-          <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${cfg.gradient} opacity-10 flex items-center justify-center mx-auto mb-4`} />
-          <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${cfg.gradient} flex items-center justify-center mx-auto -mt-20 mb-4 shadow-sm`}>
+          <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${cfg.gradient} flex items-center justify-center mx-auto mb-4 shadow-sm`}>
             <ChevronDown className="h-7 w-7 text-white" />
           </div>
           <p className="font-semibold text-slate-600 text-sm">Pilih jenis laporan dan tentukan periode</p>

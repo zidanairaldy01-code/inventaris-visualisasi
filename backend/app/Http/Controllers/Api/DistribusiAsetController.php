@@ -53,6 +53,7 @@ class DistribusiAsetController extends Controller
             $query->where(function ($q) use ($search) {
                 $q->where('nomor_surat_jalan', 'like', "%{$search}%")
                   ->orWhere('nomor_bast', 'like', "%{$search}%")
+                  ->orWhere('nomor_pengiriman', 'like', "%{$search}%")
                   ->orWhereHas('saranaPrasarana', function ($sq) use ($search) {
                       $sq->where('nama_barang', 'like', "%{$search}%")
                          ->orWhere('kode', 'like', "%{$search}%");
@@ -162,6 +163,13 @@ class DistribusiAsetController extends Controller
             $results = [];
             $prefix = 'SJ-' . date('Ym') . '-';
 
+            // ── Generate satu Nomor Pengiriman untuk seluruh batch ───────────
+            $npPrefix = 'PGRM-' . date('Ym') . '-';
+            $npCount  = DistribusiAset::where('nomor_pengiriman', 'like', "{$npPrefix}%")
+                            ->distinct('nomor_pengiriman')
+                            ->count('nomor_pengiriman');
+            $nomorPengiriman = $npPrefix . str_pad($npCount + 1, 4, '0', STR_PAD_LEFT);
+
             foreach ($validated['items'] as $item) {
                 // Jika sarana_prasarana_id tidak ada, buat data barang baru
                 if (empty($item['sarana_prasarana_id'])) {
@@ -197,6 +205,7 @@ class DistribusiAsetController extends Controller
 
                 $distribusi = DistribusiAset::create([
                     'nomor_surat_jalan'   => $nomorSuratJalan,
+                    'nomor_pengiriman'    => $nomorPengiriman,
                     'sarana_prasarana_id' => $saranaId,
                     'ruangan_tujuan_id'   => $ruanganTujuanId,
                     'petugas_pengirim_id' => $user->id,
@@ -408,7 +417,7 @@ class DistribusiAsetController extends Controller
     }
 
     /**
-     * Mengambil data terformat untuk cetak Surat Jalan
+     * Mengambil data terformat untuk cetak Surat Jalan (satu item)
      */
     public function cetakSuratJalan($id)
     {
@@ -420,6 +429,31 @@ class DistribusiAsetController extends Controller
         ])->findOrFail($id);
 
         return response()->json($distribusi);
+    }
+
+    /**
+     * Mengambil data terformat untuk cetak Surat Jalan Bulk (seluruh batch nomor_pengiriman)
+     */
+    public function cetakSuratJalanBulk($nomorPengiriman)
+    {
+        $items = DistribusiAset::with([
+            'saranaPrasarana.folder',
+            'ruanganTujuan.gedung',
+            'petugasPengirim',
+            'wakaproPenerima',
+        ])
+        ->where('nomor_pengiriman', $nomorPengiriman)
+        ->latest('id')
+        ->get();
+
+        if ($items->isEmpty()) {
+            return response()->json(['message' => 'Nomor pengiriman tidak ditemukan.'], 404);
+        }
+
+        return response()->json([
+            'nomor_pengiriman' => $nomorPengiriman,
+            'items'            => $items,
+        ]);
     }
 
     /**
@@ -842,5 +876,112 @@ class DistribusiAsetController extends Controller
             'bengkel_list'       => $bengkelData,
             'bast_terbaru'       => $bastTerbaru,
         ]);
+    }
+
+    /**
+     * Riwayat penerimaan barang oleh Wakapro (status: diterima atau ditolak).
+     * Item dari distribusi bulk (nomor_pengiriman tidak null) dikembalikan
+     * sebagai grup; item distribusi single dikembalikan flat seperti biasa.
+     */
+    public function riwayat(Request $request)
+    {
+        $user = $request->user();
+        $query = DistribusiAset::with([
+            'saranaPrasarana',
+            'ruanganTujuan.gedung',
+            'petugasPengirim',
+            'wakaproPenerima',
+        ])->whereIn('status', ['diterima', 'ditolak']);
+
+        // Wakapro hanya melihat riwayat milik ruangannya sendiri
+        if ($user->role === 'wakapro') {
+            if ($user->ruangan_id) {
+                $query->where('ruangan_tujuan_id', $user->ruangan_id);
+            } else {
+                return response()->json([]);
+            }
+        }
+
+        // Filter opsional berdasarkan status tertentu
+        if ($request->filled('status') && in_array($request->status, ['diterima', 'ditolak'])) {
+            $query->where('status', $request->status);
+        }
+
+        // Filter pencarian — cari juga di nomor_pengiriman
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('nomor_surat_jalan', 'like', "%{$search}%")
+                  ->orWhere('nomor_bast', 'like', "%{$search}%")
+                  ->orWhere('nomor_pengiriman', 'like', "%{$search}%")
+                  ->orWhereHas('saranaPrasarana', function ($sq) use ($search) {
+                      $sq->where('nama_barang', 'like', "%{$search}%")
+                         ->orWhere('kode', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        $items = $query->latest('tanggal_terima')->latest('id')->get();
+
+        // ── Group item bulk, biarkan item single tetap flat ─────────────────
+        $grouped = [];
+        $seen    = [];   // nomor_pengiriman yang sudah dikumpulkan
+
+        foreach ($items as $item) {
+            $np = $item->nomor_pengiriman;
+
+            if ($np) {
+                // Item bulk — kumpulkan ke dalam grup
+                if (!isset($seen[$np])) {
+                    $seen[$np] = count($grouped);
+                    $grouped[] = [
+                        'type'              => 'bulk',
+                        'nomor_pengiriman'  => $np,
+                        'tanggal_kirim'     => $item->tanggal_kirim,
+                        'tanggal_terima'    => $item->tanggal_terima,
+                        'ruangan_tujuan'    => $item->ruanganTujuan,
+                        'petugas_pengirim'  => $item->petugasPengirim,
+                        'catatan_pengiriman'=> $item->catatan_pengiriman,
+                        // Status grup: diterima jika semua diterima, ditolak jika semua ditolak,
+                        // sebagian jika campuran
+                        'status'            => $item->status,
+                        'items'             => [],
+                    ];
+                }
+
+                $idx = $seen[$np];
+                $grouped[$idx]['items'][] = $item;
+
+                // Perbarui status grup
+                $statusList = collect($grouped[$idx]['items'])->pluck('status')->unique()->values()->all();
+                if (count($statusList) > 1) {
+                    $grouped[$idx]['status'] = 'sebagian';
+                } else {
+                    $grouped[$idx]['status'] = $statusList[0];
+                }
+
+                // Ambil tanggal_terima terbaru dalam grup
+                if ($item->tanggal_terima && (!$grouped[$idx]['tanggal_terima'] ||
+                    $item->tanggal_terima > $grouped[$idx]['tanggal_terima'])) {
+                    $grouped[$idx]['tanggal_terima'] = $item->tanggal_terima;
+                }
+            } else {
+                // Item single — masuk sebagai entri individual
+                $grouped[] = [
+                    'type'  => 'single',
+                    'items' => [$item],
+                    // convenience fields agar frontend bisa pakai struktur yang sama
+                    'nomor_pengiriman'   => null,
+                    'tanggal_kirim'      => $item->tanggal_kirim,
+                    'tanggal_terima'     => $item->tanggal_terima,
+                    'ruangan_tujuan'     => $item->ruanganTujuan,
+                    'petugas_pengirim'   => $item->petugasPengirim,
+                    'catatan_pengiriman' => $item->catatan_pengiriman,
+                    'status'             => $item->status,
+                ];
+            }
+        }
+
+        return response()->json(array_values($grouped));
     }
 }

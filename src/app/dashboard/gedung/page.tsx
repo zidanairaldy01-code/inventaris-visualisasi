@@ -22,6 +22,7 @@ interface Ruangan {
   deskripsi: string | null;
   foto_ruangan: string | null;
   asets_count?: number;
+  asets?: Aset[];
   created_at?: string;
 }
 
@@ -75,6 +76,7 @@ interface Summary {
   total_ruangan: number;
   total_lantai: number;
   total_aset: number;
+  total_nilai: number;
 }
 
 /* ─────────────────────── Helpers ─────────────────────── */
@@ -118,6 +120,13 @@ const getImageUrl = (path: string | null) => {
   if (path.startsWith('http')) return path;
   return `http://localhost:8000${path}`;
 };
+
+const formatRupiah = (value: number) =>
+  new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(value);
+
+/** Hitung total nilai (jumlah × harga_perolehan) dari array aset */
+const calcTotalNilai = (asets: Aset[]): number =>
+  asets.reduce((sum, a) => sum + (Number(a.jumlah) || 1) * (Number(a.harga_perolehan) || 0), 0);
 
 
 
@@ -188,6 +197,9 @@ export default function GedungDrivePage() {
   // Master data
   const [kondisiList, setKondisiList] = useState<{ id: number; nama_kondisi: string }[]>(DEFAULT_KONDISIS);
 
+  // Modal detail aset
+  const [detailAset, setDetailAset] = useState<Aset | null>(null);
+
   const showToast = useCallback((message: string, type: 'success' | 'error' | 'warning') => {
     setToast({ show: true, message, type });
   }, []);
@@ -228,12 +240,16 @@ export default function GedungDrivePage() {
       const totalGedung = gedungs.length;
       const totalRuangan = gedungs.reduce((sum, g) => sum + (g.ruangans?.length ?? 0), 0);
       const totalLantai = gedungs.reduce((sum, g) => sum + (g.jumlah_lantai ?? 0), 0);
-      
+      const totalNilai = gedungs.reduce((sum, g) =>
+        sum + (g.ruangans ?? []).reduce((rs, r) =>
+          rs + calcTotalNilai(r.asets ?? []), 0), 0);
+
       setSummary({
         total_gedung: totalGedung,
         total_ruangan: totalRuangan,
         total_lantai: totalLantai,
         total_aset: 0,
+        total_nilai: totalNilai,
       });
     } catch (e) {
       console.error(e);
@@ -693,7 +709,7 @@ export default function GedungDrivePage() {
 
       {/* Summary Cards */}
       {summary && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           {[
             { label: 'Total Gedung', value: summary.total_gedung, icon: Building2, from: 'from-indigo-500', to: 'to-indigo-700', bg: 'bg-indigo-50', border: 'border-indigo-200', text: 'text-indigo-900' },
             { label: 'Total Ruangan', value: summary.total_ruangan, icon: MapPin, from: 'from-blue-500', to: 'to-blue-700', bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-900' },
@@ -710,6 +726,18 @@ export default function GedungDrivePage() {
               <p className={`text-2xl font-extrabold ${text}`}>{value}</p>
             </div>
           ))}
+          {/* Kartu Total Nilai Aset — full width on mobile, 1 col on md */}
+          <div className="col-span-2 md:col-span-1 bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-4 shadow-sm">
+            <div className="flex items-center gap-2 mb-1.5">
+              <div className="p-2 bg-gradient-to-br from-amber-500 to-orange-500 rounded-lg">
+                <Package className="h-4 w-4 text-white" />
+              </div>
+              <p className="text-[11px] font-semibold text-amber-900 uppercase tracking-wide">Total Nilai Aset</p>
+            </div>
+            <p className="text-base font-extrabold text-amber-900 leading-tight break-all">
+              {formatRupiah(summary.total_nilai)}
+            </p>
+          </div>
         </div>
       )}
 
@@ -757,6 +785,7 @@ export default function GedungDrivePage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {gedungs.map((g, idx) => {
                 const ruanganCount = g.ruangans?.length ?? g.ruangans_count ?? 0;
+                const gedungNilai = (g.ruangans ?? []).reduce((sum, r) => sum + calcTotalNilai(r.asets ?? []), 0);
                 const gradients = [
                   { gradient: 'from-blue-600 to-indigo-600', bg: 'bg-blue-50', iconColor: 'text-blue-600' },
                   { gradient: 'from-violet-600 to-purple-600', bg: 'bg-violet-50', iconColor: 'text-violet-600' },
@@ -823,6 +852,12 @@ export default function GedungDrivePage() {
                       </span>
                       <ChevronRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
                     </div>
+                    {gedungNilai > 0 && (
+                      <div className="mt-2 px-2.5 py-1.5 bg-amber-50 border border-amber-100 rounded-lg">
+                        <p className="text-[10px] text-amber-600 font-semibold uppercase tracking-wide mb-0.5">Total Nilai Aset</p>
+                        <p className="text-xs font-extrabold text-amber-800">{formatRupiah(gedungNilai)}</p>
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -908,6 +943,11 @@ export default function GedungDrivePage() {
                       { gradient: 'from-cyan-500 to-sky-500', bg: 'bg-cyan-50', iconColor: 'text-cyan-600' },
                     ];
                     const color = ruanganGradients[((page - 1) * PER_PAGE + i) % ruanganGradients.length];
+                    // Ambil data ruangan dari gedungs (sudah eager-loaded beserta asets)
+                    const ruanganWithAsets = gedungs
+                      .flatMap(g => g.ruangans ?? [])
+                      .find(gr => gr.id === r.id);
+                    const ruanganNilai = calcTotalNilai(ruanganWithAsets?.asets ?? []);
 
                     return (
                       <div
@@ -972,6 +1012,12 @@ export default function GedungDrivePage() {
                           </span>
                           <ChevronRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
                         </div>
+                        {ruanganNilai > 0 && (
+                          <div className="mt-2 px-2.5 py-1.5 bg-amber-50 border border-amber-100 rounded-lg">
+                            <p className="text-[10px] text-amber-600 font-semibold uppercase tracking-wide mb-0.5">Total Nilai</p>
+                            <p className="text-xs font-extrabold text-amber-800">{formatRupiah(ruanganNilai)}</p>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -1046,6 +1092,15 @@ export default function GedungDrivePage() {
                   {filteredAsets.length} aset {searchQuery ? `(dari ${asets.length})` : ''}
                 </p>
               </div>
+              {asets.length > 0 && (() => {
+                const totalNilaiRuangan = calcTotalNilai(asets);
+                return totalNilaiRuangan > 0 ? (
+                  <div className="text-right">
+                    <p className="text-[10px] text-amber-600 font-semibold uppercase tracking-wide">Total Nilai Ruangan</p>
+                    <p className="text-base font-extrabold text-amber-800">{formatRupiah(totalNilaiRuangan)}</p>
+                  </div>
+                ) : null;
+              })()}
             </div>
 
             <div className="p-6">
@@ -1073,7 +1128,8 @@ export default function GedungDrivePage() {
                   {(paged as Aset[]).map((aset) => (
                     <div 
                       key={aset.id} 
-                      className="bg-white border border-slate-200 rounded-xl p-4 hover:shadow-lg transition-all duration-200 hover:-translate-y-1 group"
+                      onClick={() => setDetailAset(aset)}
+                      className="bg-white border border-slate-200 rounded-xl p-4 hover:shadow-lg transition-all duration-200 hover:-translate-y-1 group cursor-pointer"
                     >
                       {/* Foto Aset */}
                       <div className="relative mb-3 rounded-lg overflow-hidden bg-slate-100 aspect-square">
@@ -1082,29 +1138,27 @@ export default function GedungDrivePage() {
                             src={getImageUrl(aset.foto_thumbnail) || ''} 
                             alt={aset.nama_aset}
                             className="w-full h-full object-cover"
+                            onError={(e) => {
+                              const target = e.currentTarget;
+                              target.style.display = 'none';
+                              const parent = target.parentElement;
+                              if (parent && !parent.querySelector('.fallback-icon')) {
+                                const div = document.createElement('div');
+                                div.className = 'fallback-icon w-full h-full flex items-center justify-center';
+                                div.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0v10l-8 4M4 7v10l8 4"/></svg>';
+                                parent.appendChild(div);
+                              }
+                            }}
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">
                             <Package className="h-12 w-12 text-slate-300" />
                           </div>
                         )}
-                        
-                        {/* Overlay Actions */}
-                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                          <button
-                            onClick={() => openEditAset(aset)}
-                            className="p-2 bg-white text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors"
-                            title="Edit Aset"
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => setDeleteAsetTarget(aset)}
-                            className="p-2 bg-white text-red-600 rounded-lg hover:bg-red-50 transition-colors"
-                            title="Hapus Aset"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+
+                        {/* Hover overlay hint */}
+                        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <span className="text-white text-xs font-semibold bg-black/50 px-3 py-1 rounded-full">Lihat Detail</span>
                         </div>
                       </div>
 
@@ -1139,6 +1193,18 @@ export default function GedungDrivePage() {
                           )}
                         </div>
 
+                        {aset.harga_perolehan != null && aset.harga_perolehan > 0 && (
+                          <div className="mt-2 pt-2 border-t border-slate-100">
+                            <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">Harga Perolehan</p>
+                            <p className="text-xs font-extrabold text-amber-700">{formatRupiah(Number(aset.harga_perolehan))}</p>
+                            {aset.jumlah > 1 && (
+                              <p className="text-[10px] text-slate-400 mt-0.5">
+                                Total: <span className="font-bold text-amber-600">{formatRupiah(aset.jumlah * Number(aset.harga_perolehan))}</span>
+                              </p>
+                            )}
+                          </div>
+                        )}
+
                       </div>
                     </div>
                   ))}
@@ -1170,6 +1236,126 @@ export default function GedungDrivePage() {
             )}
           </div>
         </>
+      )}
+
+      {/* ════════ MODAL DETAIL ASET ════════ */}
+      {detailAset && createPortal(
+        <div
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onClick={() => setDetailAset(null)}
+        >
+          <div
+            className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Foto */}
+            <div className="relative bg-slate-100 w-full" style={{ aspectRatio: '16/9' }}>
+              {detailAset.foto_thumbnail ? (
+                <img
+                  src={getImageUrl(detailAset.foto_thumbnail) || ''}
+                  alt={detailAset.nama_aset}
+                  className="w-full h-full object-contain"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                    const parent = e.currentTarget.parentElement;
+                    if (parent) {
+                      parent.innerHTML = '<div class="w-full h-full flex flex-col items-center justify-center gap-2 text-slate-400"><svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg><span class="text-sm">Foto tidak tersedia</span></div>';
+                    }
+                  }}
+                />
+              ) : (
+                <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-slate-400">
+                  <Package className="h-16 w-16" />
+                  <span className="text-sm">Belum ada foto</span>
+                </div>
+              )}
+              {/* Close btn */}
+              <button
+                onClick={() => setDetailAset(null)}
+                className="absolute top-3 right-3 p-1.5 bg-black/50 hover:bg-black/70 text-white rounded-full transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+              {/* Kondisi badge overlay */}
+              {detailAset.kondisi && (
+                <span className={`absolute bottom-3 left-3 px-2.5 py-1 rounded-full text-xs font-semibold ${getKondisiBadge(detailAset.kondisi.nama_kondisi)}`}>
+                  {detailAset.kondisi.nama_kondisi}
+                </span>
+              )}
+            </div>
+
+            {/* Info */}
+            <div className="p-5">
+              <div className="flex items-start justify-between gap-3 mb-4">
+                <div>
+                  {detailAset.kode_aset && (
+                    <span className="inline-block px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-xs font-mono mb-1">
+                      {detailAset.kode_aset}
+                    </span>
+                  )}
+                  <h2 className="text-lg font-extrabold text-slate-900">{detailAset.nama_aset}</h2>
+                  {detailAset.merek && (
+                    <p className="text-sm text-slate-500">{detailAset.merek}{detailAset.tipe ? ` · ${detailAset.tipe}` : ''}</p>
+                  )}
+                </div>
+                <span className="px-2.5 py-1 bg-blue-100 text-blue-700 rounded-lg text-sm font-bold whitespace-nowrap">
+                  {detailAset.jumlah} {detailAset.satuan}
+                </span>
+              </div>
+
+              {/* Detail grid */}
+              <div className="grid grid-cols-2 gap-3 text-sm mb-4">
+                {detailAset.harga_perolehan != null && Number(detailAset.harga_perolehan) > 0 && (
+                  <>
+                    <div className="bg-amber-50 border border-amber-100 rounded-xl p-3">
+                      <p className="text-[10px] text-amber-600 font-semibold uppercase tracking-wide mb-1">Harga Satuan</p>
+                      <p className="text-sm font-extrabold text-amber-800">{formatRupiah(Number(detailAset.harga_perolehan))}</p>
+                    </div>
+                    <div className="bg-amber-50 border border-amber-100 rounded-xl p-3">
+                      <p className="text-[10px] text-amber-600 font-semibold uppercase tracking-wide mb-1">Total Nilai</p>
+                      <p className="text-sm font-extrabold text-amber-800">{formatRupiah(detailAset.jumlah * Number(detailAset.harga_perolehan))}</p>
+                    </div>
+                  </>
+                )}
+                {detailAset.warna && (
+                  <div className="bg-slate-50 border border-slate-100 rounded-xl p-3">
+                    <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wide mb-1">Warna</p>
+                    <p className="text-sm font-bold text-slate-800">{detailAset.warna}</p>
+                  </div>
+                )}
+                {detailAset.kategori && (
+                  <div className="bg-slate-50 border border-slate-100 rounded-xl p-3">
+                    <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wide mb-1">Kategori</p>
+                    <p className="text-sm font-bold text-slate-800">{detailAset.kategori.nama_kategori}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Ruangan info */}
+              <div className="flex items-center gap-2 text-xs text-slate-500 mb-4 bg-slate-50 rounded-lg px-3 py-2">
+                <MapPin className="h-3.5 w-3.5 text-indigo-500 shrink-0" />
+                <span>{activeGedungTitle} › {activeRuanganTitle}</span>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-3 pt-2 border-t border-slate-100">
+                <button
+                  onClick={() => { setDetailAset(null); openEditAset(detailAset); }}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition-colors"
+                >
+                  <Edit2 className="h-4 w-4" /> Edit Aset
+                </button>
+                <button
+                  onClick={() => { setDetailAset(null); setDeleteAsetTarget(detailAset); }}
+                  className="flex items-center justify-center gap-2 px-4 py-2.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-sm font-semibold transition-colors border border-red-200"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
 
       {/* ════════ GEDUNG CREATE / EDIT MODAL ════════ */}

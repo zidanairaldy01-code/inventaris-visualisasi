@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Building2, Warehouse,
   LogOut, Package, ChevronRight, Wrench, Handshake,
   BarChart3, ChevronDown, ClipboardList, X, Wallet,
-  SlidersHorizontal, History, User, Users, Truck, Inbox
+  SlidersHorizontal, History, User, Users, Truck, Inbox, Bell
 } from 'lucide-react';
 import Cookies from 'js-cookie';
 import axios from '@/lib/axios';
@@ -87,6 +87,7 @@ function getHrefForRole(href: string, role: string, isDynamic?: boolean): string
     if (href === '/dashboard/servis') return '/wakapro/servis';
     if (href === '/dashboard/kondisi') return '/wakapro/kondisi';
     if (href === '/dashboard/laporan') return '/wakapro/laporan';
+    if (href === '/dashboard/notifikasi') return '/wakapro/notifikasi';
   }
 
   // For petugas role, map all accessible routes to /petugas-input/...
@@ -102,6 +103,7 @@ function getHrefForRole(href: string, role: string, isDynamic?: boolean): string
     if (href === '/dashboard/kondisi') return '/petugas-input/kondisi';
     if (href === '/dashboard/history') return '/petugas-input/history';
     if (href === '/dashboard/laporan') return '/petugas-input/laporan';
+    if (href === '/dashboard/notifikasi') return '/petugas-input/notifikasi';
   }
 
   // For wakasek role, map all accessible routes to /wakasek/...
@@ -114,6 +116,7 @@ function getHrefForRole(href: string, role: string, isDynamic?: boolean): string
     if (href === '/dashboard/kondisi') return '/wakasek/kondisi';
     if (href === '/dashboard/history') return '/wakasek/history';
     if (href === '/dashboard/laporan') return '/wakasek/laporan';
+    if (href === '/dashboard/notifikasi') return '/wakasek/notifikasi';
   }
 
   return href; // super_admin stays at /dashboard/...

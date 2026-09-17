@@ -522,11 +522,8 @@ export default function Header({ onMenuClick }: HeaderProps) {
                           setNotifOpen(false);
                           if (notif.data?.link_url) {
                             router.push(notif.data.link_url);
-                          } else if (user?.role === 'wakapro') {
-                            router.push('/wakapro/inventaris');
-                          } else {
-                            router.push('/dashboard/kondisi');
                           }
+                          // Jika tidak ada link_url, tidak redirect — user tetap di halaman yang sama
                         }}
                         className={`p-3.5 transition-all cursor-pointer hover:bg-slate-50 relative group flex gap-3 items-start ${
                           !notif.is_read ? 'bg-amber-50/40 border-l-4 border-l-amber-500' : 'border-l-4 border-l-transparent'
@@ -603,11 +600,11 @@ export default function Header({ onMenuClick }: HeaderProps) {
                 {user?.role === 'wakapro' ? (
                   <>
                     <Link
-                      href="/wakapro/bast"
+                      href="/wakapro/notifikasi"
                       onClick={() => setNotifOpen(false)}
                       className="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors px-2 py-1 rounded-lg hover:bg-blue-50/50"
                     >
-                      <span>Verifikasi &amp; BAST</span>
+                      <span>Lihat Semua Notifikasi</span>
                       <ExternalLink className="h-3 w-3" />
                     </Link>
                     <Link
@@ -618,22 +615,58 @@ export default function Header({ onMenuClick }: HeaderProps) {
                       Inventaris Workshop
                     </Link>
                   </>
-                ) : (
+                ) : pathname?.startsWith('/petugas-input') ? (
                   <>
                     <Link
-                      href="/dashboard/kondisi"
+                      href="/petugas-input/notifikasi"
                       onClick={() => setNotifOpen(false)}
                       className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 transition-colors px-2 py-1 rounded-lg hover:bg-indigo-50/50"
                     >
-                      <span>Buka Monitoring Kondisi Aset</span>
+                      <span>Lihat Semua Notifikasi</span>
                       <ExternalLink className="h-3 w-3" />
                     </Link>
                     <Link
-                      href="/dashboard/ruangan"
+                      href="/petugas-input/distribusi"
                       onClick={() => setNotifOpen(false)}
                       className="text-xs text-slate-500 hover:text-slate-800 px-2 py-1 rounded-lg hover:bg-slate-100 transition-colors"
                     >
-                      Daftar Workshop
+                      Distribusi
+                    </Link>
+                  </>
+                ) : pathname?.startsWith('/wakasek') ? (
+                  <>
+                    <Link
+                      href="/wakasek/notifikasi"
+                      onClick={() => setNotifOpen(false)}
+                      className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 transition-colors px-2 py-1 rounded-lg hover:bg-indigo-50/50"
+                    >
+                      <span>Lihat Semua Notifikasi</span>
+                      <ExternalLink className="h-3 w-3" />
+                    </Link>
+                    <Link
+                      href="/wakasek/kondisi"
+                      onClick={() => setNotifOpen(false)}
+                      className="text-xs text-slate-500 hover:text-slate-800 px-2 py-1 rounded-lg hover:bg-slate-100 transition-colors"
+                    >
+                      Kondisi Aset
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <Link
+                      href="/dashboard/notifikasi"
+                      onClick={() => setNotifOpen(false)}
+                      className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 transition-colors px-2 py-1 rounded-lg hover:bg-indigo-50/50"
+                    >
+                      <span>Lihat Semua Notifikasi</span>
+                      <ExternalLink className="h-3 w-3" />
+                    </Link>
+                    <Link
+                      href="/dashboard/kondisi"
+                      onClick={() => setNotifOpen(false)}
+                      className="text-xs text-slate-500 hover:text-slate-800 px-2 py-1 rounded-lg hover:bg-slate-100 transition-colors"
+                    >
+                      Monitoring Kondisi Aset
                     </Link>
                   </>
                 )}

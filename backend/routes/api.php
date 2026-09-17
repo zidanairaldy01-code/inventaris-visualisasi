@@ -73,9 +73,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('peminjamans', PeminjamanController::class)->except(['index']);
 
     // Laporan
-    Route::get('laporan/aset',       [LaporanController::class, 'aset']);
-    Route::get('laporan/servis',     [LaporanController::class, 'servis']);
-    Route::get('laporan/peminjaman', [LaporanController::class, 'peminjaman']);
+    Route::get('laporan/aset',        [LaporanController::class, 'aset']);
+    Route::get('laporan/servis',      [LaporanController::class, 'servis']);
+    Route::get('laporan/peminjaman',  [LaporanController::class, 'peminjaman']);
+    Route::get('laporan/penerimaan',  [LaporanController::class, 'penerimaan']);
 
     // Kelas Management (Admin only - CRUD)
     Route::apiResource('kelas', KelasController::class);
@@ -115,7 +116,9 @@ Route::middleware('auth:sanctum')->group(function () {
     
     // IMPORTANT: Specific routes MUST come BEFORE parameterized routes
     Route::get('distribusi-asets/search-barang', [DistribusiAsetController::class, 'searchBarang']);
+    Route::get('distribusi-asets/riwayat', [DistribusiAsetController::class, 'riwayat']);
     Route::post('distribusi-asets/bulk', [DistribusiAsetController::class, 'bulkStore']);
+
     
     // General CRUD routes
     Route::get('distribusi-asets', [DistribusiAsetController::class, 'index']);
@@ -125,6 +128,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('distribusi-asets/{id}/konfirmasi', [DistribusiAsetController::class, 'konfirmasi']);
     Route::get('distribusi-asets/{id}/surat-jalan', [DistribusiAsetController::class, 'cetakSuratJalan']);
     Route::get('distribusi-asets/{id}/bast', [DistribusiAsetController::class, 'cetakBast']);
+    // Cetak surat jalan untuk seluruh batch (berdasarkan nomor_pengiriman)
+    Route::get('distribusi-asets/bulk/{nomorPengiriman}/surat-jalan', [DistribusiAsetController::class, 'cetakSuratJalanBulk']);
 
     // Notifikasi Sistem
     Route::get('notifikasis', [NotifikasiController::class, 'index']);

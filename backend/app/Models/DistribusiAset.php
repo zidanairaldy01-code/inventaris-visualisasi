@@ -13,6 +13,7 @@ class DistribusiAset extends Model
 
     protected $fillable = [
         'nomor_surat_jalan',
+        'nomor_pengiriman',
         'nomor_bast',
         'sarana_prasarana_id',
         'ruangan_tujuan_id',
