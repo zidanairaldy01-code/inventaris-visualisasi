@@ -24,6 +24,7 @@ interface BarangItem {
   nama_barang: string
   satuan: string
   jumlah: number
+  harga_satuan: number
   kondisi: string
   keterangan: string
   isNew: boolean
@@ -36,6 +37,7 @@ interface SearchResult {
   satuan: string
   stok_akhir: number
   kondisi: string
+  nilai_harga_pembelian?: number
   folder_nama: string | null
 }
 
@@ -135,6 +137,7 @@ export default function BulkDistribusiPage() {
       nama_barang: result.nama_barang,
       satuan: result.satuan,
       jumlah: 1,
+      harga_satuan: Number(result.nilai_harga_pembelian) || 0,
       kondisi: result.kondisi || 'Baik',
       keterangan: result.folder_nama || '',
       isNew: false,
@@ -151,6 +154,7 @@ export default function BulkDistribusiPage() {
       nama_barang: '',
       satuan: 'Unit',
       jumlah: 1,
+      harga_satuan: 0,
       kondisi: 'Baik',
       keterangan: '',
       isNew: true,
@@ -198,6 +202,7 @@ export default function BulkDistribusiPage() {
           kondisi: item.isNew ? item.kondisi : undefined,
           keterangan: item.keterangan || undefined,
           jumlah: item.jumlah,
+          harga_satuan: item.harga_satuan || 0,
         })),
       }
 
@@ -352,6 +357,12 @@ export default function BulkDistribusiPage() {
                   <span className="text-sm text-slate-300">Dari Database</span>
                   <span className="text-blue-300 font-semibold">{items.filter(i => !i.isNew).length}</span>
                 </div>
+                <div className="flex justify-between items-center pt-2 border-t border-slate-700/80">
+                  <span className="text-xs text-slate-300 font-medium">Total Estimasi Nilai:</span>
+                  <span className="font-bold text-base text-emerald-400">
+                    Rp {items.reduce((s, i) => s + ((i.harga_satuan || 0) * (i.jumlah || 1)), 0).toLocaleString('id-ID')}
+                  </span>
+                </div>
               </div>
 
               <button
@@ -437,6 +448,11 @@ export default function BulkDistribusiPage() {
                                       <span className="text-[10px] font-mono bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">{result.kode}</span>
                                     )}
                                     <span className="text-xs text-slate-500">Stok: <strong>{result.stok_akhir}</strong> {result.satuan}</span>
+                                    {result.nilai_harga_pembelian ? (
+                                      <span className="text-xs font-bold text-emerald-600">
+                                        Rp {Number(result.nilai_harga_pembelian).toLocaleString('id-ID')}
+                                      </span>
+                                    ) : null}
                                     <span className={`text-[10px] px-1.5 py-0.5 rounded-full border font-semibold ${kondisiBadge(result.kondisi)}`}>
                                       {result.kondisi}
                                     </span>
@@ -557,7 +573,26 @@ export default function BulkDistribusiPage() {
                           />
                         </div>
 
-                        <div className="col-span-2">
+                        <div>
+                          <label className="block text-[10px] font-semibold text-emerald-700 mb-1">Harga Satuan (Rp)</label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={item.harga_satuan || ''}
+                            onChange={e => updateItem(item.id, 'harga_satuan', Number(e.target.value) || 0)}
+                            placeholder="0"
+                            className="w-full border border-emerald-200 rounded-lg px-3 py-2 text-sm bg-emerald-50/70 focus:outline-none focus:ring-2 focus:ring-emerald-400 font-semibold text-emerald-800 transition-all"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[10px] font-semibold text-slate-500 mb-1">Subtotal Nilai</label>
+                          <div className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-100 font-bold text-slate-800 truncate">
+                            Rp {((item.harga_satuan || 0) * (item.jumlah || 1)).toLocaleString('id-ID')}
+                          </div>
+                        </div>
+
+                        <div>
                           <label className="block text-[10px] font-semibold text-slate-600 mb-1">Kondisi</label>
                           <select
                             value={item.kondisi}
@@ -571,14 +606,14 @@ export default function BulkDistribusiPage() {
                           </select>
                         </div>
 
-                        <div className="col-span-2">
+                        <div>
                           <label className="block text-[10px] font-semibold text-slate-600 mb-1">Keterangan</label>
                           <input
                             type="text"
                             value={item.keterangan}
                             onChange={e => updateItem(item.id, 'keterangan', e.target.value)}
                             className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-all"
-                            placeholder="Keterangan tambahan..."
+                            placeholder="Keterangan..."
                           />
                         </div>
                       </div>

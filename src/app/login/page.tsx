@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
 import axios from '@/lib/axios';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, AlertCircle } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -12,17 +12,33 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [isExpired, setIsExpired] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('expired') === '1') {
+        setIsExpired(true);
+      }
+    }
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
+    setIsExpired(false);
 
     try {
       const response = await axios.post('/api/login', { username, password });
       if (response.data.access_token && response.data.user) {
-        Cookies.set('auth_token', response.data.access_token, { expires: 7 });
+        // Set cookie kedaluwarsa dalam 2 jam (2/24 hari)
+        Cookies.set('auth_token', response.data.access_token, { 
+          expires: new Date(Date.now() + 2 * 60 * 60 * 1000) 
+        });
+        // Catat timestamp aktivitas login
+        localStorage.setItem('auth_last_active', Date.now().toString());
 
         const userRole = response.data.user.role;
         let redirectPath = '/dashboard';
@@ -72,6 +88,13 @@ export default function LoginPage() {
         <div style={styles.formCard}>
           <h1 style={styles.formTitle}>Masuk ke Portal</h1>
           <p style={styles.formSub}>Silakan masukkan kredensial Anda</p>
+
+          {isExpired && !error && (
+            <div style={styles.expiredBox}>
+              <AlertCircle size={18} style={{ flexShrink: 0 }} />
+              <span>Sesi login Anda telah berakhir karena waktu tunggu (2 jam) telah habis. Silakan masuk kembali.</span>
+            </div>
+          )}
 
           {error && (
             <div style={styles.errorBox}>
@@ -242,6 +265,19 @@ const styles: { [key: string]: React.CSSProperties } = {
     padding: '10px 14px',
     fontSize: '13px',
     marginBottom: '20px',
+  },
+  expiredBox: {
+    backgroundColor: '#fffbeb',
+    border: '1px solid #fcd34d',
+    color: '#b45309',
+    borderRadius: '6px',
+    padding: '10px 14px',
+    fontSize: '13px',
+    marginBottom: '20px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    lineHeight: '1.4',
   },
 
   // --- Form Fields ---

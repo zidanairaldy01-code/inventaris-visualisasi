@@ -51,22 +51,25 @@ class AsetPerKelasController extends Controller
             $query->where('id_jurusan', $id_jurusan);
         })->with(['kondisi', 'ruangan.kelas']);
 
-        $totalAset = $asets->count();
-        $totalNilai = $asets->sum('harga_perolehan');
+        $asetList = $asets->get();
+        $totalAset = $asetList->count();
+        $totalUnit = (int) $asetList->sum(fn($i) => $i->jumlah ?? 1);
+        $totalNilai = (float) $asetList->sum(fn($i) => ($i->jumlah ?? 1) * ($i->harga_perolehan ?? 0));
         $rataRataHarga = $totalAset > 0 ? $totalNilai / $totalAset : 0;
 
         // Group by kondisi
-        $byKondisi = $asets->get()->groupBy('kondisi.nama_kondisi')->map(function ($items) {
+        $byKondisi = $asetList->groupBy('kondisi.nama_kondisi')->map(function ($items) {
             return $items->count();
         });
 
         // Group by tingkat
-        $byTingkat = $asets->get()->groupBy(function ($item) {
+        $byTingkat = $asetList->groupBy(function ($item) {
             return $item->ruangan->kelas->tingkat ?? 'Tanpa Kelas';
         })->map(function ($items) {
             return [
-                'total_aset' => $items->count(),
-                'total_nilai' => $items->sum('harga_perolehan')
+                'total_aset'  => $items->count(),
+                'total_unit'  => $items->sum(fn($i) => $i->jumlah ?? 1),
+                'total_nilai' => (float) $items->sum(fn($i) => ($i->jumlah ?? 1) * ($i->harga_perolehan ?? 0))
             ];
         });
 
@@ -75,11 +78,12 @@ class AsetPerKelasController extends Controller
             'data' => [
                 'jurusan' => $jurusan,
                 'summary' => [
-                    'total_aset' => $totalAset,
-                    'total_nilai' => $totalNilai,
+                    'total_aset'      => $totalAset,
+                    'total_unit'      => $totalUnit,
+                    'total_nilai'     => $totalNilai,
                     'rata_rata_harga' => $rataRataHarga,
-                    'by_kondisi' => $byKondisi,
-                    'by_tingkat' => $byTingkat
+                    'by_kondisi'      => $byKondisi,
+                    'by_tingkat'      => $byTingkat
                 ]
             ]
         ]);
@@ -96,37 +100,41 @@ class AsetPerKelasController extends Controller
             $query->where('id_kelas', $id_kelas);
         })->with(['kondisi', 'kategori']);
 
-        $totalAset = $asets->count();
-        $totalNilai = $asets->sum('harga_perolehan');
+        $asetList = $asets->get();
+        $totalAset = $asetList->count();
+        $totalUnit = (int) $asetList->sum(fn($i) => $i->jumlah ?? 1);
+        $totalNilai = (float) $asetList->sum(fn($i) => ($i->jumlah ?? 1) * ($i->harga_perolehan ?? 0));
         $rataRataHarga = $totalAset > 0 ? $totalNilai / $totalAset : 0;
 
         // Group by kondisi
-        $byKondisi = $asets->get()->groupBy('kondisi.nama_kondisi')->map(function ($items) {
+        $byKondisi = $asetList->groupBy('kondisi.nama_kondisi')->map(function ($items) {
             return $items->count();
         });
 
         // Group by kategori
-        $byKategori = $asets->get()->groupBy('kategori.nama_kategori')->map(function ($items) {
+        $byKategori = $asetList->groupBy('kategori.nama_kategori')->map(function ($items) {
             return [
-                'total_aset' => $items->count(),
-                'total_nilai' => $items->sum('harga_perolehan')
+                'total_aset'  => $items->count(),
+                'total_unit'  => $items->sum(fn($i) => $i->jumlah ?? 1),
+                'total_nilai' => (float) $items->sum(fn($i) => ($i->jumlah ?? 1) * ($i->harga_perolehan ?? 0))
             ];
         });
 
         // Count dipinjam
-        $dipinjam = $asets->where('status_aset', 'Dipinjam')->count();
+        $dipinjam = $asetList->where('status_aset', 'Dipinjam')->count();
 
         return response()->json([
             'status' => 'success',
             'data' => [
                 'kelas' => $kelas,
                 'summary' => [
-                    'total_aset' => $totalAset,
-                    'total_nilai' => $totalNilai,
+                    'total_aset'      => $totalAset,
+                    'total_unit'      => $totalUnit,
+                    'total_nilai'     => $totalNilai,
                     'rata_rata_harga' => $rataRataHarga,
-                    'aset_dipinjam' => $dipinjam,
-                    'by_kondisi' => $byKondisi,
-                    'by_kategori' => $byKategori
+                    'aset_dipinjam'   => $dipinjam,
+                    'by_kondisi'      => $byKondisi,
+                    'by_kategori'     => $byKategori
                 ]
             ]
         ]);

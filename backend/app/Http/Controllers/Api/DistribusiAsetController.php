@@ -12,6 +12,7 @@ use App\Models\Notifikasi;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class DistribusiAsetController extends Controller
 {
@@ -75,11 +76,18 @@ class DistribusiAsetController extends Controller
             'sarana_prasarana_id' => 'required|exists:sarana_prasaranas,id',
             'ruangan_tujuan_id'   => 'required|exists:ruangans,id',
             'jumlah'              => 'nullable|integer|min:1',
+            'harga_satuan'        => 'nullable|numeric|min:0',
             'catatan_pengiriman'  => 'nullable|string',
         ]);
 
         $user = $request->user();
         $jumlah = $validated['jumlah'] ?? 1;
+
+        $sarana = SaranaPrasarana::find($validated['sarana_prasarana_id']);
+        $hargaSatuan = isset($validated['harga_satuan']) && $validated['harga_satuan'] !== ''
+            ? (float) $validated['harga_satuan']
+            : (float) ($sarana?->nilai_harga_pembelian ?? 0);
+        $totalHarga = $hargaSatuan * $jumlah;
 
         // Cari Wakapro yang bertanggung jawab atas ruangan tujuan jika ada
         $wakapro = User::where('role', 'wakapro')
@@ -91,7 +99,7 @@ class DistribusiAsetController extends Controller
         $countThisMonth = DistribusiAset::where('nomor_surat_jalan', 'like', "{$prefix}%")->count();
         $nomorSuratJalan = $prefix . str_pad($countThisMonth + 1, 4, '0', STR_PAD_LEFT);
 
-        $distribusi = DB::transaction(function () use ($validated, $user, $wakapro, $nomorSuratJalan, $jumlah) {
+        $distribusi = DB::transaction(function () use ($validated, $user, $wakapro, $nomorSuratJalan, $jumlah, $hargaSatuan, $totalHarga, $sarana) {
             $record = DistribusiAset::create([
                 'nomor_surat_jalan'   => $nomorSuratJalan,
                 'sarana_prasarana_id' => $validated['sarana_prasarana_id'],
@@ -99,6 +107,8 @@ class DistribusiAsetController extends Controller
                 'petugas_pengirim_id' => $user->id,
                 'wakapro_penerima_id' => $wakapro ? $wakapro->id : null,
                 'jumlah'              => $jumlah,
+                'harga_satuan'        => $hargaSatuan,
+                'total_harga'         => $totalHarga,
                 'tanggal_kirim'       => Carbon::today(),
                 'status'              => 'menunggu_konfirmasi',
                 'catatan_pengiriman'  => $validated['catatan_pengiriman'] ?? null,
@@ -144,6 +154,7 @@ class DistribusiAsetController extends Controller
             'items'               => 'required|array|min:1',
             'items.*.sarana_prasarana_id' => 'nullable|exists:sarana_prasaranas,id',
             'items.*.jumlah'      => 'required|integer|min:1',
+            'items.*.harga_satuan' => 'nullable|numeric|min:0',
             // Data untuk barang baru jika sarana_prasarana_id tidak ada
             'items.*.nama_barang' => 'nullable|string',
             'items.*.satuan'      => 'nullable|string',
@@ -171,6 +182,10 @@ class DistribusiAsetController extends Controller
             $nomorPengiriman = $npPrefix . str_pad($npCount + 1, 4, '0', STR_PAD_LEFT);
 
             foreach ($validated['items'] as $item) {
+                $hargaSatuan = isset($item['harga_satuan']) && $item['harga_satuan'] !== ''
+                    ? (float) $item['harga_satuan']
+                    : 0;
+
                 // Jika sarana_prasarana_id tidak ada, buat data barang baru
                 if (empty($item['sarana_prasarana_id'])) {
                     if (empty($item['nama_barang'])) {
@@ -183,21 +198,29 @@ class DistribusiAsetController extends Controller
                     $kode = $kodePrefix . str_pad($countBarang + 1, 4, '0', STR_PAD_LEFT);
 
                     $saranaNew = SaranaPrasarana::create([
-                        'kode'         => $kode,
-                        'nama_barang'  => $item['nama_barang'],
-                        'satuan'       => $item['satuan'] ?? 'Unit',
-                        'stok_awal'    => $item['jumlah'],
-                        'stok_masuk'   => 0,
-                        'stok_keluar'  => 0,
-                        'kondisi'      => $item['kondisi'] ?? 'Baik',
-                        'keterangan'   => $item['keterangan'] ?? 'Input manual saat distribusi',
-                        'id_user'      => $user->id,
+                        'kode'                  => $kode,
+                        'nama_barang'           => $item['nama_barang'],
+                        'satuan'                => $item['satuan'] ?? 'Unit',
+                        'stok_awal'             => $item['jumlah'],
+                        'stok_masuk'            => 0,
+                        'stok_keluar'           => 0,
+                        'nilai_harga_pembelian' => $hargaSatuan,
+                        'nilai_harga_sekarang'  => $hargaSatuan,
+                        'kondisi'               => $item['kondisi'] ?? 'Baik',
+                        'keterangan'            => $item['keterangan'] ?? 'Input manual saat distribusi',
+                        'id_user'               => $user->id,
                     ]);
 
                     $saranaId = $saranaNew->id;
                 } else {
                     $saranaId = $item['sarana_prasarana_id'];
+                    $saranaExist = SaranaPrasarana::find($saranaId);
+                    if ($hargaSatuan <= 0 && $saranaExist) {
+                        $hargaSatuan = (float) ($saranaExist->nilai_harga_pembelian ?? 0);
+                    }
                 }
+
+                $totalHarga = $hargaSatuan * $item['jumlah'];
 
                 // Generate Nomor Surat Jalan untuk setiap item
                 $countThisMonth = DistribusiAset::where('nomor_surat_jalan', 'like', "{$prefix}%")->count();
@@ -211,6 +234,8 @@ class DistribusiAsetController extends Controller
                     'petugas_pengirim_id' => $user->id,
                     'wakapro_penerima_id' => $wakapro ? $wakapro->id : null,
                     'jumlah'              => $item['jumlah'],
+                    'harga_satuan'        => $hargaSatuan,
+                    'total_harga'         => $totalHarga,
                     'tanggal_kirim'       => Carbon::today(),
                     'status'              => 'menunggu_konfirmasi',
                     'catatan_pengiriman'  => $validated['catatan_pengiriman'] ?? null,
@@ -263,7 +288,7 @@ class DistribusiAsetController extends Controller
                         'pesan'             => "Petugas {$user->nama_lengkap} mengirimkan {$countResults} item barang ke {$namaRuang}. Silakan periksa fisik barang dan lakukan konfirmasi BAST.",
                         'data'              => [
                             'ruangan_id' => $ruanganTujuanId,
-                            'link_url'   => '/wakapro/bast',
+                            'link_url'   => '/wakapro/penerimaan',
                         ],
                         'is_read'           => false,
                     ]);
@@ -297,13 +322,14 @@ class DistribusiAsetController extends Controller
         ->get()
         ->map(function ($item) {
             return [
-                'id'           => $item->id,
-                'kode'         => $item->kode,
-                'nama_barang'  => $item->nama_barang,
-                'satuan'       => $item->satuan,
-                'stok_akhir'   => $item->stok_akhir,
-                'kondisi'      => $item->kondisi,
-                'folder_nama'  => $item->folder ? $item->folder->nama_folder : null,
+                'id'                    => $item->id,
+                'kode'                  => $item->kode,
+                'nama_barang'           => $item->nama_barang,
+                'satuan'                => $item->satuan,
+                'stok_akhir'            => $item->stok_akhir,
+                'kondisi'               => $item->kondisi,
+                'nilai_harga_pembelian' => (float) ($item->nilai_harga_pembelian ?? 0),
+                'folder_nama'           => $item->folder ? $item->folder->nama_folder : null,
             ];
         });
 
@@ -336,9 +362,32 @@ class DistribusiAsetController extends Controller
             'aksi'                => 'required|in:terima,tolak',
             'catatan_penerimaan'  => 'nullable|string',
             'kondisi_diterima'    => 'nullable|in:Baik,Rusak Ringan,Rusak Berat',
+            'foto_kerusakan'      => 'nullable|file|image|mimes:jpeg,png,jpg,webp|max:5120',
         ]);
 
         if ($validated['aksi'] === 'terima') {
+            $kondisi = $validated['kondisi_diterima'] ?? 'Baik';
+
+            // Jika barang diterima dalam kondisi rusak, wajib menyertakan foto kerusakan
+            if (in_array($kondisi, ['Rusak Ringan', 'Rusak Berat'])) {
+                if (!$request->hasFile('foto_kerusakan') && !$distribusi->foto_kerusakan) {
+                    return response()->json([
+                        'message' => 'Wajib mengunggah foto kerusakan saat menerima barang dengan kondisi rusak.',
+                        'errors'  => [
+                            'foto_kerusakan' => ['Foto barang rusak wajib dilampirkan jika kondisi barang Rusak Ringan atau Rusak Berat.']
+                        ]
+                    ], 422);
+                }
+            }
+
+            $fotoKerusakanPath = $distribusi->foto_kerusakan;
+            if ($request->hasFile('foto_kerusakan')) {
+                if ($fotoKerusakanPath && Storage::disk('public')->exists($fotoKerusakanPath)) {
+                    Storage::disk('public')->delete($fotoKerusakanPath);
+                }
+                $fotoKerusakanPath = $request->file('foto_kerusakan')->store('distribusi/kerusakan', 'public');
+            }
+
             // Generate Nomor BAST: BAST-YYYYMM-XXXX
             $prefix = 'BAST-' . date('Ym') . '-';
             $countThisMonth = DistribusiAset::where('nomor_bast', 'like', "{$prefix}%")->count();
@@ -349,15 +398,18 @@ class DistribusiAsetController extends Controller
                 'nomor_bast'          => $nomorBast,
                 'tanggal_terima'      => Carbon::now(),
                 'wakapro_penerima_id' => $user->id,
-                'catatan_penerimaan'  => $validated['catatan_penerimaan'] ?? 'Barang telah diperiksa fisik dan diterima dalam kondisi baik.',
+                'catatan_penerimaan'  => $validated['catatan_penerimaan'] ?? ($kondisi === 'Baik' ? 'Barang telah diperiksa fisik dan diterima dalam kondisi baik.' : "Barang diterima dalam kondisi {$kondisi}."),
+                'foto_kerusakan'      => $fotoKerusakanPath,
             ]);
 
             // Jika ada perubahan kondisi saat diterima
-            if (!empty($validated['kondisi_diterima'])) {
-                $sarana = SaranaPrasarana::find($distribusi->sarana_prasarana_id);
-                if ($sarana) {
-                    $sarana->update(['kondisi' => $validated['kondisi_diterima']]);
+            $sarana = SaranaPrasarana::find($distribusi->sarana_prasarana_id);
+            if ($sarana) {
+                $saranaData = ['kondisi' => $kondisi];
+                if ($fotoKerusakanPath) {
+                    $saranaData['foto_kerusakan'] = $fotoKerusakanPath;
                 }
+                $sarana->update($saranaData);
             }
 
             $message = "Aset berhasil diterima dan Berita Acara Serah Terima ({$nomorBast}) telah diterbitkan.";
@@ -580,15 +632,22 @@ class DistribusiAsetController extends Controller
         $totalUnit = (int) $diterima->sum('jumlah');
         $totalItemJenis = $diterima->pluck('sarana_prasarana_id')->unique()->count();
 
-        // Hitung kondisi berdasarkan sarana_prasarana yang diterima
+        // Hitung total nilai aset dan kondisi berdasarkan sarana_prasarana yang diterima
+        $totalNilaiAset = 0;
         $kondisiBaik = 0;
         $kondisiRusak = 0;
         foreach ($diterima as $dist) {
+            $harga = (float) ($dist->total_harga ?: ($dist->jumlah * ($dist->harga_satuan ?: ($dist->saranaPrasarana?->nilai_harga_pembelian ?? 0))));
+            $totalNilaiAset += $harga;
+
             $kondisi = $dist->saranaPrasarana?->kondisi ?? 'Baik';
-            if ($kondisi === 'Baik') {
-                $kondisiBaik += (int) $dist->jumlah;
-            } else {
+            $isRusak = in_array($kondisi, ['Rusak Ringan', 'Rusak Berat', 'Tidak Layak Pakai'])
+                || stripos($kondisi, 'rusak') !== false
+                || stripos($kondisi, 'tidak layak') !== false;
+            if ($isRusak) {
                 $kondisiRusak += (int) $dist->jumlah;
+            } else {
+                $kondisiBaik += (int) $dist->jumlah;
             }
         }
 
@@ -596,6 +655,7 @@ class DistribusiAsetController extends Controller
             'ruangan'             => $ruangan,
             'total_unit'          => $totalUnit,
             'total_item_jenis'    => $totalItemJenis,
+            'total_nilai_aset'    => $totalNilaiAset,
             'kondisi_baik'        => $kondisiBaik,
             'kondisi_rusak'       => $kondisiRusak,
             'menunggu_konfirmasi' => $menunggu->count(),
@@ -618,7 +678,7 @@ class DistribusiAsetController extends Controller
             return response()->json([
                 'ruangan'  => null,
                 'items'    => [],
-                'summary'  => ['total_unit' => 0, 'total_jenis' => 0, 'kondisi_baik' => 0, 'kondisi_rusak' => 0],
+                'summary'  => ['total_unit' => 0, 'total_jenis' => 0, 'total_nilai' => 0, 'kondisi_baik' => 0, 'kondisi_rusak' => 0],
                 'warning'  => 'Akun Anda belum terhubung ke ruangan manapun. Hubungi administrator.',
             ]);
         }
@@ -654,14 +714,21 @@ class DistribusiAsetController extends Controller
         // Hitung summary
         $totalUnit   = (int) $items->sum('jumlah');
         $totalJenis  = $items->pluck('sarana_prasarana_id')->unique()->count();
+        $totalNilai  = 0;
         $kondisiBaik = 0;
         $kondisiRusak = 0;
         foreach ($items as $item) {
+            $harga = (float) ($item->total_harga ?: ($item->jumlah * ($item->harga_satuan ?: ($item->saranaPrasarana?->nilai_harga_pembelian ?? 0))));
+            $totalNilai += $harga;
+
             $k = $item->saranaPrasarana?->kondisi ?? 'Baik';
-            if ($k === 'Baik') {
-                $kondisiBaik += (int) $item->jumlah;
-            } else {
+            $isRusak = in_array($k, ['Rusak Ringan', 'Rusak Berat', 'Tidak Layak Pakai'])
+                || stripos($k, 'rusak') !== false
+                || stripos($k, 'tidak layak') !== false;
+            if ($isRusak) {
                 $kondisiRusak += (int) $item->jumlah;
+            } else {
+                $kondisiBaik += (int) $item->jumlah;
             }
         }
 
@@ -671,6 +738,7 @@ class DistribusiAsetController extends Controller
             'summary' => [
                 'total_unit'   => $totalUnit,
                 'total_jenis'  => $totalJenis,
+                'total_nilai'  => $totalNilai,
                 'kondisi_baik' => $kondisiBaik,
                 'kondisi_rusak'=> $kondisiRusak,
             ],

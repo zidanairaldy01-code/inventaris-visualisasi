@@ -36,6 +36,7 @@ interface InventarisItem {
 interface Summary {
   total_unit: number
   total_jenis: number
+  total_nilai: number
   kondisi_baik: number
   kondisi_rusak: number
 }
@@ -51,7 +52,7 @@ export default function InventarisWorkshopPage() {
   const isMobile = useIsMobile()
   const { success, error: showError } = useNotification()
   const [items, setItems] = useState<InventarisItem[]>([])
-  const [summary, setSummary] = useState<Summary>({ total_unit: 0, total_jenis: 0, kondisi_baik: 0, kondisi_rusak: 0 })
+  const [summary, setSummary] = useState<Summary>({ total_unit: 0, total_jenis: 0, total_nilai: 0, kondisi_baik: 0, kondisi_rusak: 0 })
   const [ruangan, setRuangan] = useState<Ruangan | null>(null)
   const [loading, setLoading] = useState(true)
   const [warning, setWarning] = useState<string | null>(null)
@@ -74,7 +75,7 @@ export default function InventarisWorkshopPage() {
 
       const res = await axios.get(`/api/workshop/inventaris?${params.toString()}`)
       setItems(res.data.items ?? [])
-      setSummary(res.data.summary ?? { total_unit: 0, total_jenis: 0, kondisi_baik: 0, kondisi_rusak: 0 })
+      setSummary(res.data.summary ?? { total_unit: 0, total_jenis: 0, total_nilai: 0, kondisi_baik: 0, kondisi_rusak: 0 })
       setRuangan(res.data.ruangan ?? null)
       setWarning(res.data.warning ?? null)
     } catch (err) {
@@ -201,19 +202,21 @@ export default function InventarisWorkshopPage() {
         </div>
 
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-          <p className="text-xs text-slate-500 mb-1">Kondisi Baik</p>
-          {loading ? <div className="h-7 w-16 bg-slate-100 rounded animate-pulse" /> : (
-            <p className="text-2xl font-black text-emerald-600">{summary.kondisi_baik.toLocaleString('id-ID')}</p>
+          <p className="text-xs text-slate-500 mb-1">Total Nilai Aset</p>
+          {loading ? <div className="h-7 w-24 bg-slate-100 rounded animate-pulse" /> : (
+            <p className="text-base font-black text-emerald-700 leading-tight">
+              {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(summary.total_nilai ?? 0)}
+            </p>
           )}
-          <p className="text-[11px] text-slate-400 mt-1">unit siap pakai</p>
+          <p className="text-[11px] text-slate-400 mt-1">akumulasi dari distribusi BAST</p>
         </div>
 
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-          <p className="text-xs text-slate-500 mb-1">Perlu Servis</p>
+          <p className="text-xs text-slate-500 mb-1">Kondisi Baik</p>
           {loading ? <div className="h-7 w-16 bg-slate-100 rounded animate-pulse" /> : (
-            <p className="text-2xl font-black text-rose-600">{summary.kondisi_rusak.toLocaleString('id-ID')}</p>
+            <p className="text-2xl font-black text-blue-600">{summary.kondisi_baik.toLocaleString('id-ID')}</p>
           )}
-          <p className="text-[11px] text-slate-400 mt-1">unit rusak / perlu perbaikan</p>
+          <p className="text-[11px] text-slate-400 mt-1">unit siap pakai</p>
         </div>
 
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
@@ -224,6 +227,7 @@ export default function InventarisWorkshopPage() {
           <div className="mt-2 h-1.5 bg-slate-100 rounded-full overflow-hidden">
             <div className="h-full bg-indigo-500 rounded-full transition-all" style={{ width: `${kesiapanPersen}%` }} />
           </div>
+          <p className="text-[11px] text-slate-400 mt-1">{summary.kondisi_rusak} unit perlu servis</p>
         </div>
       </div>
 

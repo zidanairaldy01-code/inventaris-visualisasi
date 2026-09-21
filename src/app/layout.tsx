@@ -15,6 +15,8 @@ export const metadata: Metadata = {
   themeColor: "#1e293b",
 };
 
+import AuthTimeoutWatcher from "@/components/AuthTimeoutWatcher";
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
@@ -27,7 +29,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </head>
-      <body className="min-h-full flex flex-col touch-manipulation">{children}</body>
+      <body className="min-h-full flex flex-col touch-manipulation">
+        <AuthTimeoutWatcher />
+        {children}
+      </body>
     </html>
   );
 }

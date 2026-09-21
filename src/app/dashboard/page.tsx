@@ -55,6 +55,7 @@ export default function DashboardPage() {
         // Unknown role - redirect to login
         console.warn('Unknown role:', role);
         Cookies.remove('auth_token');
+        localStorage.removeItem('auth_last_active');
         router.push('/login');
       }
     } catch (err: any) {
@@ -65,32 +66,36 @@ export default function DashboardPage() {
       if (err.response?.status === 401) {
         console.log('Token invalid (401), clearing and redirecting to login...');
         Cookies.remove('auth_token');
-        router.push('/login');
+        localStorage.removeItem('auth_last_active');
+        router.push('/login?expired=1');
       } else {
         // Other errors, still redirect to login for safety
         console.log('Unknown error, redirecting to login...');
         Cookies.remove('auth_token');
+        localStorage.removeItem('auth_last_active');
         router.push('/login');
       }
     }
   };
 
+  const [recentSarana, setRecentSarana] = useState<any[]>([]);
+
   const loadDashboardData = async () => {
     setLoading(true);
-    
-    // For now, just use default stats to avoid 401 errors
-    // TODO: Create proper admin stats endpoint in backend
-    setStats(getDefaultStats());
-    setLoading(false);
-    
-    /* Commented out until backend stats endpoint is fixed
     try {
-      const statsRes = await axios.get('/api/stats').catch(() => null);
+      const [statsRes, saranaRes] = await Promise.all([
+        axios.get('/api/stats').catch(() => null),
+        axios.get('/api/sarana-prasaranas').catch(() => null),
+      ]);
       
       if (statsRes?.data) {
         setStats(statsRes.data);
       } else {
-        await loadFallbackStats();
+        setStats(getDefaultStats());
+      }
+
+      if (saranaRes?.data?.data && Array.isArray(saranaRes.data.data)) {
+        setRecentSarana(saranaRes.data.data.slice(0, 5));
       }
     } catch (error: any) {
       console.error('Error loading dashboard data:', error);
@@ -98,7 +103,6 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-    */
   };
 
   const getDefaultStats = () => ({
@@ -150,7 +154,7 @@ export default function DashboardPage() {
         stats={stats || getDefaultStats()}
         recentActivity={[]}
         recentBelanja={[]}
-        recentSarana={[]}
+        recentSarana={recentSarana}
         loading={loading}
       />
     );

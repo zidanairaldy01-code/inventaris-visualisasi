@@ -7,7 +7,7 @@ import Cookies from 'js-cookie';
 import {
   Bell, Search, UserCircle, ChevronDown, Package, MapPin, Building2,
   X, Loader2, Menu, User, KeyRound, LogOut, ShieldCheck, ChevronRight,
-  AlertTriangle, CheckCheck, CheckCircle2, Clock, Trash2, ExternalLink
+  AlertTriangle, CheckCheck, CheckCircle2, Clock, Trash2
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -187,6 +187,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
       console.error(e);
     } finally {
       Cookies.remove('auth_token');
+      localStorage.removeItem('auth_last_active');
       window.location.href = '/login';
     }
   };
@@ -521,9 +522,15 @@ export default function Header({ onMenuClick }: HeaderProps) {
                           if (!notif.is_read) markNotificationRead(notif.id);
                           setNotifOpen(false);
                           if (notif.data?.link_url) {
-                            router.push(notif.data.link_url);
+                            // Sanitize broken legacy routes
+                            const url = notif.data.link_url
+                              .replace('/wakapro/bast', '/wakapro/penerimaan');
+                            router.push(url);
+                          } else if (user?.role === 'wakapro') {
+                            router.push('/wakapro/penerimaan');
+                          } else {
+                            router.push('/dashboard/kondisi');
                           }
-                          // Jika tidak ada link_url, tidak redirect — user tetap di halaman yang sama
                         }}
                         className={`p-3.5 transition-all cursor-pointer hover:bg-slate-50 relative group flex gap-3 items-start ${
                           !notif.is_read ? 'bg-amber-50/40 border-l-4 border-l-amber-500' : 'border-l-4 border-l-transparent'
@@ -592,83 +599,6 @@ export default function Header({ onMenuClick }: HeaderProps) {
                       </div>
                     );
                   })
-                )}
-              </div>
-
-              {/* Footer */}
-              <div className="p-2.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs">
-                {user?.role === 'wakapro' ? (
-                  <>
-                    <Link
-                      href="/wakapro/notifikasi"
-                      onClick={() => setNotifOpen(false)}
-                      className="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors px-2 py-1 rounded-lg hover:bg-blue-50/50"
-                    >
-                      <span>Lihat Semua Notifikasi</span>
-                      <ExternalLink className="h-3 w-3" />
-                    </Link>
-                    <Link
-                      href="/wakapro/inventaris"
-                      onClick={() => setNotifOpen(false)}
-                      className="text-xs text-slate-500 hover:text-slate-800 px-2 py-1 rounded-lg hover:bg-slate-100 transition-colors"
-                    >
-                      Inventaris Workshop
-                    </Link>
-                  </>
-                ) : pathname?.startsWith('/petugas-input') ? (
-                  <>
-                    <Link
-                      href="/petugas-input/notifikasi"
-                      onClick={() => setNotifOpen(false)}
-                      className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 transition-colors px-2 py-1 rounded-lg hover:bg-indigo-50/50"
-                    >
-                      <span>Lihat Semua Notifikasi</span>
-                      <ExternalLink className="h-3 w-3" />
-                    </Link>
-                    <Link
-                      href="/petugas-input/distribusi"
-                      onClick={() => setNotifOpen(false)}
-                      className="text-xs text-slate-500 hover:text-slate-800 px-2 py-1 rounded-lg hover:bg-slate-100 transition-colors"
-                    >
-                      Distribusi
-                    </Link>
-                  </>
-                ) : pathname?.startsWith('/wakasek') ? (
-                  <>
-                    <Link
-                      href="/wakasek/notifikasi"
-                      onClick={() => setNotifOpen(false)}
-                      className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 transition-colors px-2 py-1 rounded-lg hover:bg-indigo-50/50"
-                    >
-                      <span>Lihat Semua Notifikasi</span>
-                      <ExternalLink className="h-3 w-3" />
-                    </Link>
-                    <Link
-                      href="/wakasek/kondisi"
-                      onClick={() => setNotifOpen(false)}
-                      className="text-xs text-slate-500 hover:text-slate-800 px-2 py-1 rounded-lg hover:bg-slate-100 transition-colors"
-                    >
-                      Kondisi Aset
-                    </Link>
-                  </>
-                ) : (
-                  <>
-                    <Link
-                      href="/dashboard/notifikasi"
-                      onClick={() => setNotifOpen(false)}
-                      className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 transition-colors px-2 py-1 rounded-lg hover:bg-indigo-50/50"
-                    >
-                      <span>Lihat Semua Notifikasi</span>
-                      <ExternalLink className="h-3 w-3" />
-                    </Link>
-                    <Link
-                      href="/dashboard/kondisi"
-                      onClick={() => setNotifOpen(false)}
-                      className="text-xs text-slate-500 hover:text-slate-800 px-2 py-1 rounded-lg hover:bg-slate-100 transition-colors"
-                    >
-                      Monitoring Kondisi Aset
-                    </Link>
-                  </>
                 )}
               </div>
             </div>

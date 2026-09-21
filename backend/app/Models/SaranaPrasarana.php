@@ -22,6 +22,7 @@ class SaranaPrasarana extends Model
         'nilai_harga_pembelian',
         'nilai_harga_sekarang',
         'kondisi',
+        'foto_kerusakan',
         'keterangan',
         'id_user',
         'id_folder',
@@ -30,6 +31,16 @@ class SaranaPrasarana extends Model
     protected $casts = [
         'tanggal_pengambilan' => 'date',
     ];
+
+    protected $appends = ['foto_kerusakan_url'];
+
+    public function getFotoKerusakanUrlAttribute(): ?string
+    {
+        if (!$this->foto_kerusakan) {
+            return null;
+        }
+        return \Illuminate\Support\Facades\Storage::disk('public')->url($this->foto_kerusakan);
+    }
 
     public function user()
     {

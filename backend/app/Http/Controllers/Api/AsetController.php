@@ -50,9 +50,24 @@ class AsetController extends Controller
     {
         $asets = Aset::whereNull('deleted_at')->get();
 
-        $totalUnit = $asets->sum('jumlah');
+        $saranaUnit = (int) \App\Models\SaranaPrasarana::sum('stok_akhir');
+        $saranaItems = \App\Models\SaranaPrasarana::count();
+        $saranaNilai = (float) \App\Models\SaranaPrasarana::sum('nilai_harga_pembelian');
+
+        $totalUnit = $asets->sum(fn($a) => (int) ($a->jumlah ?? 1));
+        if ($totalUnit === 0 && $saranaUnit > 0) {
+            $totalUnit = $saranaUnit;
+        }
+
         $totalItem = $asets->count();
-        $totalNilai = $asets->sum(fn($a) => (float) ($a->harga_perolehan ?? 0));
+        if ($totalItem === 0 && $saranaItems > 0) {
+            $totalItem = $saranaItems;
+        }
+
+        $totalNilai = $asets->sum(fn($a) => (float) (($a->jumlah ?? 1) * ($a->harga_perolehan ?? 0)));
+        if ($totalNilai == 0 && $saranaNilai > 0) {
+            $totalNilai = $saranaNilai;
+        }
 
         $perKondisi = $asets->groupBy(fn($a) => $a->id_kondisi)
             ->map(fn($group) => $group->count());
@@ -61,11 +76,14 @@ class AsetController extends Controller
             ->whereNull('deleted_at')
             ->get()
             ->groupBy(fn($a) => $a->kategori?->nama_kategori ?? 'Lainnya')
-            ->map(fn($g) => ['jumlah' => $g->count(), 'nilai' => $g->sum(fn($a) => (float) ($a->harga_perolehan ?? 0))]);
+            ->map(fn($g) => [
+                'jumlah' => $g->count(),
+                'nilai'  => $g->sum(fn($a) => (float) (($a->jumlah ?? 1) * ($a->harga_perolehan ?? 0))),
+            ]);
 
         // Hitung jumlah ruangan, gedung, kategori
-        $totalRuanganWorkshop = \App\Models\Ruangan::where('jenis', 'workshop')->count();
-        $totalRuanganGedung   = \App\Models\Ruangan::where('jenis', 'gedung')->count();
+        $totalRuanganWorkshop = \App\Models\Ruangan::whereIn('jenis', ['workshop', 'bengkel'])->count();
+        $totalRuanganGedung   = \App\Models\Ruangan::whereIn('jenis', ['gedung', 'kelas'])->count();
         $totalRuangan         = \App\Models\Ruangan::count();
         $totalGedung          = \App\Models\Gedung::count();
         $totalKategori        = \App\Models\Kategori::count();

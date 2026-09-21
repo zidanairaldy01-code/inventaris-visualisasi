@@ -5,7 +5,7 @@ import Link from 'next/link';
 import {
   Warehouse, CheckCircle2, AlertTriangle, Clock, ArrowRight,
   Cpu, Search, Package, Wrench, Printer, ShieldAlert,
-  Inbox, Check, X, FileText
+  Inbox, Check, X, FileText, Coins
 } from 'lucide-react';
 import axios from '@/lib/axios';
 
@@ -13,6 +13,7 @@ interface WakaproStats {
   ruangan: any;
   total_unit: number;
   total_item_jenis: number;
+  total_nilai_aset?: number;
   kondisi_baik: number;
   kondisi_rusak: number;
   menunggu_konfirmasi: number;
@@ -112,7 +113,7 @@ export default function WakaproDashboard({ user, wakaproStats, loading, onRefres
               Cetak KIR Workshop
             </button>
             <Link
-              href="/dashboard/kondisi"
+              href="/wakapro/kondisi"
               className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5"
             >
               <Wrench className="h-4 w-4 text-slate-400" />
@@ -139,7 +140,7 @@ export default function WakaproDashboard({ user, wakaproStats, loading, onRefres
             </div>
           </div>
           <Link
-            href="/dashboard/penerimaan"
+            href="/wakapro/penerimaan"
             className="px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl transition-all shadow-sm shrink-0 flex items-center gap-1.5"
           >
             <Inbox className="h-4 w-4" />
@@ -148,8 +149,8 @@ export default function WakaproDashboard({ user, wakaproStats, loading, onRefres
         </div>
       )}
 
-      {/* ── 4 KPI Stats Card khusus Bengkel Wakapro ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+      {/* ── 5 KPI Stats Card khusus Bengkel Wakapro ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 sm:gap-5">
         {/* Card 1: Total Unit di Bengkel */}
         <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between mb-3">
@@ -173,7 +174,31 @@ export default function WakaproDashboard({ user, wakaproStats, loading, onRefres
           </p>
         </div>
 
-        {/* Card 2: Kondisi Siap Praktik (Baik) */}
+        {/* Card 2: Total Nilai Aset / Valuasi Bengkel */}
+        <div className="bg-gradient-to-br from-emerald-500/10 via-white to-white border border-emerald-200/80 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <div className="p-2 bg-emerald-500 text-white rounded-xl shadow-sm">
+                <Coins className="h-4 w-4" />
+              </div>
+              <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full border border-emerald-300">
+                Valuasi Bengkel
+              </span>
+            </div>
+            {loading ? (
+              <div className="h-8 w-28 bg-slate-100 rounded-lg animate-pulse" />
+            ) : (
+              <p className="text-xl sm:text-2xl font-black text-emerald-800 tracking-tight">
+                Rp {(wakaproStats.total_nilai_aset || 0).toLocaleString('id-ID')}
+              </p>
+            )}
+          </div>
+          <p className="text-[11px] text-slate-500 mt-2 font-medium">
+            Total nilai nominal aset di jurusan ini
+          </p>
+        </div>
+
+        {/* Card 3: Kondisi Siap Praktik (Baik) */}
         <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-3">
@@ -201,7 +226,7 @@ export default function WakaproDashboard({ user, wakaproStats, loading, onRefres
           </div>
         </div>
 
-        {/* Card 3: Perlu Servis / Rusak */}
+        {/* Card 4: Perlu Servis / Rusak */}
         <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-3">
@@ -222,7 +247,7 @@ export default function WakaproDashboard({ user, wakaproStats, loading, onRefres
             )}
           </div>
           <Link
-            href="/dashboard/kondisi"
+            href="/wakapro/kondisi"
             className="text-xs text-rose-600 hover:text-rose-700 font-medium mt-2 flex items-center justify-between"
           >
             <span>Lapor / Jadwal Servis</span>
@@ -230,9 +255,9 @@ export default function WakaproDashboard({ user, wakaproStats, loading, onRefres
           </Link>
         </div>
 
-        {/* Card 4: Menunggu ACC BAST */}
+        {/* Card 5: Menunggu ACC BAST */}
         <Link
-          href="/dashboard/penerimaan"
+          href="/wakapro/penerimaan"
           className="bg-amber-50/70 border border-amber-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between group"
         >
           <div>
@@ -339,6 +364,7 @@ export default function WakaproDashboard({ user, wakaproStats, loading, onRefres
                       <th className="py-2.5 px-3">Nama Alat &amp; Spesifikasi</th>
                       <th className="py-2.5 px-3">Kode Aset</th>
                       <th className="py-2.5 px-3 text-center">Jumlah Unit</th>
+                      <th className="py-2.5 px-3 text-right">Nilai Aset</th>
                       <th className="py-2.5 px-3 text-center">Kondisi Fisik</th>
                       <th className="py-2.5 px-3">Legalitas Dokumen</th>
                       <th className="py-2.5 px-3 text-right">Aksi</th>
@@ -348,6 +374,7 @@ export default function WakaproDashboard({ user, wakaproStats, loading, onRefres
                     {filteredAsetList.map((item: any) => {
                       const sarana = item.sarana_prasarana;
                       const isBaik = (sarana?.kondisi || 'Baik') === 'Baik';
+                      const hargaTotal = item.total_harga || ((item.jumlah || 1) * (item.harga_satuan || sarana?.nilai_harga_pembelian || 0));
 
                       return (
                         <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
@@ -364,6 +391,16 @@ export default function WakaproDashboard({ user, wakaproStats, loading, onRefres
                             <span className="font-extrabold text-slate-900 bg-slate-100 px-2.5 py-1 rounded-lg text-xs">
                               {item.jumlah || 1} Unit
                             </span>
+                          </td>
+                          <td className="py-3 px-3 text-right">
+                            <p className="font-bold text-emerald-700 text-xs">
+                              Rp {Number(hargaTotal || 0).toLocaleString('id-ID')}
+                            </p>
+                            {(item.harga_satuan || sarana?.nilai_harga_pembelian) ? (
+                              <p className="text-[10px] text-slate-400">
+                                @{Number(item.harga_satuan || sarana?.nilai_harga_pembelian).toLocaleString('id-ID')}
+                              </p>
+                            ) : null}
                           </td>
                           <td className="py-3 px-3 text-center">
                             {isBaik ? (
@@ -386,7 +423,7 @@ export default function WakaproDashboard({ user, wakaproStats, loading, onRefres
                           </td>
                           <td className="py-3 px-3 text-right">
                             <Link
-                              href="/dashboard/kondisi"
+                              href="/wakapro/kondisi"
                               className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-600 text-[11px] font-bold transition-all inline-flex items-center gap-1"
                             >
                               <Wrench className="h-3 w-3" />

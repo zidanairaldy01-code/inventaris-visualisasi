@@ -171,6 +171,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       console.error(e);
     } finally {
       Cookies.remove('auth_token');
+      localStorage.removeItem('auth_last_active');
       window.location.href = '/login';
     }
   };

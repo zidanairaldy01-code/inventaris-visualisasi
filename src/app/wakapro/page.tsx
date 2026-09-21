@@ -9,6 +9,7 @@ interface WakaproStats {
   ruangan: any;
   total_unit: number;
   total_item_jenis: number;
+  total_nilai_aset?: number;
   kondisi_baik: number;
   kondisi_rusak: number;
   menunggu_konfirmasi: number;
@@ -21,6 +22,7 @@ const defaultWakaproStats: WakaproStats = {
   ruangan: null,
   total_unit: 0,
   total_item_jenis: 0,
+  total_nilai_aset: 0,
   kondisi_baik: 0,
   kondisi_rusak: 0,
   menunggu_konfirmasi: 0,

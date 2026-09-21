@@ -20,18 +20,33 @@ class DistribusiAset extends Model
         'petugas_pengirim_id',
         'wakapro_penerima_id',
         'jumlah',
+        'harga_satuan',
+        'total_harga',
         'tanggal_kirim',
         'tanggal_terima',
         'status',
         'catatan_pengiriman',
         'catatan_penerimaan',
+        'foto_kerusakan',
     ];
 
     protected $casts = [
         'tanggal_kirim' => 'date',
         'tanggal_terima' => 'datetime',
         'jumlah' => 'integer',
+        'harga_satuan' => 'float',
+        'total_harga' => 'float',
     ];
+
+    protected $appends = ['foto_kerusakan_url'];
+
+    public function getFotoKerusakanUrlAttribute(): ?string
+    {
+        if (!$this->foto_kerusakan) {
+            return null;
+        }
+        return \Illuminate\Support\Facades\Storage::disk('public')->url($this->foto_kerusakan);
+    }
 
     public function saranaPrasarana()
     {

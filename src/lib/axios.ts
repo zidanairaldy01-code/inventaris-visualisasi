@@ -31,8 +31,11 @@ axiosInstance.interceptors.response.use(
   (error) => {
     if (error.response && error.response.status === 401) {
       Cookies.remove('auth_token');
-      if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login') && window.location.pathname !== '/') {
-        window.location.href = '/login?expired=1';
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('auth_last_active');
+        if (!window.location.pathname.startsWith('/login') && window.location.pathname !== '/') {
+          window.location.href = '/login?expired=1';
+        }
       }
     }
     return Promise.reject(error);
