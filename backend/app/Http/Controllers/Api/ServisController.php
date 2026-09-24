@@ -12,7 +12,7 @@ class ServisController extends Controller
 {
     public function index(Request $request)
     {
-        $user = $request->user();
+        $user = $request->user() ?? auth('sanctum')->user();
         $query = Servis::with(['aset.ruangan', 'aset.kategori', 'saranaPrasarana']);
 
         // Jika user adalah wakapro, hanya tampilkan servis aset milik workshopnya
@@ -184,28 +184,37 @@ class ServisController extends Controller
             if ($sarana) {
                 if ($servis->status === 'Selesai') {
                     $sarana->update(['kondisi' => 'Baik']);
+                } else if ($servis->status === 'Proses') {
+                    $sarana->update(['kondisi' => 'Rusak Ringan']);
                 }
             }
         }
 
         // Update kondisi aset fisik jika ada
-        if ($servis->id_aset && $servis->status === 'Selesai') {
-            $kondisiBaik = \App\Models\Kondisi::where('nama_kondisi', 'Baik')->first();
-            if ($kondisiBaik) {
-                \App\Models\Aset::where('id', $servis->id_aset)->update(['id_kondisi' => $kondisiBaik->id]);
+        if ($servis->id_aset) {
+            $kondisiTarget = $servis->status === 'Selesai' ? 'Baik' : ($servis->status === 'Proses' ? 'Rusak Ringan' : null);
+            if ($kondisiTarget) {
+                $k = \App\Models\Kondisi::where('nama_kondisi', $kondisiTarget)->first();
+                if ($k) {
+                    \App\Models\Aset::where('id', $servis->id_aset)->update(['id_kondisi' => $k->id]);
+                }
             }
         }
 
         // Create history when servis finished
         if ($statusBerubah) {
-            $namaBarang = $servis->saranaPrasarana?->nama_barang ?? $servis->aset?->nama_aset ?? 'Aset';
-            History::create([
-                'id_aset' => $servis->id_aset,
-                'id_user' => $request->user()?->id,
-                'aksi' => 'SELESAI SERVIS',
-                'keterangan' => "Servis {$namaBarang} ({$servis->jenis_perbaikan}) telah selesai. Aset kembali normal.",
-                'tanggal' => now()
-            ]);
+            try {
+                $namaBarang = $servis->saranaPrasarana?->nama_barang ?? $servis->aset?->nama_aset ?? 'Aset';
+                History::create([
+                    'id_aset' => $servis->id_aset,
+                    'id_user' => $request->user()?->id,
+                    'aksi' => 'SELESAI SERVIS',
+                    'keterangan' => "Servis {$namaBarang} ({$servis->jenis_perbaikan}) telah selesai. Aset kembali normal.",
+                    'tanggal' => now()
+                ]);
+            } catch (\Exception $e) {
+                // Abaikan jika history log gagal
+            }
         }
 
         return response()->json($servis);

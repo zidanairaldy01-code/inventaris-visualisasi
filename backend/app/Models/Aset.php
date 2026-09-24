@@ -15,7 +15,7 @@ class Aset extends Model
         'tahun_perolehan', 'harga_perolehan', 'nomor_seri', 'tanggal_perolehan', 'deskripsi', 'status_aset', 'foto_thumbnail'
     ];
 
-    public function folder() { return $this->belongsTo(FolderInventaris::class, 'id_folder'); }
+    public function folder() { return $this->belongsTo(FolderInventaris::class, 'id_folder')->withTrashed(); }
     public function kategori() { return $this->belongsTo(Kategori::class, 'id_kategori'); }
     public function ruangan() { return $this->belongsTo(Ruangan::class, 'id_ruangan'); }
     public function sumberDana() { return $this->belongsTo(SumberDana::class, 'id_sumber_dana'); }

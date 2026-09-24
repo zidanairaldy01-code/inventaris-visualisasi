@@ -529,6 +529,11 @@ export default function ServisPage() {
                   className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 focus:bg-white font-medium text-slate-800 transition-all"
                 >
                   <option value="">-- Pilih Barang di Workshop Anda --</option>
+                  {editingItem && formData.item_key && !barangList.some(item => `${item.tipe}-${item.id}` === formData.item_key) && (
+                    <option value={formData.item_key}>
+                      {editingItem.sarana_prasarana?.nama_barang ?? editingItem.aset?.nama_aset ?? 'Barang Terpilih'} (Sedang Diedit)
+                    </option>
+                  )}
                   {barangList.map(item => (
                     <option key={`${item.tipe}-${item.id}`} value={`${item.tipe}-${item.id}`}>
                       {item.nama_barang} {item.kode ? `(${item.kode})` : ''} — Kondisi: {item.kondisi} ({item.jumlah} {item.satuan})

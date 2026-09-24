@@ -88,7 +88,7 @@ class SaranaPrasaranaController extends Controller
      */
     public function show(string $id)
     {
-        $item = SaranaPrasarana::with('user')->findOrFail($id);
+        $item = SaranaPrasarana::with(['user', 'fotos'])->findOrFail($id);
         return response()->json([
             'status' => 'success',
             'data'   => $item,

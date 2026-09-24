@@ -97,7 +97,11 @@ class DistribusiAsetController extends Controller
         // Generate Nomor Surat Jalan: SJ-YYYYMM-XXXX
         $prefix = 'SJ-' . date('Ym') . '-';
         $countThisMonth = DistribusiAset::where('nomor_surat_jalan', 'like', "{$prefix}%")->count();
-        $nomorSuratJalan = $prefix . str_pad($countThisMonth + 1, 4, '0', STR_PAD_LEFT);
+        $seq = $countThisMonth + 1;
+        do {
+            $nomorSuratJalan = $prefix . str_pad($seq, 4, '0', STR_PAD_LEFT);
+            $seq++;
+        } while (DistribusiAset::where('nomor_surat_jalan', $nomorSuratJalan)->exists());
 
         $distribusi = DB::transaction(function () use ($validated, $user, $wakapro, $nomorSuratJalan, $jumlah, $hargaSatuan, $totalHarga, $sarana) {
             $record = DistribusiAset::create([
@@ -114,16 +118,10 @@ class DistribusiAsetController extends Controller
                 'catatan_pengiriman'  => $validated['catatan_pengiriman'] ?? null,
             ]);
 
-            // Update lokasi ruangan pada sarana prasarana
-            $sarana = SaranaPrasarana::find($validated['sarana_prasarana_id']);
-            if ($sarana) {
-                $sarana->update(['id_ruangan' => $validated['ruangan_tujuan_id']]);
-            }
-
             // Catat history aktivitas jika model History aktif
             try {
                 History::create([
-                    'user_id'    => $user->id,
+                    'id_user'    => $user->id,
                     'aksi'       => 'Kirim Aset ke Bengkel',
                     'keterangan' => "Pengiriman {$sarana->nama_barang} dengan No. {$nomorSuratJalan} ke bengkel tujuan.",
                     'tanggal'    => Carbon::now(),
@@ -179,7 +177,11 @@ class DistribusiAsetController extends Controller
             $npCount  = DistribusiAset::where('nomor_pengiriman', 'like', "{$npPrefix}%")
                             ->distinct('nomor_pengiriman')
                             ->count('nomor_pengiriman');
-            $nomorPengiriman = $npPrefix . str_pad($npCount + 1, 4, '0', STR_PAD_LEFT);
+            $npSeq = $npCount + 1;
+            do {
+                $nomorPengiriman = $npPrefix . str_pad($npSeq, 4, '0', STR_PAD_LEFT);
+                $npSeq++;
+            } while (DistribusiAset::where('nomor_pengiriman', $nomorPengiriman)->exists());
 
             foreach ($validated['items'] as $item) {
                 $hargaSatuan = isset($item['harga_satuan']) && $item['harga_satuan'] !== ''
@@ -195,7 +197,11 @@ class DistribusiAsetController extends Controller
                     // Generate kode otomatis untuk barang baru
                     $kodePrefix = 'BRG-' . date('Ym') . '-';
                     $countBarang = SaranaPrasarana::where('kode', 'like', "{$kodePrefix}%")->count();
-                    $kode = $kodePrefix . str_pad($countBarang + 1, 4, '0', STR_PAD_LEFT);
+                    $kodeSeq = $countBarang + 1;
+                    do {
+                        $kode = $kodePrefix . str_pad($kodeSeq, 4, '0', STR_PAD_LEFT);
+                        $kodeSeq++;
+                    } while (SaranaPrasarana::where('kode', $kode)->exists());
 
                     $saranaNew = SaranaPrasarana::create([
                         'kode'                  => $kode,
@@ -224,7 +230,11 @@ class DistribusiAsetController extends Controller
 
                 // Generate Nomor Surat Jalan untuk setiap item
                 $countThisMonth = DistribusiAset::where('nomor_surat_jalan', 'like', "{$prefix}%")->count();
-                $nomorSuratJalan = $prefix . str_pad($countThisMonth + 1, 4, '0', STR_PAD_LEFT);
+                $sjSeq = $countThisMonth + 1;
+                do {
+                    $nomorSuratJalan = $prefix . str_pad($sjSeq, 4, '0', STR_PAD_LEFT);
+                    $sjSeq++;
+                } while (DistribusiAset::where('nomor_surat_jalan', $nomorSuratJalan)->exists());
 
                 $distribusi = DistribusiAset::create([
                     'nomor_surat_jalan'   => $nomorSuratJalan,
@@ -241,12 +251,6 @@ class DistribusiAsetController extends Controller
                     'catatan_pengiriman'  => $validated['catatan_pengiriman'] ?? null,
                 ]);
 
-                // Update lokasi ruangan pada sarana prasarana
-                $sarana = SaranaPrasarana::find($saranaId);
-                if ($sarana) {
-                    $sarana->update(['id_ruangan' => $ruanganTujuanId]);
-                }
-
                 $distribusi->load(['saranaPrasarana', 'ruanganTujuan.gedung', 'petugasPengirim', 'wakaproPenerima']);
                 $results[] = $distribusi;
             }
@@ -254,7 +258,7 @@ class DistribusiAsetController extends Controller
             // Catat history aktivitas jika model History aktif
             try {
                 History::create([
-                    'user_id'    => $user->id,
+                    'id_user'    => $user->id,
                     'aksi'       => 'Distribusi Bulk Aset',
                     'keterangan' => "Distribusi " . count($results) . " item barang ke workshop.",
                     'tanggal'    => Carbon::now(),
@@ -391,7 +395,11 @@ class DistribusiAsetController extends Controller
             // Generate Nomor BAST: BAST-YYYYMM-XXXX
             $prefix = 'BAST-' . date('Ym') . '-';
             $countThisMonth = DistribusiAset::where('nomor_bast', 'like', "{$prefix}%")->count();
-            $nomorBast = $prefix . str_pad($countThisMonth + 1, 4, '0', STR_PAD_LEFT);
+            $bastSeq = $countThisMonth + 1;
+            do {
+                $nomorBast = $prefix . str_pad($bastSeq, 4, '0', STR_PAD_LEFT);
+                $bastSeq++;
+            } while (DistribusiAset::where('nomor_bast', $nomorBast)->exists());
 
             $distribusi->update([
                 'status'              => 'diterima',

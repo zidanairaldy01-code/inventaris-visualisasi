@@ -40,7 +40,7 @@ class Inventaris extends Model
 
     public function folder()
     {
-        return $this->belongsTo(FolderInventaris::class, 'id_folder');
+        return $this->belongsTo(FolderInventaris::class, 'id_folder')->withTrashed();
     }
 
     // Auto calculate stok_akhir before saving

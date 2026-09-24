@@ -24,6 +24,11 @@ class InventarisGudangController extends Controller
             } elseif (is_numeric($idFolder)) {
                 $query->where('id_folder', $idFolder);
             }
+        } elseif (!$request->boolean('include_trashed')) {
+            $query->where(function ($q) {
+                $q->whereNull('id_folder')
+                  ->orWhereHas('folder');
+            });
         }
 
         $items = $query->orderBy('created_at', 'desc')->get();
@@ -172,19 +177,25 @@ class InventarisGudangController extends Controller
             $skipped  = 0;
             $errors   = [];
 
-            // ── Step 1: Find header row (look for "nama" or "barang" keyword) ──
+            // ── Step 1: Find header row (scoring system to avoid false match on document titles) ──
             $h1Idx = -1;
+            $bestScore = 0;
             foreach ($rawRows as $idx => $row) {
                 if (!is_array($row)) continue;
                 $line = strtolower(implode(' ', array_map(fn($c) => trim(strval($c ?? '')), $row)));
-                if (
-                    str_contains($line, 'nama barang') ||
-                    str_contains($line, 'nama') ||
-                    str_contains($line, 'barang') ||
-                    str_contains($line, 'kode')
-                ) {
+                $score = 0;
+                if (str_contains($line, 'nama barang') || str_contains($line, 'nama_barang') || str_contains($line, 'uraian')) $score += 3;
+                elseif (str_contains($line, 'nama')) $score += 1;
+
+                if (str_contains($line, 'kode')) $score += 2;
+                if (str_contains($line, 'satuan')) $score += 2;
+                if (str_contains($line, 'stok') || str_contains($line, 'awal') || str_contains($line, 'saldo')) $score += 2;
+                if (str_contains($line, 'tanggal')) $score += 2;
+                if (str_contains($line, 'no.') || str_contains($line, 'nomor') || preg_match('/\bno\b/', $line)) $score += 1;
+
+                if ($score > $bestScore && $score >= 3) {
+                    $bestScore = $score;
                     $h1Idx = $idx;
-                    break;
                 }
             }
 
@@ -192,7 +203,7 @@ class InventarisGudangController extends Controller
                 DB::rollBack();
                 return response()->json([
                     'status'  => 'error',
-                    'message' => 'Header tidak ditemukan. Pastikan ada kolom: NAMA BARANG, KODE, STOK.',
+                    'message' => 'Header tabel tidak ditemukan. Pastikan ada baris kolom tabel: NAMA BARANG, KODE, STOK.',
                 ], 400);
             }
 
@@ -242,7 +253,7 @@ class InventarisGudangController extends Controller
                 }
                 // Nama Barang
                 if (
-                    (str_contains($combined, 'nama barang') || str_contains($combined, 'nama') || str_contains($v1, 'barang') || str_contains($v1, 'uraian')) &&
+                    (str_contains($combined, 'nama barang') || str_contains($combined, 'nama_barang') || str_contains($combined, 'uraian') || $combined === 'nama' || $v1 === 'nama') &&
                     !isset($colMap['nama'])
                 ) {
                     $colMap['nama'] = $i;
@@ -269,10 +280,18 @@ class InventarisGudangController extends Controller
                 }
             }
 
-            // Fallback: if no explicit 'nama' column found, look for any text column
-            // Try positional fallback: NO=0, TANGGAL=1, KODE=2, NAMA=3, SATUAN=4, AWAL=5, IN=6, OUT=7
+            // Fallback jika tidak ditemukan nama barang secara eksplisit
             if (!isset($colMap['nama'])) {
-                $colMap['nama']       = 3;
+                // Cari kolom yang mengandung kata 'barang' bukan di judul
+                foreach ($h1 as $ci => $cv) {
+                    if (str_contains($cv, 'barang') && !isset($colMap['tanggal']) && $ci !== ($colMap['kode'] ?? -1)) {
+                        $colMap['nama'] = $ci;
+                        break;
+                    }
+                }
+                if (!isset($colMap['nama'])) {
+                    $colMap['nama'] = 3;
+                }
             }
             if (!isset($colMap['tanggal'])) {
                 $colMap['tanggal']    = 1;
@@ -317,19 +336,32 @@ class InventarisGudangController extends Controller
                     $masukRaw   = $row[$colMap['stok_masuk']] ?? 0;
                     $keluarRaw  = $row[$colMap['stok_keluar']] ?? 0;
 
-                    // Fallback: nama still empty → scan all text cells
-                    if (empty($namaRaw)) {
+                    // Deteksi jika namaRaw salah terisi tanggal atau nomor serial tanggal Excel (misal: 46211, 28/7/2026)
+                    $isDateLike = preg_match('/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$/', $namaRaw)
+                        || preg_match('/^\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}$/', $namaRaw)
+                        || (is_numeric($namaRaw) && (int)$namaRaw > 30000 && (int)$namaRaw < 60000);
+
+                    if (empty($namaRaw) || $isDateLike) {
+                        $actualName = '';
                         foreach ($row as $cIdx => $val) {
                             $sv = trim(strval($val ?? ''));
                             if (
                                 !empty($sv) &&
                                 !is_numeric($sv) &&
-                                !preg_match('/^\d{1,2}[\/-]\d{1,2}[\/-]\d{4}$/', $sv) &&
-                                strlen($sv) > 3
+                                !preg_match('/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$/', $sv) &&
+                                !preg_match('/^\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}$/', $sv) &&
+                                strlen($sv) > 2 &&
+                                !in_array(strtolower($sv), ['unit', 'pcs', 'set', 'sak', 'buah', 'box', 'roll', 'pack', 'kg', 'meter', 'liter', 'kaleng'])
                             ) {
-                                $namaRaw = $sv;
+                                $actualName = $sv;
                                 break;
                             }
+                        }
+                        if (!empty($actualName)) {
+                            if ($isDateLike && empty($tanggalRaw)) {
+                                $tanggalRaw = $namaRaw;
+                            }
+                            $namaRaw = $actualName;
                         }
                     }
 
@@ -429,6 +461,66 @@ class InventarisGudangController extends Controller
         if (is_numeric($value)) return (int) $value;
         $cleaned = preg_replace('/[^0-9\-]/', '', strval($value));
         return $cleaned !== '' ? (int) $cleaned : 0;
+    }
+
+    /**
+     * Batch store multiple items (digunakan untuk import data yang sudah diverifikasi di preview frontend).
+     */
+    public function batchStore(Request $request)
+    {
+        $validated = $request->validate([
+            'items'     => 'required|array|min:1',
+            'items.*'   => 'required|array',
+            'id_folder' => 'nullable',
+        ]);
+
+        $defaultFolderId = $validated['id_folder'] ?? null;
+        if ($defaultFolderId === 'null' || $defaultFolderId === 'general' || empty($defaultFolderId)) {
+            $defaultFolderId = null;
+        }
+
+        $userId = $request->user()?->id;
+        $created = 0;
+
+        DB::beginTransaction();
+        try {
+            foreach ($validated['items'] as $item) {
+                $nama = trim(strval($item['nama_barang'] ?? $item['nama'] ?? ''));
+                if (empty($nama)) continue;
+
+                $folderId = !empty($item['id_folder']) ? $item['id_folder'] : $defaultFolderId;
+
+                $data = [
+                    'tanggal_pengambilan' => !empty($item['tanggal_pengambilan']) ? $item['tanggal_pengambilan'] : null,
+                    'kode'                => !empty($item['kode']) ? trim(strval($item['kode'])) : null,
+                    'nama_barang'         => $nama,
+                    'satuan'              => !empty($item['satuan']) ? trim(strval($item['satuan'])) : 'Unit',
+                    'stok_awal'           => isset($item['stok_awal']) ? (int) $item['stok_awal'] : 0,
+                    'stok_masuk'          => isset($item['stok_masuk']) ? (int) $item['stok_masuk'] : 0,
+                    'stok_keluar'         => isset($item['stok_keluar']) ? (int) $item['stok_keluar'] : 0,
+                    'keterangan'          => !empty($item['keterangan']) ? trim(strval($item['keterangan'])) : null,
+                    'id_user'             => $userId,
+                    'id_folder'           => $folderId,
+                ];
+
+                InventarisGudang::create($data);
+                $created++;
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'status'  => 'success',
+                'message' => "Berhasil meng-import {$created} data barang gudang",
+                'created' => $created,
+            ], 201);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Gagal batch store: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**

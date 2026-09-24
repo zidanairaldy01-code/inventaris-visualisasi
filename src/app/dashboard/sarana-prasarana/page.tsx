@@ -7,11 +7,12 @@ import {
   Package, AlertTriangle, CheckCircle2, Search, RefreshCw,
   FileSpreadsheet, Plus, Upload, DollarSign, Layers, TrendingUp,
   Camera, Edit2, Trash2, X, Loader2, Download, ChevronLeft, ChevronRight,
-  Folder, FolderOpen, ArrowLeft, Grid, List as ListIcon, FolderPlus, MoreVertical, Save
+  Folder, FolderOpen, ArrowLeft, Grid, List as ListIcon, FolderPlus, MoreVertical, Save,
+  RotateCcw, Clock, Eye, Archive
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import Toast from '@/components/Toast';
-import AsetFotoModal from '@/components/AsetFotoModal';
+import SaranaPrasaranaFotoModal from '@/components/SaranaPrasaranaFotoModal';
 
 /* ─────────────────────── Types ─────────────────────── */
 interface MasterItem {
@@ -28,6 +29,10 @@ interface CustomFolder {
   warna?: string;
   items_count?: number;
   created_at?: string;
+  deleted_at?: string | null;
+  days_remaining?: number;
+  sisa_hari?: number;
+  items?: any[];
 }
 
 interface SaranaPrasaranaItem {
@@ -347,12 +352,23 @@ export default function SaranaPrasaranaPage() {
   const [deleteFolderTarget, setDeleteFolderTarget] = useState<CustomFolder | null>(null);
   const [deletingFolder, setDeletingFolder] = useState(false);
 
+  // Trash Bin State
+  const [trashFolders, setTrashFolders] = useState<CustomFolder[]>([]);
+  const [loadingTrash, setLoadingTrash] = useState(false);
+  const [showTrashModal, setShowTrashModal] = useState(false);
+  const [viewingTrashFolder, setViewingTrashFolder] = useState<CustomFolder | null>(null);
+  const [actionTrashLoading, setActionTrashLoading] = useState<number | string | null>(null);
+  const [confirmForceDeleteTarget, setConfirmForceDeleteTarget] = useState<CustomFolder | null>(null);
+  const [showEmptyTrashConfirm, setShowEmptyTrashConfirm] = useState(false);
+
   // Pagination
   const [page, setPage] = useState(1);
   const PER_PAGE = 20;
 
   // Foto modal
-  const [selectedAset, setSelectedAset] = useState<SaranaPrasaranaItem | null>(null);
+  const [fotoModalItem, setFotoModalItem] = useState<SaranaPrasaranaItem | null>(null);
+  const [fotoModalItemFotos, setFotoModalItemFotos] = useState<any[]>([]);
+  const [loadingFotos, setLoadingFotos] = useState(false);
 
   // Edit/Add modal
   const [showFormModal, setShowFormModal] = useState(false);
@@ -391,6 +407,7 @@ export default function SaranaPrasaranaPage() {
     setMounted(true);
     axios.get('/api/user').then(res => setUser(res.data)).catch(() => {});
     fetchFolders();
+    fetchTrashFolders();
     fetchAsets();
     // fetchMasterData tidak diperlukan — kategoris/ruangans/kondisis tidak digunakan di halaman ini
   }, []);
@@ -401,6 +418,14 @@ export default function SaranaPrasaranaPage() {
       const list = Array.isArray(res.data) ? res.data : (res.data?.data || []);
       setFolders(list);
     } catch { setFolders([]); }
+  };
+
+  const fetchTrashFolders = async () => {
+    try {
+      setLoadingTrash(true);
+      const res = await axios.get('/api/folder-inventaris/trash?jenis=sarana-prasarana');
+      if (res.data?.status === 'success') setTrashFolders(res.data.data || []);
+    } catch (e) { console.error(e); } finally { setLoadingTrash(false); }
   };
 
   const fetchAsets = async (showRefresh = false) => {
@@ -473,19 +498,51 @@ export default function SaranaPrasaranaPage() {
     } finally { setSavingFolder(false); }
   };
 
-  const handleDeleteFolder = async () => {
-    if (!deleteFolderTarget) return;
+  const handleSoftDeleteFolder = async (folder: CustomFolder) => {
     try {
       setDeletingFolder(true);
-      await axios.delete(`/api/folder-inventaris/${deleteFolderTarget.id}`);
-      showToast(`Folder "${deleteFolderTarget.nama_folder}" berhasil dihapus`, 'success');
+      const res = await axios.delete(`/api/folder-inventaris/${folder.id}`);
+      showToast(res.data?.message || `Folder "${folder.nama_folder}" dipindahkan ke tempat sampah`, 'success');
       setDeleteFolderTarget(null);
-      if (activeFolderId === deleteFolderTarget.id) setActiveFolderId(null);
-      fetchFolders();
-      fetchAsets(true);
-    } catch {
-      showToast('Gagal menghapus folder', 'error');
-    } finally { setDeletingFolder(false); }
+      if (activeFolderId === folder.id) setActiveFolderId(null);
+      fetchFolders(); fetchAsets(true); fetchTrashFolders();
+    } catch { showToast('Gagal memindahkan folder ke tempat sampah', 'error'); }
+    finally { setDeletingFolder(false); }
+  };
+
+  const handleForceDeleteFolder = async (folder: CustomFolder) => {
+    try {
+      setDeletingFolder(true);
+      const res = await axios.delete(`/api/folder-inventaris/${folder.id}/force`);
+      showToast(res.data?.message || `Folder "${folder.nama_folder}" berhasil dihapus permanen`, 'success');
+      setDeleteFolderTarget(null); setConfirmForceDeleteTarget(null);
+      if (viewingTrashFolder?.id === folder.id) setViewingTrashFolder(null);
+      if (activeFolderId === folder.id) setActiveFolderId(null);
+      fetchFolders(); fetchAsets(true); fetchTrashFolders();
+    } catch { showToast('Gagal menghapus folder permanen', 'error'); }
+    finally { setDeletingFolder(false); }
+  };
+
+  const handleRestoreFolder = async (folderId: number) => {
+    try {
+      setActionTrashLoading(folderId);
+      const res = await axios.post(`/api/folder-inventaris/${folderId}/restore`);
+      showToast(res.data?.message || 'Folder berhasil dipulihkan', 'success');
+      if (viewingTrashFolder?.id === folderId) setViewingTrashFolder(null);
+      fetchFolders(); fetchAsets(true); fetchTrashFolders();
+    } catch { showToast('Gagal memulihkan folder', 'error'); }
+    finally { setActionTrashLoading(null); }
+  };
+
+  const handleEmptyTrash = async () => {
+    try {
+      setActionTrashLoading('empty');
+      const res = await axios.delete('/api/folder-inventaris/trash/empty?jenis=sarana-prasarana');
+      showToast(res.data?.message || 'Tempat sampah dikosongkan', 'success');
+      setShowEmptyTrashConfirm(false); setViewingTrashFolder(null);
+      fetchFolders(); fetchAsets(true); fetchTrashFolders();
+    } catch { showToast('Gagal mengosongkan tempat sampah', 'error'); }
+    finally { setActionTrashLoading(null); }
   };
 
   /* ── Batch Selection Handlers ── */
@@ -620,7 +677,22 @@ export default function SaranaPrasaranaPage() {
     } finally { setDeleting(false); }
   };
 
+  const openFotoModal = async (item: SaranaPrasaranaItem) => {
+    setFotoModalItem(item);
+    setLoadingFotos(true);
+    try {
+      const res = await axios.get(`/api/sarana-prasaranas/${item.id}`);
+      const data = res.data?.data || res.data;
+      setFotoModalItemFotos(data?.fotos || []);
+    } catch {
+      setFotoModalItemFotos([]);
+    } finally {
+      setLoadingFotos(false);
+    }
+  };
+
   const set = (k: keyof FormData, v: string) => setFormData(prev => ({ ...prev, [k]: v }));
+
 
   /* ── Import Excel ── */
   const openImport = () => {
@@ -832,6 +904,16 @@ export default function SaranaPrasaranaPage() {
             <button onClick={openAddFolder}
               className="flex items-center gap-2 px-3.5 py-2.5 bg-white/15 backdrop-blur-md border border-white/30 text-white rounded-xl hover:bg-white/25 text-sm font-semibold transition-all shadow-sm">
               <FolderPlus className="h-4 w-4" /> Buat Folder
+            </button>
+            <button onClick={() => { setShowTrashModal(true); fetchTrashFolders(); }}
+              className="flex items-center gap-2 px-3.5 py-2.5 bg-rose-500/25 hover:bg-rose-500/35 border border-rose-300/30 text-white rounded-xl text-sm font-semibold transition-all shadow-sm">
+              <Trash2 className="h-4 w-4 text-rose-200" />
+              <span>Tempat Sampah</span>
+              {trashFolders.length > 0 && (
+                <span className="px-1.5 py-0.5 text-[10px] font-black bg-rose-600 text-white rounded-full leading-none">
+                  {trashFolders.length}
+                </span>
+              )}
             </button>
             {isSuperAdmin && (
               <button
@@ -1136,6 +1218,9 @@ export default function SaranaPrasaranaPage() {
                         </td>
                         <td className="px-4 py-3 text-center">
                           <div className="flex items-center justify-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => openFotoModal(aset)} className="p-1.5 hover:bg-blue-50 text-blue-500 rounded-lg transition-colors" title="Foto Barang">
+                              <Camera className="h-4 w-4" />
+                            </button>
                             <button onClick={() => openEditModal(aset)} className="p-1.5 hover:bg-amber-50 text-amber-600 rounded-lg transition-colors" title="Edit">
                               <Edit2 className="h-4 w-4" />
                             </button>
@@ -1171,6 +1256,15 @@ export default function SaranaPrasaranaPage() {
             </div>
           )}
         </div>
+      )}
+
+      {/* ════════ FOTO BARANG MODAL ════════ */}
+      {fotoModalItem && !loadingFotos && (
+        <SaranaPrasaranaFotoModal
+          item={{ ...fotoModalItem, kode: fotoModalItem.kode, fotos: fotoModalItemFotos }}
+          onClose={() => { setFotoModalItem(null); setFotoModalItemFotos([]); }}
+          onUpdate={() => fetchAsets(true)}
+        />
       )}
 
       {/* ════════ FOLDER MODAL (Add/Edit) ════════ */}
@@ -1219,21 +1313,322 @@ export default function SaranaPrasaranaPage() {
 
       {/* ════════ DELETE FOLDER CONFIRM MODAL ════════ */}
       {deleteFolderTarget && createPortal(
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl p-5 border border-slate-100">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+                <Trash2 className="h-4 w-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-sm font-semibold text-slate-900">Hapus Folder</h3>
+                <p className="text-xs text-slate-500 mt-0.5 truncate">
+                  &ldquo;<span className="font-medium text-slate-700">{deleteFolderTarget.nama_folder}</span>&rdquo;
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-2 mb-4">
+              <button
+                type="button"
+                onClick={() => handleSoftDeleteFolder(deleteFolderTarget)}
+                disabled={deletingFolder}
+                className="w-full text-left px-3.5 py-2.5 rounded-xl border border-slate-200 hover:border-slate-300 hover:bg-slate-50/80 transition-colors flex items-center justify-between group disabled:opacity-50"
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <Archive className="h-4 w-4 text-slate-400 group-hover:text-slate-600 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-slate-800">Pindahkan ke Sampah</p>
+                    <p className="text-[11px] text-slate-400">Tersimpan selama 30 hari</p>
+                  </div>
+                </div>
+                <span className="text-[11px] font-semibold text-slate-400 group-hover:text-slate-700 shrink-0">Pilih</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const target = deleteFolderTarget;
+                  setDeleteFolderTarget(null);
+                  setConfirmForceDeleteTarget(target);
+                }}
+                disabled={deletingFolder}
+                className="w-full text-left px-3.5 py-2.5 rounded-xl border border-rose-100 hover:border-rose-200 hover:bg-rose-50/40 transition-colors flex items-center justify-between group disabled:opacity-50"
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <Trash2 className="h-4 w-4 text-rose-400 group-hover:text-rose-600 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-rose-700">Hapus Permanen</p>
+                    <p className="text-[11px] text-rose-400/80">Langsung dihapus permanen</p>
+                  </div>
+                </div>
+                <span className="text-[11px] font-semibold text-rose-400 group-hover:text-rose-600 shrink-0">Pilih</span>
+              </button>
+            </div>
+
+            <div className="flex justify-end pt-1">
+              <button
+                type="button"
+                onClick={() => setDeleteFolderTarget(null)}
+                disabled={deletingFolder}
+                className="px-3.5 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                Batal
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ════════ CONFIRM FORCE DELETE ════════ */}
+      {confirmForceDeleteTarget && createPortal(
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl p-5 border border-slate-100">
+            <div className="flex items-start gap-3 mb-3">
+              <div className="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+                <AlertTriangle className="h-4 w-4" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-slate-900">Hapus Permanen?</h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Folder <strong className="text-slate-800">&quot;{confirmForceDeleteTarget.nama_folder}&quot;</strong> dan seluruh data barang di dalamnya akan dihapus permanen dan tidak dapat dipulihkan.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2 justify-end mt-4">
+              <button
+                type="button"
+                onClick={() => setConfirmForceDeleteTarget(null)}
+                disabled={deletingFolder}
+                className="px-3.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={() => handleForceDeleteFolder(confirmForceDeleteTarget)}
+                disabled={deletingFolder}
+                className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-sm disabled:opacity-50"
+              >
+                {deletingFolder ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                <span>{deletingFolder ? 'Menghapus...' : 'Hapus'}</span>
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ════════ CONFIRM EMPTY TRASH ════════ */}
+      {showEmptyTrashConfirm && createPortal(
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl p-6 text-center">
             <div className="inline-flex items-center justify-center w-14 h-14 bg-red-100 rounded-full mb-4">
-              <AlertTriangle className="h-7 w-7 text-red-600" />
+              <Trash2 className="h-7 w-7 text-red-600" />
             </div>
-            <h3 className="text-lg font-bold text-slate-900 mb-1">Hapus Folder Ini?</h3>
-            <p className="text-sm text-slate-600 mb-6 font-semibold">{deleteFolderTarget.nama_folder}</p>
+            <h3 className="text-base font-bold text-slate-900 mb-1">Kosongkan Tempat Sampah?</h3>
+            <p className="text-xs text-slate-600 mb-4">Semua {trashFolders.length} folder dan datanya akan dihapus permanen. Tindakan ini tidak dapat dibatalkan.</p>
             <div className="flex gap-3">
-              <button onClick={() => setDeleteFolderTarget(null)} disabled={deletingFolder}
-                className="flex-1 py-2.5 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 text-sm font-medium transition-colors">Batal</button>
-              <button onClick={handleDeleteFolder} disabled={deletingFolder}
-                className="flex-1 py-2.5 bg-red-600 text-white rounded-xl hover:bg-red-700 disabled:opacity-50 text-sm font-medium transition-colors flex items-center justify-center gap-2">
-                {deletingFolder ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                {deletingFolder ? 'Menghapus...' : 'Ya, Hapus'}
+              <button onClick={() => setShowEmptyTrashConfirm(false)} disabled={actionTrashLoading === 'empty'}
+                className="flex-1 py-2.5 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 text-xs font-semibold">Batal</button>
+              <button onClick={handleEmptyTrash} disabled={actionTrashLoading === 'empty'}
+                className="flex-1 py-2.5 bg-red-600 text-white rounded-xl hover:bg-red-700 disabled:opacity-50 text-xs font-semibold flex items-center justify-center gap-2">
+                {actionTrashLoading === 'empty' ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                {actionTrashLoading === 'empty' ? 'Mengosongkan...' : 'Ya, Kosongkan'}
               </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ════════ TEMPAT SAMPAH MODAL ════════ */}
+      {showTrashModal && createPortal(
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl w-full max-w-4xl shadow-2xl overflow-hidden flex flex-col max-h-[88vh] border border-slate-200">
+            <div className="px-6 py-5 bg-gradient-to-r from-slate-900 via-rose-950 to-slate-900 text-white flex items-center justify-between border-b border-rose-900/30">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-rose-500/20 border border-rose-400/30 flex items-center justify-center text-rose-300">
+                  <Trash2 className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg font-bold">Tempat Sampah Folder Sarana & Prasarana</h2>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500 text-white">{trashFolders.length} Folder</span>
+                  </div>
+                  <p className="text-xs text-rose-200/80 mt-0.5">Folder otomatis terhapus permanen setelah 30 hari.</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {trashFolders.length > 0 && !viewingTrashFolder && (
+                  <button onClick={() => setShowEmptyTrashConfirm(true)} disabled={actionTrashLoading === 'empty'}
+                    className="px-3 py-1.5 bg-rose-500/20 hover:bg-rose-600 text-rose-200 hover:text-white rounded-xl text-xs font-bold border border-rose-400/30 flex items-center gap-1.5 transition-all">
+                    <Trash2 className="h-3.5 w-3.5" /><span>Kosongkan Sampah</span>
+                  </button>
+                )}
+                <button onClick={() => { setShowTrashModal(false); setViewingTrashFolder(null); }}
+                  className="p-2 hover:bg-white/10 rounded-xl text-slate-400 hover:text-white transition-colors">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 overflow-y-auto flex-1 bg-slate-50/50">
+              {viewingTrashFolder ? (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between flex-wrap gap-3 pb-3 border-b border-slate-200">
+                    <button onClick={() => setViewingTrashFolder(null)}
+                      className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-indigo-700 bg-white px-3 py-2 rounded-xl border border-slate-200 shadow-sm transition-colors">
+                      <ArrowLeft className="h-4 w-4" /> Kembali ke Daftar Sampah
+                    </button>
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => handleRestoreFolder(viewingTrashFolder.id)} disabled={actionTrashLoading === viewingTrashFolder.id}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm disabled:opacity-50 transition-all">
+                        {actionTrashLoading === viewingTrashFolder.id ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
+                        <span>Pulihkan Folder Ini</span>
+                      </button>
+                      <button onClick={() => setConfirmForceDeleteTarget(viewingTrashFolder)}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-sm transition-all">
+                        <Trash2 className="h-3.5 w-3.5" /><span>Hapus Permanen</span>
+                      </button>
+                    </div>
+                  </div>
+                  <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between flex-wrap gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600"><Folder className="h-6 w-6" /></div>
+                      <div>
+                        <h3 className="text-base font-bold text-slate-800">{viewingTrashFolder.nama_folder}</h3>
+                        <p className="text-xs text-slate-500 mt-0.5">{viewingTrashFolder.keterangan || 'Tidak ada keterangan'}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4 text-xs">
+                      <div>
+                        <span className="text-slate-400 block text-[10px]">TANGGAL DIHAPUS</span>
+                        <span className="font-semibold text-slate-700">
+                          {viewingTrashFolder.deleted_at ? new Date(viewingTrashFolder.deleted_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'}
+                        </span>
+                      </div>
+                      <div className="h-8 w-px bg-slate-200" />
+                      <div>
+                        <span className="text-slate-400 block text-[10px]">SISA WAKTU</span>
+                        <span className="font-bold text-rose-600">{viewingTrashFolder.sisa_hari ?? 30} Hari</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div className="px-5 py-3.5 bg-slate-50/80 border-b border-slate-200 flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-700">Daftar Barang di Dalam Folder ({viewingTrashFolder.items?.length ?? viewingTrashFolder.items_count ?? 0})</span>
+                      <span className="text-[11px] text-slate-500">Barang ini akan ikut pulih jika folder dipulihkan</span>
+                    </div>
+                    {(!viewingTrashFolder.items || viewingTrashFolder.items.length === 0) ? (
+                      <div className="p-8 text-center text-slate-400 text-xs">Folder ini tidak memiliki data barang.</div>
+                    ) : (
+                      <div className="overflow-x-auto max-h-72">
+                        <table className="w-full text-xs">
+                          <thead className="bg-slate-100 text-slate-600 font-bold border-b border-slate-200 sticky top-0">
+                            <tr>
+                              <th className="px-3 py-2 text-left">No</th>
+                              <th className="px-3 py-2 text-left">Kode</th>
+                              <th className="px-3 py-2 text-left">Jenis Kekayaan / Nama</th>
+                              <th className="px-3 py-2 text-center">Jumlah / Satuan</th>
+                              <th className="px-3 py-2 text-right">Harga Pembelian</th>
+                              <th className="px-3 py-2 text-right">Nilai Sekarang</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {viewingTrashFolder.items.map((it: any, idx: number) => (
+                              <tr key={it.id || idx} className="hover:bg-slate-50">
+                                <td className="px-3 py-2 text-slate-500">{idx + 1}</td>
+                                <td className="px-3 py-2 font-mono text-indigo-600">{it.kode || '-'}</td>
+                                <td className="px-3 py-2 font-semibold text-slate-800">{it.nama_barang}</td>
+                                <td className="px-3 py-2 text-center font-bold text-blue-600">{it.stok_akhir ?? it.stok_awal ?? 0} {it.satuan || 'Unit'}</td>
+                                <td className="px-3 py-2 text-right text-slate-600">Rp {(it.nilai_harga_pembelian || 0).toLocaleString('id-ID')}</td>
+                                <td className="px-3 py-2 text-right font-bold text-emerald-700">Rp {(it.nilai_harga_sekarang || 0).toLocaleString('id-ID')}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  {loadingTrash ? (
+                    <div className="py-16 text-center text-slate-400 space-y-2">
+                      <RefreshCw className="h-7 w-7 animate-spin mx-auto text-rose-500" />
+                      <p className="text-xs">Memuat tempat sampah...</p>
+                    </div>
+                  ) : trashFolders.length === 0 ? (
+                    <div className="py-16 text-center text-slate-400 space-y-3">
+                      <div className="w-16 h-16 rounded-2xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-400 mx-auto">
+                        <Trash2 className="h-8 w-8" />
+                      </div>
+                      <h4 className="text-sm font-bold text-slate-700">Tempat Sampah Kosong</h4>
+                      <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                        Tidak ada folder yang dihapus. Folder yang dipindahkan ke sini akan tersimpan aman hingga 30 hari sebelum dihapus permanen.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                      {trashFolders.map((f) => {
+                        const sisa = f.sisa_hari ?? 30;
+                        const deletedDateStr = f.deleted_at
+                          ? new Date(f.deleted_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })
+                          : '-';
+                        const badgeColor = sisa <= 5
+                          ? 'bg-rose-100 text-rose-700 border-rose-200'
+                          : sisa <= 14
+                          ? 'bg-amber-100 text-amber-700 border-amber-200'
+                          : 'bg-emerald-100 text-emerald-700 border-emerald-200';
+
+                        return (
+                          <div key={f.id} className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
+                            <div>
+                              <div className="flex items-start justify-between gap-2 mb-3">
+                                <div className="flex items-center gap-3">
+                                  <div className="p-3 bg-rose-50 text-rose-600 rounded-xl border border-rose-100 shadow-sm"><Folder className="h-6 w-6" /></div>
+                                  <div>
+                                    <h4 className="font-bold text-sm text-slate-800 line-clamp-1">{f.nama_folder}</h4>
+                                    <p className="text-[11px] text-slate-400">Dihapus: {deletedDateStr}</p>
+                                  </div>
+                                </div>
+                                <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border flex items-center gap-1 ${badgeColor}`}>
+                                  <Clock className="h-3 w-3" /><span>{sisa} Hari Lagi</span>
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between text-xs text-slate-600 py-2 border-t border-slate-100">
+                                <span className="flex items-center gap-1 font-medium"><Package className="h-3.5 w-3.5 text-slate-400" /><strong className="text-slate-800">{f.items_count ?? 0}</strong> Item</span>
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-slate-100">
+                              <button onClick={() => setViewingTrashFolder(f)}
+                                className="px-2.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-colors">
+                                <Eye className="h-3.5 w-3.5" /><span>Lihat Isi</span>
+                              </button>
+                              <button onClick={() => handleRestoreFolder(f.id)} disabled={actionTrashLoading === f.id}
+                                className="px-2.5 py-2 bg-indigo-50 hover:bg-indigo-600 text-indigo-700 hover:text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-colors border border-indigo-200 disabled:opacity-50">
+                                {actionTrashLoading === f.id ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
+                                <span>Pulihkan</span>
+                              </button>
+                              <button onClick={() => setConfirmForceDeleteTarget(f)}
+                                className="px-2.5 py-2 bg-rose-50 hover:bg-rose-600 text-rose-700 hover:text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-colors border border-rose-200">
+                                <Trash2 className="h-3.5 w-3.5" /><span>Permanen</span>
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="px-6 py-4 bg-white border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
+              <span>* Data dapat dipulihkan kapan saja sebelum 30 hari.</span>
+              <button onClick={() => { setShowTrashModal(false); setViewingTrashFolder(null); }}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold transition-colors">Tutup</button>
             </div>
           </div>
         </div>,

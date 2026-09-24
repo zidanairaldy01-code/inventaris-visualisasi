@@ -23,6 +23,7 @@ use App\Http\Controllers\Api\DaftarBelanjaController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\DistribusiAsetController;
 use App\Http\Controllers\Api\NotifikasiController;
+use App\Http\Controllers\Api\FotoSaranaPrasaranaController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login'])->name('login');
@@ -36,7 +37,6 @@ Route::get('stats', [AsetController::class, 'publicStats']);
 Route::get('daftar-belanja/summary', [DaftarBelanjaController::class, 'summary']);
 Route::get('gedungs', [GedungController::class, 'index']);
 Route::get('sumber-danas', [SumberDanaController::class, 'index']);
-Route::get('servises', [ServisController::class, 'index']);
 Route::get('peminjamans', [PeminjamanController::class, 'index']);
 
 // Public Routes for Jurusan & Kelas (untuk halaman public)
@@ -70,7 +70,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::apiResource('histories', HistoryController::class)->only(['index', 'show']);
     Route::post('servises/{servis}', [ServisController::class, 'update']); // Support PUT via POST + _method for file uploads
-    Route::apiResource('servises', ServisController::class)->except(['index']);
+    Route::apiResource('servises', ServisController::class);
     Route::apiResource('peminjamans', PeminjamanController::class)->except(['index']);
 
     // Laporan
@@ -87,6 +87,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('inventaris/import-barang', [InventarisBarangController::class, 'importExcel']); // Format Barang (Kode Rekening + Kode Program)
     Route::get('inventaris/summary', [InventarisController::class, 'summary']);
     Route::apiResource('inventaris', InventarisController::class);
+    // Folder Inventaris (Trash, Restore, Force Delete, CRUD)
+    Route::get('folder-inventaris/trash', [FolderInventarisController::class, 'trash']);
+    Route::delete('folder-inventaris/trash/empty', [FolderInventarisController::class, 'emptyTrash']);
+    Route::post('folder-inventaris/{id}/restore', [FolderInventarisController::class, 'restore']);
+    Route::delete('folder-inventaris/{id}/force', [FolderInventarisController::class, 'forceDelete']);
     Route::apiResource('folder-inventaris', FolderInventarisController::class);
 
     // Sarana Prasarana
@@ -95,8 +100,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('sarana-prasaranas/summary', [SaranaPrasaranaController::class, 'summary']);
     Route::apiResource('sarana-prasaranas', SaranaPrasaranaController::class);
 
+    // Foto Sarana Prasarana
+    Route::get('foto-sarana-prasarana/search', [FotoSaranaPrasaranaController::class, 'searchSharedPhotos']);
+    Route::post('sarana-prasaranas/{id}/fotos', [FotoSaranaPrasaranaController::class, 'store']);
+    Route::post('sarana-prasaranas/{id}/fotos/use-shared', [FotoSaranaPrasaranaController::class, 'useSharedPhoto']);
+    Route::delete('foto-sarana-prasarana/{id}', [FotoSaranaPrasaranaController::class, 'destroy']);
+
     // Inventaris Gudang (Tabel & System Terpisah)
     Route::post('inventaris-gudang/import', [InventarisGudangController::class, 'importExcel']);
+    Route::post('inventaris-gudang/batch-store', [InventarisGudangController::class, 'batchStore']);
     Route::get('inventaris-gudang/summary', [InventarisGudangController::class, 'summary']);
     Route::apiResource('inventaris-gudang', InventarisGudangController::class);
 

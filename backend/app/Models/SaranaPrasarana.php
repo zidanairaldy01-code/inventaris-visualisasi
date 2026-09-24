@@ -49,7 +49,12 @@ class SaranaPrasarana extends Model
 
     public function folder()
     {
-        return $this->belongsTo(FolderInventaris::class, 'id_folder');
+        return $this->belongsTo(FolderInventaris::class, 'id_folder')->withTrashed();
+    }
+
+    public function fotos()
+    {
+        return $this->hasMany(\App\Models\FotoSaranaPrasarana::class, 'id_sarana_prasarana')->orderBy('urutan');
     }
 
     // Auto calculate stok_akhir before saving

@@ -3,9 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class FolderInventaris extends Model
 {
+    use SoftDeletes;
+
     protected $table = 'folder_inventaris';
 
     protected $fillable = [
@@ -14,6 +17,10 @@ class FolderInventaris extends Model
         'warna',
         'jenis',
         'id_sumber_dana',
+    ];
+
+    protected $casts = [
+        'deleted_at' => 'datetime',
     ];
 
     /**

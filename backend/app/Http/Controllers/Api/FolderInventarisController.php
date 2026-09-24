@@ -142,16 +142,138 @@ class FolderInventarisController extends Controller
     }
 
     /**
-     * Remove the specified folder from storage.
+     * Remove the specified folder from storage (soft delete or permanent).
      */
-    public function destroy(string $id)
+    public function destroy(Request $request, string $id)
     {
-        $folder = FolderInventaris::findOrFail($id);
+        $folder = FolderInventaris::withTrashed()->findOrFail($id);
+
+        if ($request->query('permanent') === 'true' || $request->input('permanent') == true) {
+            $this->permanentDeleteFolder($folder);
+            return response()->json([
+                'status'  => 'success',
+                'message' => 'Folder dan semua isinya berhasil dihapus permanen',
+            ]);
+        }
+
         $folder->delete();
 
         return response()->json([
             'status'  => 'success',
-            'message' => 'Folder berhasil dihapus',
+            'message' => 'Folder berhasil dipindahkan ke tempat sampah',
         ]);
+    }
+
+    /**
+     * Get list of trashed folders (with 30-day auto-purge).
+     */
+    public function trash(Request $request)
+    {
+        // 1. Auto-purge folders older than 30 days
+        $expired = FolderInventaris::onlyTrashed()
+            ->where('deleted_at', '<=', now()->subDays(30))
+            ->get();
+
+        foreach ($expired as $exp) {
+            $this->permanentDeleteFolder($exp);
+        }
+
+        // 2. Query active trashed folders
+        $jenis = $request->query('jenis');
+        $query = FolderInventaris::onlyTrashed();
+
+        if ($jenis) {
+            $query->where('jenis', $jenis);
+        }
+
+        if ($jenis === 'inventaris-gudang') {
+            $query->withCount('inventarisGudangs as items_count')->with('inventarisGudangs');
+        } elseif ($jenis === 'inventaris-belanja') {
+            $query->withCount('daftarBelanjas as items_count')->with('daftarBelanjas');
+        } elseif ($jenis === 'sarana-prasarana') {
+            $query->withCount('saranaPrasaranas as items_count')->with('saranaPrasaranas');
+        } else {
+            $query->withCount('items')->with('items');
+        }
+
+        $folders = $query->orderBy('deleted_at', 'desc')->get();
+
+        // 3. Attach sisa_hari (remaining days before 30-day purge)
+        $folders->transform(function ($f) {
+            $deletedAt = \Carbon\Carbon::parse($f->deleted_at);
+            $daysPassed = $deletedAt->diffInDays(now());
+            $f->sisa_hari = max(0, 30 - (int)$daysPassed);
+            return $f;
+        });
+
+        return response()->json([
+            'status' => 'success',
+            'data'   => $folders,
+        ]);
+    }
+
+    /**
+     * Restore a trashed folder.
+     */
+    public function restore(string $id)
+    {
+        $folder = FolderInventaris::onlyTrashed()->findOrFail($id);
+        $folder->restore();
+
+        return response()->json([
+            'status'  => 'success',
+            'message' => 'Folder berhasil dipulihkan dari tempat sampah',
+            'data'    => $folder,
+        ]);
+    }
+
+    /**
+     * Permanently delete a folder and all its contents.
+     */
+    public function forceDelete(string $id)
+    {
+        $folder = FolderInventaris::withTrashed()->findOrFail($id);
+        $this->permanentDeleteFolder($folder);
+
+        return response()->json([
+            'status'  => 'success',
+            'message' => 'Folder dan semua isinya berhasil dihapus permanen',
+        ]);
+    }
+
+    /**
+     * Empty entire trash for a specific jenis (or all).
+     */
+    public function emptyTrash(Request $request)
+    {
+        $jenis = $request->query('jenis');
+        $query = FolderInventaris::onlyTrashed();
+
+        if ($jenis) {
+            $query->where('jenis', $jenis);
+        }
+
+        $folders = $query->get();
+        foreach ($folders as $folder) {
+            $this->permanentDeleteFolder($folder);
+        }
+
+        return response()->json([
+            'status'  => 'success',
+            'message' => 'Tempat sampah berhasil dikosongkan',
+        ]);
+    }
+
+    /**
+     * Helper to permanently delete a folder and all its child items.
+     */
+    private function permanentDeleteFolder(FolderInventaris $folder)
+    {
+        \App\Models\InventarisGudang::where('id_folder', $folder->id)->delete();
+        \App\Models\DaftarBelanja::where('id_folder', $folder->id)->delete();
+        \App\Models\SaranaPrasarana::where('id_folder', $folder->id)->delete();
+        \App\Models\Inventaris::where('id_folder', $folder->id)->delete();
+
+        $folder->forceDelete();
     }
 }
