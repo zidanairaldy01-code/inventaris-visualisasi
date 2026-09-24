@@ -10,17 +10,39 @@ use Illuminate\Support\Facades\Storage;
 
 class ServisController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $servises = Servis::with(['aset.ruangan', 'aset.kategori', 'saranaPrasarana'])
-            ->orderBy('tanggal_servis', 'desc')
-            ->get();
+        $user = $request->user();
+        $query = Servis::with(['aset.ruangan', 'aset.kategori', 'saranaPrasarana']);
+
+        // Jika user adalah wakapro, hanya tampilkan servis aset milik workshopnya
+        if ($user && $user->role === 'wakapro') {
+            if (!$user->ruangan_id) {
+                return response()->json([]);
+            }
+
+            $saranaIds = \App\Models\DistribusiAset::where('ruangan_tujuan_id', $user->ruangan_id)
+                ->where('status', 'diterima')
+                ->pluck('sarana_prasarana_id')
+                ->toArray();
+
+            $query->where(function ($q) use ($user, $saranaIds) {
+                $q->whereIn('sarana_prasarana_id', $saranaIds)
+                  ->orWhereHas('aset', function ($qa) use ($user) {
+                      $qa->where('id_ruangan', $user->ruangan_id);
+                  });
+            });
+        }
+
+        $servises = $query->orderBy('tanggal_servis', 'desc')->get();
             
         return response()->json($servises);
     }
 
     public function store(Request $request)
     {
+        $user = $request->user();
+
         $validated = $request->validate([
             'id_aset'              => 'nullable|exists:asets,id',
             'sarana_prasarana_id'  => 'nullable|exists:sarana_prasaranas,id',
@@ -37,6 +59,32 @@ class ServisController extends Controller
             return response()->json([
                 'message' => 'Pilih salah satu aset atau sarana prasarana yang diservis.'
             ], 422);
+        }
+
+        // Validasi kepemilikan aset workshop untuk wakapro
+        if ($user && $user->role === 'wakapro') {
+            if (!$user->ruangan_id) {
+                return response()->json(['message' => 'Akun Anda belum terhubung ke ruangan workshop manapun.'], 403);
+            }
+
+            if (!empty($validated['sarana_prasarana_id'])) {
+                $isAllowed = \App\Models\DistribusiAset::where('ruangan_tujuan_id', $user->ruangan_id)
+                    ->where('sarana_prasarana_id', $validated['sarana_prasarana_id'])
+                    ->where('status', 'diterima')
+                    ->exists();
+                if (!$isAllowed) {
+                    return response()->json(['message' => 'Barang ini bukan milik workshop Anda.'], 403);
+                }
+            }
+
+            if (!empty($validated['id_aset'])) {
+                $isAllowed = \App\Models\Aset::where('id', $validated['id_aset'])
+                    ->where('id_ruangan', $user->ruangan_id)
+                    ->exists();
+                if (!$isAllowed) {
+                    return response()->json(['message' => 'Aset ini bukan milik workshop Anda.'], 403);
+                }
+            }
         }
 
         if ($request->hasFile('foto_kerusakan')) {
@@ -62,17 +110,32 @@ class ServisController extends Controller
             }
         }
 
+        // Update kondisi pada aset fisik jika ada
+        if ($servis->id_aset) {
+            $kondisiTarget = $servis->status === 'Selesai' ? 'Baik' : ($servis->status === 'Proses' ? 'Rusak Ringan' : null);
+            if ($kondisiTarget) {
+                $k = \App\Models\Kondisi::where('nama_kondisi', $kondisiTarget)->first();
+                if ($k) {
+                    \App\Models\Aset::where('id', $servis->id_aset)->update(['id_kondisi' => $k->id]);
+                }
+            }
+        }
+
         // Create history
-        $namaBarang = $servis->saranaPrasarana?->nama_barang ?? $servis->aset?->nama_aset ?? 'Aset';
-        History::create([
-            'id_aset' => $validated['id_aset'] ?? null,
-            'id_user' => $request->user()?->id,
-            'aksi' => 'SERVIS',
-            'keterangan' => "Aset {$namaBarang} diservis: {$validated['jenis_perbaikan']}. " . 
-                           ($validated['teknisi_bengkel'] ? "Teknisi: {$validated['teknisi_bengkel']}. " : "") .
-                           "Biaya: Rp " . number_format($validated['biaya_servis'], 0, ',', '.'),
-            'tanggal' => now()
-        ]);
+        try {
+            $namaBarang = $servis->saranaPrasarana?->nama_barang ?? $servis->aset?->nama_aset ?? 'Aset';
+            History::create([
+                'id_aset' => $validated['id_aset'] ?? null,
+                'id_user' => $request->user()?->id,
+                'aksi' => 'SERVIS',
+                'keterangan' => "Aset {$namaBarang} diservis: {$validated['jenis_perbaikan']}. " . 
+                               ($validated['teknisi_bengkel'] ? "Teknisi: {$validated['teknisi_bengkel']}. " : "") .
+                               "Biaya: Rp " . number_format($validated['biaya_servis'], 0, ',', '.'),
+                'tanggal' => now()
+            ]);
+        } catch (\Exception $e) {
+            // Abaikan jika history log gagal
+        }
 
         return response()->json($servis, 201);
     }
@@ -122,6 +185,14 @@ class ServisController extends Controller
                 if ($servis->status === 'Selesai') {
                     $sarana->update(['kondisi' => 'Baik']);
                 }
+            }
+        }
+
+        // Update kondisi aset fisik jika ada
+        if ($servis->id_aset && $servis->status === 'Selesai') {
+            $kondisiBaik = \App\Models\Kondisi::where('nama_kondisi', 'Baik')->first();
+            if ($kondisiBaik) {
+                \App\Models\Aset::where('id', $servis->id_aset)->update(['id_kondisi' => $kondisiBaik->id]);
             }
         }
 

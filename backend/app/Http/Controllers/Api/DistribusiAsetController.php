@@ -869,6 +869,78 @@ class DistribusiAsetController extends Controller
     }
 
     /**
+     * Daftar barang / aset yang berada di workshop milik wakapro tertentu (yang sedang login).
+     * Digunakan untuk opsi "Pilih Barang" di modul Servis & Perbaikan Wakapro.
+     */
+    public function pilihBarangWorkshop(Request $request)
+    {
+        $user = $request->user();
+
+        if (!$user || !$user->ruangan_id) {
+            return response()->json([
+                'ruangan' => null,
+                'items'   => [],
+                'warning' => 'Akun Anda belum terhubung ke ruangan workshop manapun. Hubungi administrator.',
+            ]);
+        }
+
+        $ruangan = Ruangan::with('gedung')->find($user->ruangan_id);
+
+        // 1. Sarana Prasarana yang telah diterima via BAST di workshop wakapro ini
+        $distribusiItems = DistribusiAset::with(['saranaPrasarana'])
+            ->where('ruangan_tujuan_id', $user->ruangan_id)
+            ->where('status', 'diterima')
+            ->get();
+
+        $saranas = $distribusiItems
+            ->pluck('saranaPrasarana')
+            ->filter()
+            ->unique('id')
+            ->values()
+            ->map(function ($s) use ($distribusiItems) {
+                $totalUnit = (int) $distribusiItems->where('sarana_prasarana_id', $s->id)->sum('jumlah');
+                return [
+                    'id'                  => $s->id,
+                    'sarana_prasarana_id' => $s->id,
+                    'id_aset'             => null,
+                    'tipe'                => 'sarana_prasarana',
+                    'nama_barang'         => $s->nama_barang,
+                    'kode'                => $s->kode,
+                    'kondisi'             => $s->kondisi ?? 'Baik',
+                    'jumlah'              => $totalUnit,
+                    'satuan'              => $s->satuan ?? 'Unit',
+                    'keterangan'          => $s->keterangan,
+                ];
+            });
+
+        // 2. Aset fisik di tabel asets jika ada yang ditempatkan di ruangan workshop ini
+        $asets = \App\Models\Aset::with('kondisi')
+            ->where('id_ruangan', $user->ruangan_id)
+            ->get()
+            ->map(function ($a) {
+                return [
+                    'id'                  => $a->id,
+                    'sarana_prasarana_id' => null,
+                    'id_aset'             => $a->id,
+                    'tipe'                => 'aset',
+                    'nama_barang'         => $a->nama_aset,
+                    'kode'                => $a->kode_aset,
+                    'kondisi'             => $a->kondisi?->nama_kondisi ?? 'Baik',
+                    'jumlah'              => $a->jumlah,
+                    'satuan'              => $a->satuan ?? 'Unit',
+                    'keterangan'          => $a->deskripsi,
+                ];
+            });
+
+        $items = $saranas->concat($asets)->values();
+
+        return response()->json([
+            'ruangan' => $ruangan,
+            'items'   => $items,
+        ]);
+    }
+
+    /**
      * Statistik Khusus Dashboard Wakasek (Monitoring Eksekutif Sarpras & 5 Bengkel)
      */
     public function statsWakasek(Request $request)

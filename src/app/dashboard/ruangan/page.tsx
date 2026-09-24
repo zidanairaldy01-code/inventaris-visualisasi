@@ -23,6 +23,7 @@ interface Ruangan {
   deskripsi: string | null;
   foto_ruangan: string | null;
   asets_count?: number;
+  total_harga_aset?: number | null;
   gedung?: {
     id: number;
     nama_gedung: string;
@@ -505,6 +506,7 @@ export default function RuanganWorkshopPage() {
   const totalRuangans = ruangans.length;
   const totalAsetsInWorkshops = ruangans.reduce((sum, r) => sum + (r.asets_count ?? 0), 0);
   const totalGedungsWithWorkshop = new Set(ruangans.map(r => r.id_gedung).filter(Boolean)).size;
+  const totalNilaiAllWorkshops = ruangans.reduce((sum, r) => sum + (Number(r.total_harga_aset) || 0), 0);
 
   /* ══════════════════════ RENDER ══════════════════════ */
   return (
@@ -565,7 +567,7 @@ export default function RuanganWorkshopPage() {
           </div>
 
           {/* Statistics Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
             {[
               { label: 'Total Ruangan Workshop', value: totalRuangans, icon: Map, from: 'from-emerald-500', to: 'to-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-900', badge: 'Ruang' },
               { label: 'Total Aset Workshop', value: totalAsetsInWorkshops, icon: Package, from: 'from-teal-500', to: 'to-teal-700', bg: 'bg-teal-50', border: 'border-teal-200', text: 'text-teal-900', badge: 'Item' },
@@ -584,6 +586,21 @@ export default function RuanganWorkshopPage() {
                 <p className={`text-2xl font-extrabold ${text}`}>{value}</p>
               </div>
             ))}
+            {/* Total Nilai Aset card — custom render karena pakai format Rupiah */}
+            <div className="bg-violet-50 border border-violet-200 rounded-xl p-4 shadow-sm relative overflow-hidden">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 bg-gradient-to-br from-violet-500 to-violet-700 rounded-lg">
+                    <DollarSign className="h-4 w-4 text-white" />
+                  </div>
+                  <p className="text-[11px] font-semibold text-violet-900 uppercase tracking-wide">Total Nilai Aset</p>
+                </div>
+                <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-white/80 text-slate-700 border border-slate-200">Rp</span>
+              </div>
+              <p className="text-lg font-extrabold text-violet-900 leading-tight">
+                {totalNilaiAllWorkshops > 0 ? formatRupiah(totalNilaiAllWorkshops) : <span className="text-slate-400 text-sm font-semibold">Belum ada data</span>}
+              </p>
+            </div>
           </div>
 
           {/* Filters & Search */}
@@ -636,20 +653,21 @@ export default function RuanganWorkshopPage() {
                     <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Lantai</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Luas</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Aset Workshop</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Total Nilai Aset</th>
                     <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Aksi</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {loading ? (
                     <tr>
-                      <td colSpan={8} className="px-4 py-12 text-center">
+                      <td colSpan={9} className="px-4 py-12 text-center">
                         <RefreshCw className="h-6 w-6 text-slate-400 animate-spin mx-auto mb-2" />
                         <p className="text-sm text-slate-500">Memuat data ruangan workshop...</p>
                       </td>
                     </tr>
                   ) : filteredRuangans.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="px-4 py-12 text-center">
+                      <td colSpan={9} className="px-4 py-12 text-center">
                         <Wrench className="h-12 w-12 text-slate-300 mx-auto mb-3" />
                         <h3 className="text-sm font-bold text-slate-700 mb-1">
                           {searchQuery || selectedGedung !== 'all' ? 'Tidak Ada Hasil' : 'Belum Ada Ruangan Workshop'}
@@ -727,6 +745,16 @@ export default function RuanganWorkshopPage() {
                             {r.asets_count ?? 0} Aset
                             <ChevronRight className="h-3 w-3 text-emerald-500 ml-0.5" />
                           </button>
+                        </td>
+                        <td className="px-4 py-3 text-sm">
+                          {r.total_harga_aset != null && r.total_harga_aset > 0 ? (
+                            <span className="inline-flex items-center gap-1 font-semibold text-emerald-700">
+                              <DollarSign className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                              {formatRupiah(r.total_harga_aset)}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 text-xs">—</span>
+                          )}
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center justify-center gap-1" onClick={e => e.stopPropagation()}>

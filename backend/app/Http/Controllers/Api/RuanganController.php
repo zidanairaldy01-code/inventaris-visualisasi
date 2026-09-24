@@ -10,7 +10,9 @@ class RuanganController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Ruangan::with(['gedung', 'asets']);
+        $query = Ruangan::with(['gedung'])
+            ->withCount('asets')
+            ->withSum('asets as total_harga_aset', \DB::raw('jumlah * COALESCE(harga_perolehan, 0)'));
 
         if ($request->filled('jenis')) {
             $query->where('jenis', $request->query('jenis'));
@@ -51,7 +53,10 @@ class RuanganController extends Controller
 
     public function show(string $id)
     {
-        $ruangan = Ruangan::with(['gedung', 'asets'])->findOrFail($id);
+        $ruangan = Ruangan::with(['gedung', 'asets'])
+            ->withCount('asets')
+            ->withSum('asets as total_harga_aset', \DB::raw('jumlah * COALESCE(harga_perolehan, 0)'))
+            ->findOrFail($id);
         return response()->json($ruangan);
     }
 

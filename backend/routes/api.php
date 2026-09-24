@@ -114,6 +114,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('stats/wakasek', [DistribusiAsetController::class, 'statsWakasek']);
     Route::get('workshop/inventaris', [DistribusiAsetController::class, 'inventarisWorkshop']);
     Route::put('workshop/inventaris/{id}/kondisi', [DistribusiAsetController::class, 'updateKondisiInventaris']);
+    Route::get('workshop/pilih-barang', [DistribusiAsetController::class, 'pilihBarangWorkshop']);
     
     // IMPORTANT: Specific routes MUST come BEFORE parameterized routes
     Route::get('distribusi-asets/search-barang', [DistribusiAsetController::class, 'searchBarang']);
