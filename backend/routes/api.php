@@ -24,6 +24,7 @@ use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\DistribusiAsetController;
 use App\Http\Controllers\Api\NotifikasiController;
 use App\Http\Controllers\Api\FotoSaranaPrasaranaController;
+use App\Http\Controllers\Api\WorkshopController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login'])->name('login');
@@ -48,6 +49,9 @@ Route::get('jurusans/{id}/kelas/{tingkat}', [KelasController::class, 'getByTingk
 Route::get('aset-per-kelas/{id}', [AsetPerKelasController::class, 'getAsetByKelas']);
 Route::get('aset-per-kelas/summary/jurusan/{id}', [AsetPerKelasController::class, 'getSummaryByJurusan']);
 Route::get('aset-per-kelas/summary/kelas/{id}', [AsetPerKelasController::class, 'getSummaryByKelas']);
+
+// Public Routes for Workshop (untuk halaman public)
+Route::get('workshops', [WorkshopController::class, 'index']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
@@ -93,6 +97,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('folder-inventaris/{id}/restore', [FolderInventarisController::class, 'restore']);
     Route::delete('folder-inventaris/{id}/force', [FolderInventarisController::class, 'forceDelete']);
     Route::apiResource('folder-inventaris', FolderInventarisController::class);
+
+    // Workshop Management (Admin only - CRUD)
+    Route::get('workshops/admin', [WorkshopController::class, 'indexAdmin']);
+    Route::post('workshops', [WorkshopController::class, 'store']);
+    Route::get('workshops/{id}', [WorkshopController::class, 'show']);
+    Route::post('workshops/{id}', [WorkshopController::class, 'update']); // Support PUT via POST for file uploads
+    Route::delete('workshops/{id}', [WorkshopController::class, 'destroy']);
 
     // Sarana Prasarana
     Route::post('sarana-prasaranas/import', [SaranaPrasaranaController::class, 'importExcel']);

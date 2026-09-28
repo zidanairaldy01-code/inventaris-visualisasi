@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import Cookies from 'js-cookie';
 import axios from '@/lib/axios';
-import { Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { Eye, EyeOff, AlertCircle, ArrowLeft } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -86,6 +87,12 @@ export default function LoginPage() {
       {/* Right panel — form */}
       <div style={styles.rightPanel}>
         <div style={styles.formCard}>
+          {/* Tombol Kembali */}
+          <Link href="/" style={styles.backLink}>
+            <ArrowLeft size={16} />
+            <span>Kembali ke Beranda</span>
+          </Link>
+
           <h1 style={styles.formTitle}>Masuk ke Portal</h1>
           <p style={styles.formSub}>Silakan masukkan kredensial Anda</p>
 
@@ -244,6 +251,21 @@ const styles: { [key: string]: React.CSSProperties } = {
     border: '1px solid #e2e4e9',
     boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
   },
+  
+  // --- Back Link ---
+  backLink: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    fontSize: '13px',
+    fontWeight: '500',
+    color: '#6b7280',
+    textDecoration: 'none',
+    marginBottom: '24px',
+    padding: '6px 0',
+    transition: 'color 0.15s',
+  },
+  
   formTitle: {
     fontSize: '22px',
     fontWeight: '700',

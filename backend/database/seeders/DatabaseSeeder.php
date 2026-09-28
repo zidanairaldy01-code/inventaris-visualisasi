@@ -16,7 +16,7 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Create default admin user
+        // Create default admin user (minimal untuk login)
         User::firstOrCreate(
             ['username' => 'admin'],
             [
@@ -28,19 +28,7 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        // Create default user
-        User::firstOrCreate(
-            ['username' => 'testuser'],
-            [
-                'nama_lengkap' => 'Test User',
-                'email' => 'test@example.com',
-                'password' => bcrypt('password'),
-                'role' => 'user',
-                'status' => true,
-            ]
-        );
-
-        // Create predefined conditions
+        // Create predefined conditions (diperlukan sistem untuk status aset)
         $kondisis = [
             [
                 'nama_kondisi' => 'Baik',
@@ -71,10 +59,10 @@ class DatabaseSeeder extends Seeder
             );
         }
 
-        $this->call([
-            SumberDanaSeeder::class,
-            UserSeeder::class,
-            WorkshopJurusanSeeder::class,
-        ]);
+        // SEMUA DATA LAINNYA DIHAPUS
+        // Admin akan menambahkan data secara manual:
+        // - Gedung, Ruangan, Workshop melalui dashboard admin
+        // - User lain (wakapro, petugas) melalui user management
+        // - Sumber dana, jurusan, dll melalui master data management
     }
 }
