@@ -758,6 +758,11 @@ export default function SaranaPrasaranaPage() {
     setImportState('importing');
     setImportProgress({ current: 0, total, percent: 10, currentItemName: 'Menyiapkan paket data...' });
 
+    // Tentukan id_folder dari folder yang sedang aktif saat import
+    const importFolderId = typeof activeFolderId === 'number' && activeFolderId > 0
+      ? activeFolderId
+      : null;
+
     const payloadItems = rows.map(row => {
       let parsedStok = parseInt(row.luas_jumlah) || 0;
       if (parsedStok === 0 && row.luas_jumlah) {
@@ -778,6 +783,7 @@ export default function SaranaPrasaranaPage() {
         nilai_harga_sekarang:   row.nilai_harga_sekarang  || 0,
         kondisi:                row.kondisi || 'Baik',
         keterangan:             row.keterangan || null,
+        id_folder:              importFolderId,
       };
     });
 

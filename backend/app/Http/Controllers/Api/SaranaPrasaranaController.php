@@ -467,6 +467,9 @@ class SaranaPrasaranaController extends Controller
                     'kondisi'               => $item['kondisi'] ?? 'Baik',
                     'keterangan'          => $item['keterangan'] ?? null,
                     'id_user'             => $request->user()?->id,
+                    'id_folder'           => isset($item['id_folder']) && $item['id_folder'] > 0
+                                                ? (int) $item['id_folder']
+                                                : null,
                 ];
 
                 // Pastikan tidak ada nilai kosong untuk field required
