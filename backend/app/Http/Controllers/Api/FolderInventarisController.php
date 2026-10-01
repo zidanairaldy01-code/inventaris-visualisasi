@@ -17,9 +17,13 @@ class FolderInventarisController extends Controller
         
         $query = FolderInventaris::query();
 
-        // Filter berdasarkan jenis
-        if ($jenis) {
-            $query->where('jenis', $jenis);
+        // Filter berdasarkan jenis (bisa comma-separated)
+        if ($jenis && $jenis !== 'all') {
+            if (str_contains($jenis, ',')) {
+                $query->whereIn('jenis', array_map('trim', explode(',', $jenis)));
+            } else {
+                $query->where('jenis', $jenis);
+            }
         }
 
         // Filter berdasarkan id_sumber_dana
@@ -31,20 +35,29 @@ class FolderInventarisController extends Controller
             }
         }
 
-        // Load count berdasarkan jenis folder
-        if ($jenis === 'inventaris') {
-            $query->withCount('items');
-        } elseif ($jenis === 'inventaris-belanja') {
-            $query->withCount('daftarBelanjas as items_count')->with('sumberDana');
-        } elseif ($jenis === 'sarana-prasarana') {
-            $query->withCount('saranaPrasaranas as items_count');
-        } elseif ($jenis === 'inventaris-gudang') {
-            $query->withCount('inventarisGudangs as items_count');
-        } else {
-            $query->withCount('items');
-        }
+        // Eager load relasi sumber dana untuk semua jenis folder
+        $query->with('sumberDana');
+
+        // Load count dan total harga untuk semua relasi folder
+        $query->withCount([
+            'items as inventaris_count',
+            'daftarBelanjas as belanja_count',
+            'saranaPrasaranas as sarana_count',
+            'inventarisGudangs as gudang_count',
+        ])->withSum('daftarBelanjas as total_belanja', 'jumlah');
 
         $folders = $query->orderBy('created_at', 'asc')->get();
+
+        $folders->each(function ($folder) {
+            $folder->items_count = match ($folder->jenis) {
+                'inventaris'         => (int) $folder->inventaris_count,
+                'inventaris-belanja' => (int) $folder->belanja_count,
+                'sarana-prasarana'   => (int) $folder->sarana_count,
+                'inventaris-gudang'  => (int) $folder->gudang_count,
+                default              => (int) $folder->inventaris_count,
+            };
+            $folder->total_belanja = (float) ($folder->total_belanja ?? 0);
+        });
 
         return response()->json([
             'status' => 'success',
@@ -72,12 +85,13 @@ class FolderInventarisController extends Controller
 
         $folder = FolderInventaris::create($validated);
 
-        // Load count berdasarkan jenis folder
+        // Load count dan relasi sumber dana
         $jenis = $validated['jenis'];
+        $folder->load('sumberDana');
         if ($jenis === 'inventaris') {
             $folder->loadCount('items');
         } elseif ($jenis === 'inventaris-belanja') {
-            $folder->loadCount(['daftarBelanjas as items_count'])->load('sumberDana');
+            $folder->loadCount(['daftarBelanjas as items_count']);
         } elseif ($jenis === 'sarana-prasarana') {
             $folder->loadCount(['saranaPrasaranas as items_count']);
         } elseif ($jenis === 'inventaris-gudang') {
@@ -130,6 +144,10 @@ class FolderInventarisController extends Controller
 
         if ($jenis === 'inventaris-belanja') {
             $folder->loadCount(['daftarBelanjas as items_count']);
+        } elseif ($jenis === 'inventaris-gudang') {
+            $folder->loadCount(['inventarisGudangs as items_count']);
+        } elseif ($jenis === 'sarana-prasarana') {
+            $folder->loadCount(['saranaPrasaranas as items_count']);
         } else {
             $folder->loadCount('items');
         }
@@ -180,7 +198,7 @@ class FolderInventarisController extends Controller
 
         // 2. Query active trashed folders
         $jenis = $request->query('jenis');
-        $query = FolderInventaris::onlyTrashed();
+        $query = FolderInventaris::onlyTrashed()->with('sumberDana');
 
         if ($jenis) {
             $query->where('jenis', $jenis);

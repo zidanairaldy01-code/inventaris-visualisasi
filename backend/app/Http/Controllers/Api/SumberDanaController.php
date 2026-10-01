@@ -16,9 +16,30 @@ class SumberDanaController extends Controller
             ->withSum('daftarBelanjas as total_belanja', 'jumlah')
             ->withSum('daftarBelanjas as total_unit', 'volume')
             ->with(['folderInventaris' => function ($q) {
-                $q->withCount('daftarBelanjas as items_count');
+                $q->withCount([
+                    'items as inventaris_count',
+                    'daftarBelanjas as belanja_count',
+                    'inventarisGudangs as gudang_count',
+                    'saranaPrasaranas as sarana_count',
+                ])->withSum('daftarBelanjas as total_belanja', 'jumlah');
             }])
             ->get();
+
+        $data->each(function ($sumber) {
+            if ($sumber->folderInventaris) {
+                $sumber->folderInventaris->each(function ($folder) {
+                    $folder->items_count = match ($folder->jenis) {
+                        'inventaris'         => (int) $folder->inventaris_count,
+                        'inventaris-belanja' => (int) $folder->belanja_count,
+                        'sarana-prasarana'   => (int) $folder->sarana_count,
+                        'inventaris-gudang'  => (int) $folder->gudang_count,
+                        default              => (int) $folder->inventaris_count,
+                    };
+                    $folder->total_belanja = (float) ($folder->total_belanja ?? 0);
+                });
+            }
+        });
+
         return response()->json($data);
     }
 
@@ -66,9 +87,28 @@ class SumberDanaController extends Controller
             ->withSum('daftarBelanjas as total_belanja', 'jumlah')
             ->withSum('daftarBelanjas as total_unit', 'volume')
             ->with(['folderInventaris' => function ($q) {
-                $q->withCount('daftarBelanjas as items_count');
+                $q->withCount([
+                    'items as inventaris_count',
+                    'daftarBelanjas as belanja_count',
+                    'inventarisGudangs as gudang_count',
+                    'saranaPrasaranas as sarana_count',
+                ])->withSum('daftarBelanjas as total_belanja', 'jumlah');
             }])
             ->findOrFail($id);
+
+        if ($sumberDana->folderInventaris) {
+            $sumberDana->folderInventaris->each(function ($folder) {
+                $folder->items_count = match ($folder->jenis) {
+                    'inventaris'         => (int) $folder->inventaris_count,
+                    'inventaris-belanja' => (int) $folder->belanja_count,
+                    'sarana-prasarana'   => (int) $folder->sarana_count,
+                    'inventaris-gudang'  => (int) $folder->gudang_count,
+                    default              => (int) $folder->inventaris_count,
+                };
+                $folder->total_belanja = (float) ($folder->total_belanja ?? 0);
+            });
+        }
+
         return response()->json($sumberDana);
     }
 

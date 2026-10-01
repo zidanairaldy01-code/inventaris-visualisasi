@@ -31,6 +31,19 @@ class InventarisGudangController extends Controller
             });
         }
 
+        if ($request->has('id_sumber_dana')) {
+            $idSumberDana = $request->query('id_sumber_dana');
+            if ($idSumberDana === 'null' || $idSumberDana === 'general') {
+                $query->whereHas('folder', function ($q) {
+                    $q->whereNull('id_sumber_dana');
+                });
+            } elseif (is_numeric($idSumberDana)) {
+                $query->whereHas('folder', function ($q) use ($idSumberDana) {
+                    $q->where('id_sumber_dana', $idSumberDana);
+                });
+            }
+        }
+
         $items = $query->orderBy('created_at', 'desc')->get();
 
         return response()->json([

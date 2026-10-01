@@ -163,11 +163,21 @@ class ServisController extends Controller
         ]);
 
         if ($request->hasFile('foto_kerusakan')) {
+            // Ada file baru — hapus file lama lalu simpan yang baru
             if ($servis->foto_kerusakan) {
                 Storage::disk('public')->delete($servis->foto_kerusakan);
             }
             $path = $request->file('foto_kerusakan')->store('servis/kerusakan', 'public');
             $validated['foto_kerusakan'] = $path;
+        } elseif ($request->input('hapus_foto') == '1') {
+            // User sengaja menghapus foto tanpa menggantinya
+            if ($servis->foto_kerusakan) {
+                Storage::disk('public')->delete($servis->foto_kerusakan);
+            }
+            $validated['foto_kerusakan'] = null;
+        } else {
+            // Tidak ada perubahan foto — pertahankan foto yang sudah ada
+            unset($validated['foto_kerusakan']);
         }
 
         // Check if status changed to "Selesai"

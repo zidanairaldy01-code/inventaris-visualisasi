@@ -25,7 +25,15 @@ interface CustomFolder {
   deleted_at?: string | null;
   days_remaining?: number;
   sisa_hari?: number;
+  id_sumber_dana?: number | null;
+  sumber_dana?: { id: number; nama_sumber: string; jenis_sumber: string | null } | null;
   items?: any[];
+}
+
+interface SumberDana {
+  id: number;
+  nama_sumber: string;
+  jenis_sumber: string | null;
 }
 
 interface InventarisItem {
@@ -312,7 +320,8 @@ export default function CustomInventarisDrivePage() {
   // Folder CRUD modal
   const [showFolderModal, setShowFolderModal] = useState(false);
   const [editFolderTarget, setEditFolderTarget] = useState<CustomFolder | null>(null);
-  const [folderForm, setFolderForm] = useState({ nama_folder: '', keterangan: '', warna: 'blue' });
+  const [folderForm, setFolderForm] = useState({ nama_folder: '', keterangan: '', warna: 'blue', id_sumber_dana: null as number | null });
+  const [sumberDanaList, setSumberDanaList] = useState<SumberDana[]>([]);
   const [savingFolder, setSavingFolder] = useState(false);
   const [deleteFolderTarget, setDeleteFolderTarget] = useState<CustomFolder | null>(null);
   const [deletingFolder, setDeletingFolder] = useState(false);
@@ -406,10 +415,22 @@ export default function CustomInventarisDrivePage() {
     } catch (e) { console.error(e); } finally { setLoadingTrash(false); }
   }, []);
 
+  /* ── Fetch Sumber Dana List ── */
+  const fetchSumberDana = useCallback(async () => {
+    try {
+      const res = await axios.get('/api/sumber-danas');
+      const list = Array.isArray(res.data) ? res.data : (res.data?.data ?? []);
+      setSumberDanaList(list);
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
+
   useEffect(() => {
     fetchFolders();
     fetchTrashFolders();
-  }, [fetchFolders, fetchTrashFolders]);
+    fetchSumberDana();
+  }, [fetchFolders, fetchTrashFolders, fetchSumberDana]);
 
   useEffect(() => {
     fetchData(activeFolderId);
@@ -436,14 +457,14 @@ export default function CustomInventarisDrivePage() {
   /* ── FOLDER CRUD HANDLERS ── */
   const openCreateFolder = () => {
     setEditFolderTarget(null);
-    setFolderForm({ nama_folder: '', keterangan: '', warna: 'blue' });
+    setFolderForm({ nama_folder: '', keterangan: '', warna: 'blue', id_sumber_dana: null });
     setShowFolderModal(true);
   };
 
   const openEditFolder = (f: CustomFolder, e: React.MouseEvent) => {
     e.stopPropagation();
     setEditFolderTarget(f);
-    setFolderForm({ nama_folder: f.nama_folder, keterangan: f.keterangan || '', warna: f.warna || 'blue' });
+    setFolderForm({ nama_folder: f.nama_folder, keterangan: f.keterangan || '', warna: f.warna || 'blue', id_sumber_dana: f.id_sumber_dana ?? null });
     setShowFolderModal(true);
   };
 
@@ -451,7 +472,13 @@ export default function CustomInventarisDrivePage() {
     if (!folderForm.nama_folder.trim()) { showToast('Nama folder wajib diisi', 'error'); return; }
     try {
       setSavingFolder(true);
-      const payload = { ...folderForm, jenis: 'inventaris' };
+      const payload = {
+        nama_folder: folderForm.nama_folder.trim(),
+        keterangan: folderForm.keterangan?.trim() || null,
+        warna: folderForm.warna,
+        jenis: 'inventaris',
+        id_sumber_dana: folderForm.id_sumber_dana || null,
+      };
       if (editFolderTarget) {
         await axios.put(`/api/folder-inventaris/${editFolderTarget.id}`, payload);
         showToast('Folder berhasil diperbarui', 'success');
@@ -816,6 +843,15 @@ export default function CustomInventarisDrivePage() {
                 <FolderOpen className="h-4 w-4 text-indigo-600" />
                 <span>{activeFolderTitle}</span>
               </div>
+              {/* Badge sumber dana folder aktif */}
+              {activeFolderObj?.sumber_dana && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-teal-100 text-teal-700 border border-teal-200">
+                  💰 {activeFolderObj.sumber_dana.nama_sumber}
+                  {activeFolderObj.sumber_dana.jenis_sumber && (
+                    <span className="opacity-70">({activeFolderObj.sumber_dana.jenis_sumber})</span>
+                  )}
+                </span>
+              )}
             </>
           )}
         </div>
@@ -940,6 +976,12 @@ export default function CustomInventarisDrivePage() {
                       <h3 className={`font-bold text-base ${color.text} group-hover:underline line-clamp-1`}>
                         {f.nama_folder}
                       </h3>
+                      {/* Badge Sumber Dana */}
+                      {f.sumber_dana && (
+                        <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-teal-100 text-teal-700 border border-teal-200">
+                          💰 {f.sumber_dana.nama_sumber}
+                        </span>
+                      )}
                       {f.keterangan && <p className="text-xs text-slate-500 truncate mt-0.5">{f.keterangan}</p>}
                       <div className="mt-3 space-y-1 pt-2 border-t border-black/5">
                         <p className="text-xs text-slate-600 flex items-center justify-between">
@@ -1183,6 +1225,31 @@ export default function CustomInventarisDrivePage() {
                 />
               </div>
 
+              {/* Sumber Dana */}
+              <div>
+                <label className="block text-xs font-semibold text-teal-700 mb-1 flex items-center gap-1">
+                  💰 Sumber Dana
+                  <span className="text-slate-400 font-normal">(opsional)</span>
+                </label>
+                <select
+                  value={folderForm.id_sumber_dana ?? ''}
+                  onChange={e => setFolderForm(f => ({ ...f, id_sumber_dana: e.target.value ? Number(e.target.value) : null }))}
+                  className="w-full border border-teal-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 bg-teal-50"
+                >
+                  <option value="">-- Tidak ada / Pilih Sumber Dana --</option>
+                  {sumberDanaList.map(sd => (
+                    <option key={sd.id} value={sd.id}>
+                      {sd.nama_sumber}{sd.jenis_sumber ? ` (${sd.jenis_sumber})` : ''}
+                    </option>
+                  ))}
+                </select>
+                {folderForm.id_sumber_dana && (
+                  <p className="text-[11px] text-teal-600 mt-1">
+                    ✓ Folder ini terhubung dengan sumber dana ini
+                  </p>
+                )}
+              </div>
+
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Keterangan / Deskripsi</label>
                 <textarea
@@ -1420,6 +1487,11 @@ export default function CustomInventarisDrivePage() {
                       <div className="w-12 h-12 rounded-xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600"><Folder className="h-6 w-6" /></div>
                       <div>
                         <h3 className="text-base font-bold text-slate-800">{viewingTrashFolder.nama_folder}</h3>
+                        {viewingTrashFolder.sumber_dana && (
+                          <span className="inline-flex items-center gap-1 mt-0.5 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-teal-100 text-teal-700 border border-teal-200">
+                            💰 {viewingTrashFolder.sumber_dana.nama_sumber}
+                          </span>
+                        )}
                         <p className="text-xs text-slate-500 mt-0.5">{viewingTrashFolder.keterangan || 'Tidak ada keterangan'}</p>
                       </div>
                     </div>
@@ -1515,6 +1587,9 @@ export default function CustomInventarisDrivePage() {
                                   <div className="p-3 bg-rose-50 text-rose-600 rounded-xl border border-rose-100 shadow-sm"><Folder className="h-6 w-6" /></div>
                                   <div>
                                     <h4 className="font-bold text-sm text-slate-800 line-clamp-1">{f.nama_folder}</h4>
+                                    {f.sumber_dana && (
+                                      <p className="text-[11px] text-teal-700 font-medium">💰 {f.sumber_dana.nama_sumber}</p>
+                                    )}
                                     <p className="text-[11px] text-slate-400">Dihapus: {deletedDateStr}</p>
                                   </div>
                                 </div>

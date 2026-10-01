@@ -21,7 +21,16 @@ interface CustomFolder {
   keterangan?: string;
   warna?: string;
   items_count?: number;
+  total_belanja?: number | null;
   created_at?: string;
+  id_sumber_dana?: number | null;
+  sumber_dana?: { id: number; nama_sumber: string; jenis_sumber: string | null } | null;
+}
+
+interface SumberDana {
+  id: number;
+  nama_sumber: string;
+  jenis_sumber: string | null;
 }
 
 interface GudangItem {
@@ -107,6 +116,14 @@ const parseDate = (cell: unknown): string => {
 
 const fmtDate = (d: string) =>
   new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+
+const formatRupiahShort = (n: number) => {
+  if (!n || isNaN(n)) return 'Rp 0';
+  if (n >= 1_000_000_000) return `Rp ${(n / 1_000_000_000).toFixed(1)} M`;
+  if (n >= 1_000_000) return `Rp ${(n / 1_000_000).toFixed(1)} Jt`;
+  if (n >= 1_000) return `Rp ${(n / 1_000).toFixed(0)} Rb`;
+  return `Rp ${n}`;
+};
 
 const folderColorMap: Record<string, { bg: string; border: string; text: string; iconBg: string }> = {
   blue:    { bg: 'bg-blue-50 hover:bg-blue-100/80',    border: 'border-blue-200',    text: 'text-blue-800',    iconBg: 'bg-blue-600' },
@@ -396,7 +413,8 @@ export default function InventarisGudangPage() {
   // Folder CRUD modal
   const [showFolderModal, setShowFolderModal] = useState(false);
   const [editFolderTarget, setEditFolderTarget] = useState<CustomFolder | null>(null);
-  const [folderForm, setFolderForm] = useState({ nama_folder: '', keterangan: '', warna: 'emerald' });
+  const [folderForm, setFolderForm] = useState({ nama_folder: '', keterangan: '', warna: 'emerald', id_sumber_dana: null as number | null });
+  const [sumberDanaList, setSumberDanaList] = useState<SumberDana[]>([]);
   const [savingFolder, setSavingFolder] = useState(false);
   const [deleteFolderTarget, setDeleteFolderTarget] = useState<CustomFolder | null>(null);
   const [deletingFolder, setDeletingFolder] = useState(false);
@@ -467,9 +485,21 @@ export default function InventarisGudangPage() {
     } catch { /* ignore */ } finally { setLoading(false); }
   }, [activeFolderId]);
 
+  /* ── Fetch Sumber Dana List ── */
+  const fetchSumberDana = useCallback(async () => {
+    try {
+      const res = await axios.get('/api/sumber-danas');
+      const list = Array.isArray(res.data) ? res.data : (res.data?.data ?? []);
+      setSumberDanaList(list);
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
+
   useEffect(() => {
     fetchFolders();
-  }, [fetchFolders]);
+    fetchSumberDana();
+  }, [fetchFolders, fetchSumberDana]);
 
   useEffect(() => {
     fetchData(activeFolderId);
@@ -496,14 +526,14 @@ export default function InventarisGudangPage() {
   /* ── FOLDER CRUD HANDLERS ── */
   const openCreateFolder = () => {
     setEditFolderTarget(null);
-    setFolderForm({ nama_folder: '', keterangan: '', warna: 'emerald' });
+    setFolderForm({ nama_folder: '', keterangan: '', warna: 'emerald', id_sumber_dana: null });
     setShowFolderModal(true);
   };
 
   const openEditFolder = (f: CustomFolder, e: React.MouseEvent) => {
     e.stopPropagation();
     setEditFolderTarget(f);
-    setFolderForm({ nama_folder: f.nama_folder, keterangan: f.keterangan || '', warna: f.warna || 'emerald' });
+    setFolderForm({ nama_folder: f.nama_folder, keterangan: f.keterangan || '', warna: f.warna || 'emerald', id_sumber_dana: f.id_sumber_dana ?? null });
     setShowFolderModal(true);
   };
 
@@ -511,7 +541,13 @@ export default function InventarisGudangPage() {
     if (!folderForm.nama_folder.trim()) { showToast('Nama folder wajib diisi', 'error'); return; }
     try {
       setSavingFolder(true);
-      const payload = { ...folderForm, jenis: 'inventaris-gudang' };
+      const payload = {
+        nama_folder: folderForm.nama_folder.trim(),
+        keterangan: folderForm.keterangan?.trim() || null,
+        warna: folderForm.warna,
+        jenis: 'inventaris-gudang',
+        id_sumber_dana: folderForm.id_sumber_dana || null,
+      };
       if (editFolderTarget) {
         await axios.put(`/api/folder-inventaris/${editFolderTarget.id}`, payload);
         showToast('Folder gudang berhasil diperbarui', 'success');
@@ -895,6 +931,15 @@ export default function InventarisGudangPage() {
                 <FolderOpen className="h-4 w-4 text-emerald-600" />
                 <span>{activeFolderTitle}</span>
               </div>
+              {/* Badge sumber dana folder aktif */}
+              {activeFolderObj?.sumber_dana && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-teal-100 text-teal-700 border border-teal-200">
+                  💰 {activeFolderObj.sumber_dana.nama_sumber}
+                  {activeFolderObj.sumber_dana.jenis_sumber && (
+                    <span className="opacity-70">({activeFolderObj.sumber_dana.jenis_sumber})</span>
+                  )}
+                </span>
+              )}
             </>
           )}
         </div>
@@ -1001,6 +1046,7 @@ export default function InventarisGudangPage() {
                 const color = folderColorMap[colorKey] || folderColorMap.emerald;
                 const folderItems = data.filter(item => Number(item.id_folder) === f.id);
                 const totalStokInFolder = folderItems.reduce((sum, item) => sum + (item.stok_akhir || 0), 0);
+                const folderTotalPembelanjaan = Number(f.total_belanja ?? 0);
 
                 return (
                   <div
@@ -1034,6 +1080,12 @@ export default function InventarisGudangPage() {
                       <h3 className={`font-bold text-base ${color.text} group-hover:underline line-clamp-1`}>
                         {f.nama_folder}
                       </h3>
+                      {/* Badge Sumber Dana */}
+                      {f.sumber_dana && (
+                        <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-teal-100 text-teal-700 border border-teal-200">
+                          💰 {f.sumber_dana.nama_sumber}
+                        </span>
+                      )}
                       {f.keterangan && <p className="text-xs text-slate-500 truncate mt-0.5">{f.keterangan}</p>}
                       <div className="mt-3 space-y-1 pt-2 border-t border-black/5">
                         <p className="text-xs text-slate-600 flex items-center justify-between">
@@ -1044,6 +1096,10 @@ export default function InventarisGudangPage() {
                           <span className="font-bold text-emerald-700 bg-emerald-100/60 px-2 py-0.5 rounded">
                             {totalStokInFolder} Unit
                           </span>
+                        </p>
+                        <p className="text-xs font-bold text-emerald-800 flex items-center justify-between bg-emerald-100/60 px-2.5 py-1 rounded-lg border border-emerald-200/60">
+                          <span>Total Belanja:</span>
+                          <span>{formatRupiahShort(folderTotalPembelanjaan)}</span>
                         </p>
                       </div>
                     </div>
@@ -1305,6 +1361,31 @@ export default function InventarisGudangPage() {
                   placeholder="Misal: Material Bangunan, Perkakas Bengkel, Bahan DKV..."
                   className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
+              </div>
+
+              {/* Sumber Dana */}
+              <div>
+                <label className="block text-xs font-semibold text-teal-700 mb-1 flex items-center gap-1">
+                  💰 Sumber Dana
+                  <span className="text-slate-400 font-normal">(opsional)</span>
+                </label>
+                <select
+                  value={folderForm.id_sumber_dana ?? ''}
+                  onChange={e => setFolderForm(f => ({ ...f, id_sumber_dana: e.target.value ? Number(e.target.value) : null }))}
+                  className="w-full border border-teal-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 bg-teal-50"
+                >
+                  <option value="">-- Tidak ada / Pilih Sumber Dana --</option>
+                  {sumberDanaList.map(sd => (
+                    <option key={sd.id} value={sd.id}>
+                      {sd.nama_sumber}{sd.jenis_sumber ? ` (${sd.jenis_sumber})` : ''}
+                    </option>
+                  ))}
+                </select>
+                {folderForm.id_sumber_dana && (
+                  <p className="text-[11px] text-teal-600 mt-1">
+                    ✓ Folder ini terhubung dengan sumber dana ini
+                  </p>
+                )}
               </div>
 
               <div>

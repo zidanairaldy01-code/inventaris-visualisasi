@@ -1,15 +1,15 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import axios from '@/lib/axios';
 import {
   Briefcase, Search, Plus, Edit2, Trash2, RefreshCw,
   X, Save, AlertTriangle, ChevronLeft, ChevronRight,
-  Wallet, ClipboardList, Package, CheckCircle2,
+  Wallet, ClipboardList, Package,
   Folder, FolderOpen, ArrowLeft, Grid, List as ListIcon,
-  HardDrive, FolderPlus, Layers, TrendingUp, ChevronRight as ChevronRightIcon,
-  CheckSquare
+  HardDrive, FolderPlus, TrendingUp, ChevronRight as ChevronRightIcon,
+  ShoppingCart, FileText, Warehouse, CheckSquare
 } from 'lucide-react';
 import Toast from '@/components/Toast';
 
@@ -19,7 +19,9 @@ interface CustomFolder {
   nama_folder: string;
   keterangan?: string;
   warna?: string;
+  jenis?: string; // 'inventaris' | 'inventaris-belanja' | 'inventaris-gudang' | 'sarana-prasarana'
   items_count?: number;
+  total_belanja?: number | null;
   id_sumber_dana?: number | null;
   created_at?: string;
 }
@@ -56,6 +58,23 @@ interface BelanjaItem {
   created_at: string;
 }
 
+interface RekapOrGudangItem {
+  id: number;
+  tanggal_pengambilan: string | null;
+  kode: string;
+  nama_barang: string;
+  satuan: string;
+  stok_awal: number;
+  stok_masuk: number;
+  stok_keluar: number;
+  stok_akhir: number;
+  keterangan: string | null;
+  id_folder: number | null;
+  id_sumber_dana?: number | null;
+  folder?: CustomFolder | null;
+  created_at: string;
+}
+
 type FormData = {
   nama_sumber: string;
   jenis_sumber: string;
@@ -81,7 +100,7 @@ const JENIS_OPTIONS = [
 ];
 
 const jenisBadgeColor: Record<string, string> = {
-  BOS:          'bg-blue-100 text-blue-700 border border-blue-200',
+  BOS:            'bg-blue-100 text-blue-700 border border-blue-200',
   'Dana Sekolah': 'bg-emerald-100 text-emerald-700 border border-emerald-200',
   APBD:         'bg-purple-100 text-purple-700 border border-purple-200',
   APBN:         'bg-indigo-100 text-indigo-700 border border-indigo-200',
@@ -119,6 +138,45 @@ const getFolderColor = (jenis: string | null) => {
   return jenisFolderBg[key] ?? jenisFolderBg['Lainnya'];
 };
 
+export const getFolderModuleInfo = (jenis?: string) => {
+  switch (jenis) {
+    case 'inventaris':
+      return {
+        label: 'Rekap Belanja',
+        shortLabel: 'Rekap Belanja',
+        badge: 'bg-indigo-100 text-indigo-700 border border-indigo-200',
+        badgeSolid: 'bg-indigo-600 text-white',
+        dot: 'bg-indigo-500',
+        icon: FileText,
+        color: 'indigo',
+        sidebarHref: '/dashboard/inventaris/rekap-belanja',
+      };
+    case 'inventaris-gudang':
+      return {
+        label: 'Inventaris Gudang',
+        shortLabel: 'Inventaris Gudang',
+        badge: 'bg-amber-100 text-amber-800 border border-amber-200',
+        badgeSolid: 'bg-amber-600 text-white',
+        dot: 'bg-amber-500',
+        icon: Warehouse,
+        color: 'amber',
+        sidebarHref: '/dashboard/inventaris/gudang',
+      };
+    case 'inventaris-belanja':
+    default:
+      return {
+        label: 'Daftar Belanja',
+        shortLabel: 'Daftar Belanja',
+        badge: 'bg-emerald-100 text-emerald-800 border border-emerald-200',
+        badgeSolid: 'bg-emerald-600 text-white',
+        dot: 'bg-emerald-500',
+        icon: ShoppingCart,
+        color: 'emerald',
+        sidebarHref: '/dashboard/inventaris/belanja',
+      };
+  }
+};
+
 const formatRupiah = (n: number) =>
   new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n || 0);
 
@@ -132,6 +190,16 @@ const formatRupiahShort = (n: number) => {
 
 const getItemJumlah = (item: BelanjaItem): number =>
   Number(item.jumlah) || Number(item.volume) * Number(item.tarif_harga) || 0;
+
+const getHargaSatuanRekap = (item: RekapOrGudangItem): number => {
+  if (!item.keterangan) return 0;
+  const match = item.keterangan.match(/Harga Satuan:\s*Rp\s*([\d.,]+)/i);
+  if (match && match[1]) {
+    const clean = match[1].replace(/\./g, '').replace(',', '.');
+    return parseFloat(clean) || 0;
+  }
+  return 0;
+};
 
 /* ══════════════════════ MAIN COMPONENT ══════════════════════ */
 export default function SumberDanaPage() {
@@ -147,12 +215,26 @@ export default function SumberDanaPage() {
 
   // Navigation State
   const [activeSumberDanaId, setActiveSumberDanaId] = useState<number | null>(null);
-  const [activeBelanjaFolderId, setActiveBelanjaFolderId] = useState<number | null | -1>(null);
+  const [activeFolderId, setActiveFolderId] = useState<number | null>(null);
 
   // Sub-data for active Sumber Dana
   const [subFolders, setSubFolders] = useState<CustomFolder[]>([]);
-  const [subItems, setSubItems] = useState<BelanjaItem[]>([]);
+  const [subBelanjaItems, setSubBelanjaItems] = useState<BelanjaItem[]>([]);
+  const [subRekapItems, setSubRekapItems] = useState<RekapOrGudangItem[]>([]);
+  const [subGudangItems, setSubGudangItems] = useState<RekapOrGudangItem[]>([]);
   const [subLoading, setSubLoading] = useState(false);
+
+  // All items untuk menghitung total per card sumber dana di root view
+  const [allBelanjaItems, setAllBelanjaItems] = useState<BelanjaItem[]>([]);
+  const [allRekapItems, setAllRekapItems] = useState<RekapOrGudangItem[]>([]);
+
+  // Filters inside active Sumber Dana
+  const [subFolderModuleFilter, setSubFolderModuleFilter] = useState<'all' | 'inventaris-belanja' | 'inventaris' | 'inventaris-gudang'>('all');
+  const [rootTab, setRootTab] = useState<'belanja' | 'rekap' | 'gudang'>('belanja');
+
+  // Modal folder selection filter & search
+  const [modalModuleFilter, setModalModuleFilter] = useState<'all' | 'inventaris-belanja' | 'inventaris' | 'inventaris-gudang'>('all');
+  const [modalFolderSearch, setModalFolderSearch] = useState('');
 
   // Pagination for tables
   const [page, setPage] = useState(1);
@@ -176,12 +258,26 @@ export default function SumberDanaPage() {
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await axios.get('/api/sumber-danas');
-      const list: SumberDana[] = Array.isArray(res.data)
-        ? res.data
-        : (res.data.data ?? []);
+      const [resSumber, resBelanja, resRekap, resFolders] = await Promise.all([
+        axios.get('/api/sumber-danas'),
+        axios.get('/api/daftar-belanja'),
+        axios.get('/api/inventaris'),
+        axios.get('/api/folder-inventaris?jenis=inventaris,inventaris-belanja,inventaris-gudang'),
+      ]);
+      const list: SumberDana[] = Array.isArray(resSumber.data)
+        ? resSumber.data
+        : (resSumber.data.data ?? []);
       setData(list);
       setFiltered(list);
+      if (resBelanja.data?.status === 'success') {
+        setAllBelanjaItems(resBelanja.data.data || []);
+      }
+      if (resRekap.data?.status === 'success') {
+        setAllRekapItems(resRekap.data.data || []);
+      }
+      if (resFolders.data?.status === 'success') {
+        setAvailableFolders(resFolders.data.data || []);
+      }
     } catch {
       showToast('Gagal memuat data sumber dana', 'error');
     } finally {
@@ -189,12 +285,12 @@ export default function SumberDanaPage() {
     }
   }, [showToast]);
 
-  /* ── Fetch Available Belanja Folders for Dropdown ── */
+  /* ── Fetch Available Folders across all 3 modules ── */
   const fetchAvailableFolders = useCallback(async () => {
     try {
-      const res = await axios.get('/api/folder-inventaris?jenis=inventaris-belanja');
-      if (res.data.status === 'success') {
-        setAvailableFolders(res.data.data);
+      const res = await axios.get('/api/folder-inventaris?jenis=inventaris,inventaris-belanja,inventaris-gudang');
+      if (res.data?.status === 'success') {
+        setAvailableFolders(res.data.data || []);
       }
     } catch (e) {
       console.error(e);
@@ -210,14 +306,24 @@ export default function SumberDanaPage() {
   const fetchSubData = useCallback(async (sumberId: number) => {
     try {
       setSubLoading(true);
-      const resFolders = await axios.get(`/api/folder-inventaris?jenis=inventaris-belanja&id_sumber_dana=${sumberId}`);
-      if (resFolders.data.status === 'success') {
-        setSubFolders(resFolders.data.data);
-      }
+      const [resFolders, resBelanja, resRekap, resGudang] = await Promise.all([
+        axios.get(`/api/folder-inventaris?id_sumber_dana=${sumberId}`),
+        axios.get(`/api/daftar-belanja?id_sumber_dana=${sumberId}`),
+        axios.get(`/api/inventaris?id_sumber_dana=${sumberId}`),
+        axios.get(`/api/inventaris-gudang?id_sumber_dana=${sumberId}`),
+      ]);
 
-      const resItems = await axios.get(`/api/daftar-belanja?id_sumber_dana=${sumberId}`);
-      if (resItems.data.status === 'success') {
-        setSubItems(resItems.data.data);
+      if (resFolders.data?.status === 'success') {
+        setSubFolders(resFolders.data.data || []);
+      }
+      if (resBelanja.data?.status === 'success') {
+        setSubBelanjaItems(resBelanja.data.data || []);
+      }
+      if (resRekap.data?.status === 'success') {
+        setSubRekapItems(resRekap.data.data || []);
+      }
+      if (resGudang.data?.status === 'success') {
+        setSubGudangItems(resGudang.data.data || []);
       }
     } catch (e) {
       console.error(e);
@@ -230,6 +336,8 @@ export default function SumberDanaPage() {
   useEffect(() => {
     if (activeSumberDanaId !== null) {
       fetchSubData(activeSumberDanaId);
+      setActiveFolderId(null);
+      setSubFolderModuleFilter('all');
     }
   }, [activeSumberDanaId, fetchSubData]);
 
@@ -248,17 +356,38 @@ export default function SumberDanaPage() {
   /* ── Summary ── */
   const totalBarang  = data.reduce((s, d) => s + (d.daftar_belanjas_count ?? 0), 0);
   const totalUnit    = data.reduce((s, d) => s + (Number(d.total_unit) || 0), 0);
-  const totalFolderBelanja = data.reduce((s, d) => s + (d.folder_inventaris_count ?? 0), 0);
-  const totalNilaiPembelanjaan = data.reduce((s, d) => s + Number(d.total_belanja ?? 0), 0);
+
+  // Hitung total belanja per sumber dana dari daftar belanja (sesuai banner dalam view)
+  const getTotalBelanjaSumber = useCallback((sumberId: number): number => {
+    // Kumpulkan id folder yang terhubung ke sumber dana ini
+    const folderIdsOfSumber = availableFolders
+      .filter(f => f.id_sumber_dana === sumberId)
+      .map(f => f.id);
+
+    // Daftar Belanja: filter by id_sumber_dana ATAU by id_folder milik sumber dana ini
+    return allBelanjaItems
+      .filter(i =>
+        i.id_sumber_dana === sumberId ||
+        (i.id_folder !== null && folderIdsOfSumber.includes(i.id_folder))
+      )
+      .reduce((s, i) => s + getItemJumlah(i), 0);
+  }, [allBelanjaItems, availableFolders]);
+
+  const totalNilaiPembelanjaan = useMemo(
+    () => data.reduce((s, d) => s + getTotalBelanjaSumber(d.id), 0),
+    [data, getTotalBelanjaSumber],
+  );
 
   /* ── Active Objects ── */
   const activeSumberDanaObj = data.find(s => s.id === activeSumberDanaId);
-  const activeBelanjaFolderObj = subFolders.find(f => f.id === activeBelanjaFolderId);
+  const activeFolderObj = subFolders.find(f => f.id === activeFolderId);
 
   /* ── CRUD Handlers ── */
   const openAdd = () => {
     setEditTarget(null);
     setFormData(emptyForm());
+    setModalModuleFilter('all');
+    setModalFolderSearch('');
     setShowFormModal(true);
   };
 
@@ -277,6 +406,8 @@ export default function SumberDanaPage() {
       keterangan:   item.keterangan ?? '',
       folder_ids:   uniqueFolderIds,
     });
+    setModalModuleFilter('all');
+    setModalFolderSearch('');
     setShowFormModal(true);
   };
 
@@ -303,6 +434,9 @@ export default function SumberDanaPage() {
       setShowFormModal(false);
       fetchData();
       fetchAvailableFolders();
+      if (activeSumberDanaId) {
+        fetchSubData(activeSumberDanaId);
+      }
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
@@ -322,6 +456,7 @@ export default function SumberDanaPage() {
       setDeleteTarget(null);
       if (activeSumberDanaId === deleteTarget.id) {
         setActiveSumberDanaId(null);
+        setActiveFolderId(null);
       }
       fetchData();
       fetchAvailableFolders();
@@ -335,18 +470,42 @@ export default function SumberDanaPage() {
     }
   };
 
-  /* ── Pagination ── */
+  /* ── Filtered Sub Folders in Active View ── */
+  const displayedSubFolders = useMemo(() => {
+    if (subFolderModuleFilter === 'all') return subFolders;
+    return subFolders.filter(f => f.jenis === subFolderModuleFilter);
+  }, [subFolders, subFolderModuleFilter]);
+
+  /* ── Items filtering for active folder ── */
+  const activeFolderBelanjaItems = useMemo(() => {
+    if (!activeFolderId) return [];
+    return subBelanjaItems.filter(i => i.id_folder === activeFolderId);
+  }, [activeFolderId, subBelanjaItems]);
+
+  const activeFolderRekapItems = useMemo(() => {
+    if (!activeFolderId) return [];
+    return subRekapItems.filter(i => i.id_folder === activeFolderId);
+  }, [activeFolderId, subRekapItems]);
+
+  const activeFolderGudangItems = useMemo(() => {
+    if (!activeFolderId) return [];
+    return subGudangItems.filter(i => i.id_folder === activeFolderId);
+  }, [activeFolderId, subGudangItems]);
+
+  const totalBelanjaBiaya = subBelanjaItems.reduce((acc, item) => acc + getItemJumlah(item), 0);
+
+  /* ── Filtered Available Folders in Modal ── */
+  const filteredModalFolders = useMemo(() => {
+    return availableFolders.filter(f => {
+      const matchModule = modalModuleFilter === 'all' || f.jenis === modalModuleFilter;
+      const matchSearch = !modalFolderSearch.trim() || f.nama_folder.toLowerCase().includes(modalFolderSearch.toLowerCase());
+      return matchModule && matchSearch;
+    });
+  }, [availableFolders, modalModuleFilter, modalFolderSearch]);
+
+  /* ── Pagination for Table Mode ── */
   const totalPages = Math.ceil(filtered.length / PER_PAGE);
   const paged = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
-
-  // Items filtering for sub-view inside active Sumber Dana
-  const displayedSubItems = activeBelanjaFolderId === null
-    ? subItems
-    : (activeBelanjaFolderId === -1
-        ? subItems.filter(i => !i.id_folder)
-        : subItems.filter(i => i.id_folder === activeBelanjaFolderId));
-
-  const totalSubJumlah = displayedSubItems.reduce((acc, item) => acc + getItemJumlah(item), 0);
 
   /* ═══════════ RENDER ═══════════ */
   return (
@@ -371,17 +530,17 @@ export default function SumberDanaPage() {
               <div className="flex items-center gap-2">
                 <h1 className="text-3xl font-extrabold text-white tracking-tight">Sumber Dana Drive</h1>
                 <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-white/20 text-white backdrop-blur-sm border border-white/20">
-                  Modul Pendanaan
+                  Modul Terintegrasi
                 </span>
               </div>
               <p className="text-emerald-100 text-sm mt-1">
-                Jelajahi folder dan barang inventaris belanja berdasarkan kategori Sumber Dana (BOS, APBD, Komite, dll)
+                Jelajahi folder &amp; barang inventaris dari <strong>Rekap Belanja</strong>, <strong>Daftar Belanja</strong>, dan <strong>Inventaris Gudang</strong> berdasarkan Sumber Dana
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => { setActiveSumberDanaId(null); setViewMode('drive'); }}
+              onClick={() => { setActiveSumberDanaId(null); setActiveFolderId(null); setViewMode('drive'); }}
               className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
                 activeSumberDanaId === null && viewMode === 'drive'
                   ? 'bg-white text-emerald-800 shadow-md'
@@ -391,7 +550,7 @@ export default function SumberDanaPage() {
               <Grid className="h-4 w-4" /> Drive Folders
             </button>
             <button
-              onClick={() => { setActiveSumberDanaId(null); setViewMode('table'); }}
+              onClick={() => { setActiveSumberDanaId(null); setActiveFolderId(null); setViewMode('table'); }}
               className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
                 viewMode === 'table'
                   ? 'bg-white text-emerald-800 shadow-md'
@@ -414,7 +573,7 @@ export default function SumberDanaPage() {
       <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 flex-wrap">
           <button
-            onClick={() => { setActiveSumberDanaId(null); setActiveBelanjaFolderId(null); }}
+            onClick={() => { setActiveSumberDanaId(null); setActiveFolderId(null); }}
             className="flex items-center gap-1.5 hover:text-emerald-600 transition-colors bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg text-slate-700"
           >
             <HardDrive className="h-4 w-4 text-emerald-600" />
@@ -425,9 +584,9 @@ export default function SumberDanaPage() {
             <>
               <ChevronRightIcon className="h-4 w-4 text-slate-400" />
               <button
-                onClick={() => setActiveBelanjaFolderId(null)}
+                onClick={() => setActiveFolderId(null)}
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-bold transition-colors ${
-                  activeBelanjaFolderId === null
+                  activeFolderId === null
                     ? 'bg-emerald-100 border border-emerald-200 text-emerald-800'
                     : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
                 }`}
@@ -438,17 +597,22 @@ export default function SumberDanaPage() {
             </>
           )}
 
-          {activeBelanjaFolderId !== null && (
+          {activeFolderId !== null && activeFolderObj && (
             <>
               <ChevronRightIcon className="h-4 w-4 text-slate-400" />
-              <div className="flex items-center gap-2 bg-indigo-50 border border-indigo-200 px-3 py-1.5 rounded-lg text-indigo-700 font-bold">
-                <FolderOpen className="h-4 w-4 text-indigo-600" />
-                <span>
-                  {activeBelanjaFolderId === -1
-                    ? 'Barang Tanpa Folder'
-                    : (activeBelanjaFolderObj?.nama_folder || 'Folder Belanja')}
-                </span>
-              </div>
+              {(() => {
+                const mod = getFolderModuleInfo(activeFolderObj.jenis);
+                const ModIcon = mod.icon;
+                return (
+                  <div className="flex items-center gap-2 bg-indigo-50 border border-indigo-200 px-3 py-1.5 rounded-lg text-indigo-800 font-bold">
+                    <ModIcon className="h-4 w-4 text-indigo-600" />
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${mod.badge}`}>
+                      {mod.label}
+                    </span>
+                    <span>{activeFolderObj.nama_folder}</span>
+                  </div>
+                );
+              })()}
             </>
           )}
         </div>
@@ -456,8 +620,8 @@ export default function SumberDanaPage() {
         {activeSumberDanaId !== null && (
           <button
             onClick={() => {
-              if (activeBelanjaFolderId !== null) {
-                setActiveBelanjaFolderId(null);
+              if (activeFolderId !== null) {
+                setActiveFolderId(null);
               } else {
                 setActiveSumberDanaId(null);
               }
@@ -535,7 +699,7 @@ export default function SumberDanaPage() {
               <FolderPlus className="h-12 w-12 text-slate-300 mx-auto mb-3" />
               <h3 className="text-base font-bold text-slate-700 mb-1">Belum Ada Folder Sumber Dana</h3>
               <p className="text-xs text-slate-500 max-w-sm mx-auto mb-4">
-                Tambahkan sumber dana seperti BOS, APBD, Dana Sekolah untuk mulai mengelompokkan belanja.
+                Tambahkan sumber dana seperti BOS, APBD, Dana Sekolah untuk mulai mengelompokkan belanja dan inventaris.
               </p>
               <button
                 onClick={openAdd}
@@ -548,7 +712,7 @@ export default function SumberDanaPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {filtered.map(sumber => {
                 const color = getFolderColor(sumber.jenis_sumber);
-                const nominalBelanja = Number(sumber.total_belanja ?? 0);
+                const nominalBelanja = getTotalBelanjaSumber(sumber.id);
 
                 return (
                   <div
@@ -598,10 +762,10 @@ export default function SumberDanaPage() {
                       <div className="mt-4 space-y-1.5 pt-3 border-t border-black/5">
                         <div className="flex items-center justify-between text-xs text-slate-600">
                           <span className="flex items-center gap-1">
-                            <ClipboardList className="h-3.5 w-3.5 text-indigo-600" /> Jenis Barang:
+                            <ClipboardList className="h-3.5 w-3.5 text-indigo-600" /> Terhubung:
                           </span>
                           <span className="font-bold text-indigo-800 bg-indigo-100/60 px-2 py-0.5 rounded">
-                            {sumber.daftar_belanjas_count ?? 0} jenis ({sumber.folder_inventaris_count ?? 0} folder)
+                            {sumber.folder_inventaris_count ?? 0} folder
                           </span>
                         </div>
 
@@ -641,16 +805,19 @@ export default function SumberDanaPage() {
                 <Wallet className="h-7 w-7 text-teal-700" />
               </div>
               <div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <h2 className="text-xl font-bold text-slate-900">{activeSumberDanaObj.nama_sumber}</h2>
                   {activeSumberDanaObj.jenis_sumber && (
                     <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${getJenisBadge(activeSumberDanaObj.jenis_sumber)}`}>
                       {activeSumberDanaObj.jenis_sumber}
                     </span>
                   )}
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+                    {subFolders.length} Folder Terhubung
+                  </span>
                 </div>
                 <p className="text-xs text-slate-500 mt-1">
-                  {activeSumberDanaObj.keterangan || 'Menampilkan folder belanja dan data barang yang didanai oleh sumber ini.'}
+                  {activeSumberDanaObj.keterangan || 'Menampilkan folder dari Rekap Belanja, Daftar Belanja, dan Gudang yang didanai oleh sumber ini.'}
                 </p>
               </div>
             </div>
@@ -658,7 +825,7 @@ export default function SumberDanaPage() {
             <div className="flex items-center gap-3 bg-teal-50 border border-teal-200/80 px-4 py-3 rounded-xl">
               <div>
                 <p className="text-[10px] uppercase tracking-wide font-bold text-teal-800">Total Pembelanjaan</p>
-                <p className="text-lg font-extrabold text-teal-900">{formatRupiah(totalSubJumlah)}</p>
+                <p className="text-lg font-extrabold text-teal-900">{formatRupiah(totalBelanjaBiaya)}</p>
               </div>
               <TrendingUp className="h-5 w-5 text-teal-600 ml-2" />
             </div>
@@ -671,45 +838,99 @@ export default function SumberDanaPage() {
             </div>
           ) : (
             <>
-              {/* SECTION 1: Folder Belanja terhubung ke Sumber Dana ini */}
+              {/* ────────────────── SECTION 1: FOLDER TERHUBUNG ────────────────── */}
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between flex-wrap gap-2">
                   <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
                     <Folder className="h-4 w-4 text-amber-500" />
-                    Folder Belanja Terhubung ({subFolders.length})
+                    Folder Terhubung ({subFolders.length})
                   </h3>
+
+                  {/* Module Filter Tabs */}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {[
+                      { key: 'all', label: 'Semua', count: subFolders.length },
+                      { key: 'inventaris-belanja', label: '🛒 Daftar Belanja', count: subFolders.filter(f => f.jenis === 'inventaris-belanja').length },
+                      { key: 'inventaris', label: '📋 Rekap Belanja', count: subFolders.filter(f => f.jenis === 'inventaris').length },
+                      { key: 'inventaris-gudang', label: '📦 Gudang', count: subFolders.filter(f => f.jenis === 'inventaris-gudang').length },
+                    ].map(tab => (
+                      <button
+                        key={tab.key}
+                        onClick={() => setSubFolderModuleFilter(tab.key as any)}
+                        className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                          subFolderModuleFilter === tab.key
+                            ? 'bg-slate-800 text-white shadow-sm'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        }`}
+                      >
+                        {tab.label} ({tab.count})
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
-                {subFolders.length === 0 ? (
+                {displayedSubFolders.length === 0 ? (
                   <div className="bg-slate-50 rounded-xl border border-dashed border-slate-200 p-6 text-center text-xs text-slate-500">
-                    Belum ada folder belanja khusus yang dihubungkan ke sumber dana ini.
+                    Belum ada folder terhubung pada kategori ini. Pilih sumber dana ini saat membuat folder di Rekap Belanja, Daftar Belanja, atau Inventaris Gudang.
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                    {subFolders.map(f => {
+                    {displayedSubFolders.map(f => {
                       const colorKey = f.warna || 'blue';
                       const color = folderColorMap[colorKey] || folderColorMap.blue;
-                      const fItems = subItems.filter(i => i.id_folder === f.id);
-                      const fTotal = fItems.reduce((acc, i) => acc + getItemJumlah(i), 0);
+                      const mod = getFolderModuleInfo(f.jenis);
+                      const isSelected = activeFolderId === f.id;
+
+                      // Hitung total belanja berdasarkan jenis folder dari data items yang sudah di-load
+                      const folderTotal = (() => {
+                        if (f.jenis === 'inventaris-belanja') {
+                          return subBelanjaItems
+                            .filter(i => i.id_folder === f.id)
+                            .reduce((s, i) => s + getItemJumlah(i), 0);
+                        }
+                        if (f.jenis === 'inventaris') {
+                          return subRekapItems
+                            .filter(i => i.id_folder === f.id)
+                            .reduce((s, i) => s + (i.stok_awal || 0) * getHargaSatuanRekap(i), 0);
+                        }
+                        // gudang: tidak ada harga per item, gunakan withSum dari backend
+                        return Number(f.total_belanja ?? 0);
+                      })();
 
                       return (
                         <div
                           key={f.id}
-                          onClick={() => setActiveBelanjaFolderId(f.id)}
-                          className={`${color.bg} border ${color.border} rounded-xl p-4 cursor-pointer transition-all duration-200 hover:-translate-y-1 hover:shadow-md group`}
+                          onClick={() => setActiveFolderId(isSelected ? null : f.id)}
+                          className={`${color.bg} border ${isSelected ? 'ring-2 ring-emerald-500 border-emerald-500 shadow-md' : color.border} rounded-2xl p-5 cursor-pointer transition-all duration-200 hover:-translate-y-1 hover:shadow-lg group relative overflow-hidden`}
                         >
-                          <div className="flex items-center gap-3">
-                            <div className={`p-2.5 ${color.iconBg} rounded-lg text-white shadow-sm group-hover:scale-105 transition-transform`}>
-                              <FolderOpen className="h-5 w-5" />
+                          <div className="flex items-start justify-between mb-3">
+                            <div className={`p-3 ${color.iconBg} rounded-xl text-white shadow-md group-hover:scale-110 transition-transform`}>
+                              <FolderOpen className="h-6 w-6" />
                             </div>
-                            <div className="overflow-hidden flex-1">
-                              <h4 className={`font-bold text-sm ${color.text} truncate group-hover:underline`}>
-                                {f.nama_folder}
-                              </h4>
-                              <div className="flex items-center justify-between text-[11px] text-slate-600 mt-1">
-                                <span>{f.items_count ?? fItems.length} item</span>
-                                <span className="font-bold text-emerald-800">{formatRupiahShort(fTotal)}</span>
-                              </div>
+                            {/* Module type badge top-right */}
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${mod.badge}`}>
+                              {mod.label}
+                            </span>
+                          </div>
+
+                          <div>
+                            <h3 className={`font-bold text-base ${color.text} group-hover:underline line-clamp-1`}>
+                              {f.nama_folder}
+                            </h3>
+                            {f.keterangan && (
+                              <p className="text-xs text-slate-500 truncate mt-0.5">{f.keterangan}</p>
+                            )}
+                            <div className="mt-3 space-y-1 pt-2 border-t border-black/5">
+                              <p className="text-xs text-slate-600 flex items-center justify-between">
+                                <span className="flex items-center gap-1">
+                                  <Package className="h-3.5 w-3.5 text-slate-400" />
+                                  <span className="font-semibold text-slate-700">{f.items_count ?? 0}</span> barang
+                                </span>
+                              </p>
+                              <p className="text-xs font-bold text-emerald-800 flex items-center justify-between bg-emerald-100/60 px-2.5 py-1 rounded-lg border border-emerald-200/60">
+                                <span>Total Belanja:</span>
+                                <span>{formatRupiahShort(folderTotal)}</span>
+                              </p>
                             </div>
                           </div>
                         </div>
@@ -719,78 +940,387 @@ export default function SumberDanaPage() {
                 )}
               </div>
 
-              {/* SECTION 2: Tabel Barang Belanja Terhubung */}
-              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden space-y-0">
-                <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between flex-wrap gap-2">
-                  <div>
-                    <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
-                      <ClipboardList className="h-4 w-4 text-emerald-600" />
-                      Daftar Barang Belanja — {activeSumberDanaObj.nama_sumber}
-                    </h3>
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      {displayedSubItems.length} item terdaftar untuk sumber dana ini
-                    </p>
+              {/* ────────────────── SECTION 2: DETAIL ISI FOLDER / BARANG ────────────────── */}
+              {activeFolderId !== null && activeFolderObj ? (
+                /* Focused view for single folder */
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden space-y-0">
+                  <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-3">
+                      {(() => {
+                        const mod = getFolderModuleInfo(activeFolderObj.jenis);
+                        const ModIcon = mod.icon;
+                        return (
+                          <div className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-700 shadow-xs">
+                            <ModIcon className="h-5 w-5 text-emerald-600" />
+                          </div>
+                        );
+                      })()}
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-base font-bold text-slate-800">
+                            Isi Folder: {activeFolderObj.nama_folder}
+                          </h3>
+                          {(() => {
+                            const mod = getFolderModuleInfo(activeFolderObj.jenis);
+                            return (
+                              <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold ${mod.badge}`}>
+                                🏷️ {mod.label}
+                              </span>
+                            );
+                          })()}
+                        </div>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          {activeFolderObj.keterangan || `Barang dari modul ${getFolderModuleInfo(activeFolderObj.jenis).label}`}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setActiveFolderId(null)}
+                      className="px-3 py-1.5 text-xs font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors flex items-center gap-1.5"
+                    >
+                      <X className="h-3.5 w-3.5" /> Tutup Fokus Folder
+                    </button>
                   </div>
-                </div>
 
-                {displayedSubItems.length === 0 ? (
-                  <div className="p-12 text-center">
-                    <ClipboardList className="h-10 w-10 text-slate-300 mx-auto mb-2" />
-                    <p className="text-sm font-semibold text-slate-600">Belum Ada Barang Belanja</p>
-                    <p className="text-xs text-slate-400 mt-1">Belum ada barang di daftar belanja yang diset ke sumber dana ini.</p>
+                  {/* Render Table based on folder jenis */}
+                  {activeFolderObj.jenis === 'inventaris-belanja' && (
+                    <div className="overflow-x-auto">
+                      {activeFolderBelanjaItems.length === 0 ? (
+                        <div className="p-12 text-center text-slate-400 text-xs">
+                          Belum ada item belanja di folder ini.
+                        </div>
+                      ) : (
+                        <table className="w-full text-sm">
+                          <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs font-bold uppercase">
+                            <tr>
+                              <th className="px-4 py-3 text-left">No. Urut</th>
+                              <th className="px-4 py-3 text-left">Kode Rekening</th>
+                              <th className="px-4 py-3 text-left">Kode Program</th>
+                              <th className="px-4 py-3 text-left">Uraian Barang</th>
+                              <th className="px-4 py-3 text-center">Volume</th>
+                              <th className="px-4 py-3 text-center">Satuan</th>
+                              <th className="px-4 py-3 text-right">Tarif Harga</th>
+                              <th className="px-4 py-3 text-right">Total Belanja</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {activeFolderBelanjaItems.map((item, idx) => (
+                              <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
+                                <td className="px-4 py-3 text-xs text-slate-500">{item.no_urut ?? idx + 1}</td>
+                                <td className="px-4 py-3 font-mono text-xs text-indigo-700 font-semibold">{item.kode_rekening || '-'}</td>
+                                <td className="px-4 py-3 font-mono text-xs text-slate-600">{item.kode_program || '-'}</td>
+                                <td className="px-4 py-3">
+                                  <div className="font-semibold text-slate-900">{item.uraian}</div>
+                                  {item.keterangan && <div className="text-xs text-slate-400 truncate max-w-xs">{item.keterangan}</div>}
+                                </td>
+                                <td className="px-4 py-3 text-center font-bold text-blue-700 text-xs">{item.volume}</td>
+                                <td className="px-4 py-3 text-center text-xs text-slate-600">{item.satuan}</td>
+                                <td className="px-4 py-3 text-right text-xs text-emerald-700 font-semibold whitespace-nowrap">{formatRupiah(Number(item.tarif_harga))}</td>
+                                <td className="px-4 py-3 text-right text-xs text-indigo-700 font-bold whitespace-nowrap">{formatRupiah(getItemJumlah(item))}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      )}
+                    </div>
+                  )}
+
+                  {activeFolderObj.jenis === 'inventaris' && (
+                    <div className="overflow-x-auto">
+                      {activeFolderRekapItems.length === 0 ? (
+                        <div className="p-12 text-center text-slate-400 text-xs">
+                          Belum ada item rekap belanja di folder ini.
+                        </div>
+                      ) : (
+                        <table className="w-full text-sm">
+                          <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs font-bold uppercase">
+                            <tr>
+                              <th className="px-4 py-3 text-left">No</th>
+                              <th className="px-4 py-3 text-left">Tanggal</th>
+                              <th className="px-4 py-3 text-left">Kode Barang</th>
+                              <th className="px-4 py-3 text-left">Nama Barang</th>
+                              <th className="px-4 py-3 text-center">Satuan</th>
+                              <th className="px-4 py-3 text-center">Stok Awal</th>
+                              <th className="px-4 py-3 text-center">Masuk</th>
+                              <th className="px-4 py-3 text-center">Keluar</th>
+                              <th className="px-4 py-3 text-center text-indigo-700">Stok Akhir</th>
+                              <th className="px-4 py-3 text-left">Keterangan</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {activeFolderRekapItems.map((item, idx) => (
+                              <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
+                                <td className="px-4 py-3 text-xs text-slate-500">{idx + 1}</td>
+                                <td className="px-4 py-3 text-xs text-slate-600 whitespace-nowrap">{item.tanggal_pengambilan || '-'}</td>
+                                <td className="px-4 py-3 font-mono text-xs text-indigo-700 font-semibold">{item.kode || '-'}</td>
+                                <td className="px-4 py-3 font-semibold text-slate-900">{item.nama_barang}</td>
+                                <td className="px-4 py-3 text-center text-xs text-slate-600">{item.satuan || '-'}</td>
+                                <td className="px-4 py-3 text-center text-xs text-slate-500">{item.stok_awal}</td>
+                                <td className="px-4 py-3 text-center text-xs text-emerald-600 font-semibold">+{item.stok_masuk}</td>
+                                <td className="px-4 py-3 text-center text-xs text-rose-600 font-semibold">-{item.stok_keluar}</td>
+                                <td className="px-4 py-3 text-center text-xs font-extrabold text-indigo-700 bg-indigo-50/40">{item.stok_akhir}</td>
+                                <td className="px-4 py-3 text-xs text-slate-500 max-w-xs truncate">{item.keterangan || '-'}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      )}
+                    </div>
+                  )}
+
+                  {activeFolderObj.jenis === 'inventaris-gudang' && (
+                    <div className="overflow-x-auto">
+                      {activeFolderGudangItems.length === 0 ? (
+                        <div className="p-12 text-center text-slate-400 text-xs">
+                          Belum ada item inventaris gudang di folder ini.
+                        </div>
+                      ) : (
+                        <table className="w-full text-sm">
+                          <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs font-bold uppercase">
+                            <tr>
+                              <th className="px-4 py-3 text-left">No</th>
+                              <th className="px-4 py-3 text-left">Tanggal</th>
+                              <th className="px-4 py-3 text-left">Kode Barang</th>
+                              <th className="px-4 py-3 text-left">Nama Barang</th>
+                              <th className="px-4 py-3 text-center">Satuan</th>
+                              <th className="px-4 py-3 text-center">Stok Awal</th>
+                              <th className="px-4 py-3 text-center">Masuk</th>
+                              <th className="px-4 py-3 text-center">Keluar</th>
+                              <th className="px-4 py-3 text-center text-amber-700">Stok Akhir</th>
+                              <th className="px-4 py-3 text-left">Keterangan</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {activeFolderGudangItems.map((item, idx) => (
+                              <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
+                                <td className="px-4 py-3 text-xs text-slate-500">{idx + 1}</td>
+                                <td className="px-4 py-3 text-xs text-slate-600 whitespace-nowrap">{item.tanggal_pengambilan || '-'}</td>
+                                <td className="px-4 py-3 font-mono text-xs text-amber-700 font-semibold">{item.kode || '-'}</td>
+                                <td className="px-4 py-3 font-semibold text-slate-900">{item.nama_barang}</td>
+                                <td className="px-4 py-3 text-center text-xs text-slate-600">{item.satuan || '-'}</td>
+                                <td className="px-4 py-3 text-center text-xs text-slate-500">{item.stok_awal}</td>
+                                <td className="px-4 py-3 text-center text-xs text-emerald-600 font-semibold">+{item.stok_masuk}</td>
+                                <td className="px-4 py-3 text-center text-xs text-rose-600 font-semibold">-{item.stok_keluar}</td>
+                                <td className="px-4 py-3 text-center text-xs font-extrabold text-amber-700 bg-amber-50/40">{item.stok_akhir}</td>
+                                <td className="px-4 py-3 text-xs text-slate-500 max-w-xs truncate">{item.keterangan || '-'}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* Root view inside Sumber Dana: Tabs for all items */
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                  <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between flex-wrap gap-3">
+                    <div>
+                      <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
+                        <ClipboardList className="h-4 w-4 text-emerald-600" />
+                        Daftar Semua Barang — {activeSumberDanaObj.nama_sumber}
+                      </h3>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Lihat seluruh barang yang didanai sumber ini berdasarkan modul asalnya atau klik salah satu folder di atas.
+                      </p>
+                    </div>
+
+                    {/* Root Module Tabs */}
+                    <div className="flex items-center gap-2 bg-slate-200/60 p-1 rounded-xl">
+                      <button
+                        onClick={() => setRootTab('belanja')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                          rootTab === 'belanja'
+                            ? 'bg-white text-emerald-800 shadow-xs'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        <ShoppingCart className="h-3.5 w-3.5" />
+                        Daftar Belanja ({subBelanjaItems.length})
+                      </button>
+                      <button
+                        onClick={() => setRootTab('rekap')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                          rootTab === 'rekap'
+                            ? 'bg-white text-indigo-800 shadow-xs'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        <FileText className="h-3.5 w-3.5" />
+                        Rekap Belanja ({subRekapItems.length})
+                      </button>
+                      <button
+                        onClick={() => setRootTab('gudang')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                          rootTab === 'gudang'
+                            ? 'bg-white text-amber-800 shadow-xs'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        <Warehouse className="h-3.5 w-3.5" />
+                        Gudang ({subGudangItems.length})
+                      </button>
+                    </div>
                   </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="bg-slate-50 border-b border-slate-200">
-                        <tr>
-                          <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider text-left">No. Urut</th>
-                          <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider text-left">Folder</th>
-                          <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider text-left">Kode Rekening</th>
-                          <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider text-left">Kode Program</th>
-                          <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider text-left">Uraian</th>
-                          <th className="px-4 py-3 text-xs font-bold text-blue-700 uppercase tracking-wider text-center">Volume</th>
-                          <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Satuan</th>
-                          <th className="px-4 py-3 text-xs font-bold text-emerald-700 uppercase tracking-wider text-right">Tarif Harga</th>
-                          <th className="px-4 py-3 text-xs font-bold text-indigo-700 uppercase tracking-wider text-right">Jumlah</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {displayedSubItems.map((item, idx) => (
-                          <tr key={item.id} className="hover:bg-teal-50/40 transition-colors">
-                            <td className="px-4 py-3 text-xs text-slate-500">{item.no_urut ?? idx + 1}</td>
-                            <td className="px-4 py-3 text-xs font-medium text-slate-700">
-                              {item.folder ? (
-                                <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded font-semibold border border-indigo-100 flex items-center gap-1 w-fit text-[11px]">
-                                  <Folder className="h-3 w-3" /> {item.folder.nama_folder}
-                                </span>
-                              ) : (
-                                <span className="px-2 py-0.5 bg-slate-100 text-slate-500 rounded text-[11px]">Tanpa Folder</span>
-                              )}
-                            </td>
-                            <td className="px-4 py-3">
-                              <span className="font-mono text-xs bg-slate-100 text-indigo-700 border border-slate-200 px-2 py-0.5 rounded font-semibold">{item.kode_rekening || '-'}</span>
-                            </td>
-                            <td className="px-4 py-3 text-slate-600 text-xs font-mono whitespace-nowrap">{item.kode_program || '-'}</td>
-                            <td className="px-4 py-3">
-                              <div className="font-semibold text-slate-900">{item.uraian}</div>
-                              {item.keterangan && <div className="text-xs text-slate-400 truncate max-w-[250px]">{item.keterangan}</div>}
-                            </td>
-                            <td className="px-4 py-3 text-center font-bold text-blue-700 text-xs">{item.volume}</td>
-                            <td className="px-4 py-3 text-center text-xs text-slate-600">{item.satuan}</td>
-                            <td className="px-4 py-3 text-right font-semibold text-emerald-700 text-xs whitespace-nowrap">
-                              {formatRupiah(Number(item.tarif_harga))}
-                            </td>
-                            <td className="px-4 py-3 text-right font-bold text-indigo-700 text-xs whitespace-nowrap">
-                              {formatRupiah(getItemJumlah(item))}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
+
+                  {/* Tab 1: Belanja */}
+                  {rootTab === 'belanja' && (
+                    <div className="overflow-x-auto">
+                      {subBelanjaItems.length === 0 ? (
+                        <div className="p-12 text-center text-slate-400 text-xs">
+                          Belum ada barang di Daftar Belanja untuk sumber dana ini.
+                        </div>
+                      ) : (
+                        <table className="w-full text-sm">
+                          <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs font-bold uppercase">
+                            <tr>
+                              <th className="px-4 py-3 text-left">No</th>
+                              <th className="px-4 py-3 text-left">Folder</th>
+                              <th className="px-4 py-3 text-left">Kode Rekening</th>
+                              <th className="px-4 py-3 text-left">Uraian Barang</th>
+                              <th className="px-4 py-3 text-center">Volume</th>
+                              <th className="px-4 py-3 text-center">Satuan</th>
+                              <th className="px-4 py-3 text-right">Tarif Harga</th>
+                              <th className="px-4 py-3 text-right">Total</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {subBelanjaItems.map((item, idx) => (
+                              <tr key={item.id} className="hover:bg-teal-50/30 transition-colors">
+                                <td className="px-4 py-3 text-xs text-slate-500">{item.no_urut ?? idx + 1}</td>
+                                <td className="px-4 py-3 text-xs">
+                                  {item.folder ? (
+                                    <span
+                                      onClick={() => setActiveFolderId(item.folder!.id)}
+                                      className="px-2 py-0.5 bg-emerald-50 text-emerald-800 rounded font-semibold border border-emerald-200 inline-flex items-center gap-1 cursor-pointer hover:underline text-[11px]"
+                                    >
+                                      📁 {item.folder.nama_folder}
+                                    </span>
+                                  ) : (
+                                    <span className="text-slate-400 text-[11px]">Tanpa Folder</span>
+                                  )}
+                                </td>
+                                <td className="px-4 py-3 font-mono text-xs text-indigo-700 font-semibold">{item.kode_rekening || '-'}</td>
+                                <td className="px-4 py-3 font-semibold text-slate-900">{item.uraian}</td>
+                                <td className="px-4 py-3 text-center font-bold text-blue-700 text-xs">{item.volume}</td>
+                                <td className="px-4 py-3 text-center text-xs text-slate-600">{item.satuan}</td>
+                                <td className="px-4 py-3 text-right text-xs text-emerald-700 font-semibold whitespace-nowrap">{formatRupiah(Number(item.tarif_harga))}</td>
+                                <td className="px-4 py-3 text-right text-xs text-indigo-700 font-bold whitespace-nowrap">{formatRupiah(getItemJumlah(item))}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Tab 2: Rekap */}
+                  {rootTab === 'rekap' && (
+                    <div className="overflow-x-auto">
+                      {subRekapItems.length === 0 ? (
+                        <div className="p-12 text-center text-slate-400 text-xs">
+                          Belum ada barang di Rekap Belanja yang terhubung ke sumber dana ini.
+                        </div>
+                      ) : (
+                        <table className="w-full text-sm">
+                          <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs font-bold uppercase">
+                            <tr>
+                              <th className="px-4 py-3 text-left">No</th>
+                              <th className="px-4 py-3 text-left">Folder</th>
+                              <th className="px-4 py-3 text-left">Tanggal</th>
+                              <th className="px-4 py-3 text-left">Kode Barang</th>
+                              <th className="px-4 py-3 text-left">Nama Barang</th>
+                              <th className="px-4 py-3 text-center">Satuan</th>
+                              <th className="px-4 py-3 text-center">Masuk</th>
+                              <th className="px-4 py-3 text-center">Keluar</th>
+                              <th className="px-4 py-3 text-center text-indigo-700">Stok Akhir</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {subRekapItems.map((item, idx) => (
+                              <tr key={item.id} className="hover:bg-indigo-50/30 transition-colors">
+                                <td className="px-4 py-3 text-xs text-slate-500">{idx + 1}</td>
+                                <td className="px-4 py-3 text-xs">
+                                  {item.folder ? (
+                                    <span
+                                      onClick={() => setActiveFolderId(item.folder!.id)}
+                                      className="px-2 py-0.5 bg-indigo-50 text-indigo-800 rounded font-semibold border border-indigo-200 inline-flex items-center gap-1 cursor-pointer hover:underline text-[11px]"
+                                    >
+                                      📁 {item.folder.nama_folder}
+                                    </span>
+                                  ) : (
+                                    <span className="text-slate-400 text-[11px]">Tanpa Folder</span>
+                                  )}
+                                </td>
+                                <td className="px-4 py-3 text-xs text-slate-600 whitespace-nowrap">{item.tanggal_pengambilan || '-'}</td>
+                                <td className="px-4 py-3 font-mono text-xs text-indigo-700 font-semibold">{item.kode || '-'}</td>
+                                <td className="px-4 py-3 font-semibold text-slate-900">{item.nama_barang}</td>
+                                <td className="px-4 py-3 text-center text-xs text-slate-600">{item.satuan || '-'}</td>
+                                <td className="px-4 py-3 text-center text-xs text-emerald-600 font-semibold">+{item.stok_masuk}</td>
+                                <td className="px-4 py-3 text-center text-xs text-rose-600 font-semibold">-{item.stok_keluar}</td>
+                                <td className="px-4 py-3 text-center text-xs font-extrabold text-indigo-700 bg-indigo-50/40">{item.stok_akhir}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Tab 3: Gudang */}
+                  {rootTab === 'gudang' && (
+                    <div className="overflow-x-auto">
+                      {subGudangItems.length === 0 ? (
+                        <div className="p-12 text-center text-slate-400 text-xs">
+                          Belum ada barang di Inventaris Gudang yang terhubung ke sumber dana ini.
+                        </div>
+                      ) : (
+                        <table className="w-full text-sm">
+                          <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs font-bold uppercase">
+                            <tr>
+                              <th className="px-4 py-3 text-left">No</th>
+                              <th className="px-4 py-3 text-left">Folder</th>
+                              <th className="px-4 py-3 text-left">Tanggal</th>
+                              <th className="px-4 py-3 text-left">Kode Barang</th>
+                              <th className="px-4 py-3 text-left">Nama Barang</th>
+                              <th className="px-4 py-3 text-center">Satuan</th>
+                              <th className="px-4 py-3 text-center">Masuk</th>
+                              <th className="px-4 py-3 text-center">Keluar</th>
+                              <th className="px-4 py-3 text-center text-amber-700">Stok Akhir</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {subGudangItems.map((item, idx) => (
+                              <tr key={item.id} className="hover:bg-amber-50/30 transition-colors">
+                                <td className="px-4 py-3 text-xs text-slate-500">{idx + 1}</td>
+                                <td className="px-4 py-3 text-xs">
+                                  {item.folder ? (
+                                    <span
+                                      onClick={() => setActiveFolderId(item.folder!.id)}
+                                      className="px-2 py-0.5 bg-amber-50 text-amber-800 rounded font-semibold border border-amber-200 inline-flex items-center gap-1 cursor-pointer hover:underline text-[11px]"
+                                    >
+                                      📁 {item.folder.nama_folder}
+                                    </span>
+                                  ) : (
+                                    <span className="text-slate-400 text-[11px]">Tanpa Folder</span>
+                                  )}
+                                </td>
+                                <td className="px-4 py-3 text-xs text-slate-600 whitespace-nowrap">{item.tanggal_pengambilan || '-'}</td>
+                                <td className="px-4 py-3 font-mono text-xs text-amber-700 font-semibold">{item.kode || '-'}</td>
+                                <td className="px-4 py-3 font-semibold text-slate-900">{item.nama_barang}</td>
+                                <td className="px-4 py-3 text-center text-xs text-slate-600">{item.satuan || '-'}</td>
+                                <td className="px-4 py-3 text-center text-xs text-emerald-600 font-semibold">+{item.stok_masuk}</td>
+                                <td className="px-4 py-3 text-center text-xs text-rose-600 font-semibold">-{item.stok_keluar}</td>
+                                <td className="px-4 py-3 text-center text-xs font-extrabold text-amber-700 bg-amber-50/40">{item.stok_akhir}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </>
           )}
         </div>
@@ -863,7 +1393,7 @@ export default function SumberDanaPage() {
                       <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Nama Sumber Dana</th>
                       <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Jenis</th>
                       <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Keterangan</th>
-                      <th className="text-center px-4 py-3 text-xs font-semibold text-indigo-700 uppercase tracking-wider">Jenis Barang</th>
+                      <th className="text-center px-4 py-3 text-xs font-semibold text-indigo-700 uppercase tracking-wider">Folder Terhubung</th>
                       <th className="text-center px-4 py-3 text-xs font-semibold text-blue-700 uppercase tracking-wider">Jumlah Unit</th>
                       <th className="text-center px-4 py-3 text-xs font-semibold text-teal-700 uppercase tracking-wider">Total Belanja</th>
                       <th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Aksi</th>
@@ -899,10 +1429,10 @@ export default function SumberDanaPage() {
                           {item.keterangan || <span className="text-slate-300">-</span>}
                         </td>
                         <td className="px-4 py-3 text-center">
-                          <span className={`inline-flex items-center justify-center px-2 py-0.5 rounded-lg text-xs font-bold ${
-                            item.daftar_belanjas_count > 0 ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-400'
+                          <span className={`inline-flex items-center justify-center px-2.5 py-0.5 rounded-lg text-xs font-bold ${
+                            item.folder_inventaris_count > 0 ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-400'
                           }`}>
-                            {item.daftar_belanjas_count} jenis
+                            {item.folder_inventaris_count} folder
                           </span>
                         </td>
                         <td className="px-4 py-3 text-center">
@@ -1048,25 +1578,62 @@ export default function SumberDanaPage() {
                 </select>
               </div>
 
-              {/* Selection of Belanja Folders / Files */}
+              {/* Selection of Folders from Inventaris Modules */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center justify-between">
-                  <span className="flex items-center gap-1 text-emerald-800">
-                    <Folder className="h-4 w-4 text-emerald-600" /> Pilih Folder / File Daftar Belanja
-                  </span>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-semibold text-slate-700 flex items-center gap-1 text-emerald-800">
+                    <Folder className="h-4 w-4 text-emerald-600" /> Hubungkan Folder Inventaris
+                  </label>
                   <span className="text-[10px] text-emerald-600 font-bold px-2 py-0.5 bg-emerald-50 rounded-full border border-emerald-200">
                     {formData.folder_ids.length} dipilih
                   </span>
-                </label>
+                </div>
                 <p className="text-[11px] text-slate-500 mb-2">
-                  Centang folder belanja di bawah ini agar otomatis masuk dan terhubung ke sumber dana ini:
+                  Centang folder dari <strong>Rekap Belanja</strong>, <strong>Daftar Belanja</strong>, atau <strong>Gudang</strong> untuk menghubungkannya ke sumber dana ini:
                 </p>
-                <div className="max-h-44 overflow-y-auto border border-slate-200 rounded-xl p-2 bg-slate-50 space-y-1.5">
-                  {availableFolders.length === 0 ? (
-                    <p className="text-xs text-slate-400 text-center py-4">Belum ada folder belanja terdaftar</p>
+
+                {/* Filter and Search for modal */}
+                <div className="space-y-2 mb-2">
+                  <div className="flex items-center gap-1 overflow-x-auto pb-1">
+                    {[
+                      { key: 'all', label: 'Semua' },
+                      { key: 'inventaris-belanja', label: '🛒 Belanja' },
+                      { key: 'inventaris', label: '📋 Rekap' },
+                      { key: 'inventaris-gudang', label: '📦 Gudang' },
+                    ].map(tab => (
+                      <button
+                        type="button"
+                        key={tab.key}
+                        onClick={() => setModalModuleFilter(tab.key as any)}
+                        className={`px-2.5 py-1 rounded-md text-[11px] font-semibold whitespace-nowrap transition-all ${
+                          modalModuleFilter === tab.key
+                            ? 'bg-emerald-600 text-white shadow-xs'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        }`}
+                      >
+                        {tab.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                    <input
+                      type="text"
+                      value={modalFolderSearch}
+                      onChange={e => setModalFolderSearch(e.target.value)}
+                      placeholder="Cari nama folder..."
+                      className="w-full pl-8 pr-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:ring-1 focus:ring-emerald-500 outline-none bg-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="max-h-48 overflow-y-auto border border-slate-200 rounded-xl p-2 bg-slate-50 space-y-1.5">
+                  {filteredModalFolders.length === 0 ? (
+                    <p className="text-xs text-slate-400 text-center py-4">Tidak ada folder ditemukan</p>
                   ) : (
-                    availableFolders.map(folder => {
+                    filteredModalFolders.map(folder => {
                       const isChecked = formData.folder_ids.includes(folder.id);
+                      const mod = getFolderModuleInfo(folder.jenis);
 
                       return (
                         <label
@@ -1077,7 +1644,7 @@ export default function SumberDanaPage() {
                               : 'bg-white border-slate-200 hover:bg-slate-100 text-slate-700'
                           }`}
                         >
-                          <div className="flex items-center gap-2.5">
+                          <div className="flex items-center gap-2.5 overflow-hidden pr-2">
                             <input
                               type="checkbox"
                               checked={isChecked}
@@ -1088,11 +1655,16 @@ export default function SumberDanaPage() {
                                   setFormData(f => ({ ...f, folder_ids: f.folder_ids.filter(id => id !== folder.id) }));
                                 }
                               }}
-                              className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500 cursor-pointer"
+                              className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500 cursor-pointer flex-shrink-0"
                             />
-                            <span className="truncate font-medium">📁 {folder.nama_folder}</span>
+                            <div className="overflow-hidden">
+                              <span className="truncate block font-medium">📁 {folder.nama_folder}</span>
+                              <span className={`inline-block text-[9px] px-1.5 py-0.2 rounded font-bold mt-0.5 ${mod.badge}`}>
+                                {mod.label}
+                              </span>
+                            </div>
                           </div>
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-bold border border-slate-200">
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-bold border border-slate-200 flex-shrink-0">
                             {folder.items_count ?? 0} item
                           </span>
                         </label>
