@@ -66,10 +66,14 @@ class DaftarBelanjaController extends Controller
 
             // Filter by sumber dana if specified
             if ($request->has('id_sumber_dana')) {
-                if ($request->id_sumber_dana === 'null') {
+                if ($request->id_sumber_dana === 'null' || $request->id_sumber_dana === 'general') {
                     $query->whereNull('id_sumber_dana');
                 } else {
-                    $query->where('id_sumber_dana', $request->id_sumber_dana);
+                    $sId = $request->id_sumber_dana;
+                    $query->where(function ($q) use ($sId) {
+                        $q->where('id_sumber_dana', $sId)
+                          ->orWhereHas('folder', fn($fq) => $fq->where('id_sumber_dana', $sId));
+                    });
                 }
             }
 

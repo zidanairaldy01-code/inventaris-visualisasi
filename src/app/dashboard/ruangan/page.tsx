@@ -1145,7 +1145,7 @@ export default function RuanganWorkshopPage() {
                 <label className="block text-sm font-semibold text-slate-700 mb-1.5">Luas Ruangan (m²)</label>
                 <input
                   type="number"
-                  step="0.1"
+                  step="1"
                   value={ruanganForm.luas_ruangan}
                   onChange={e => setRuanganForm(f => ({ ...f, luas_ruangan: e.target.value }))}
                   placeholder="e.g. 120"

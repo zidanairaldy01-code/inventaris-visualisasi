@@ -13,7 +13,10 @@ return new class extends Migration
     public function up(): void
     {
         // Ubah tipe kolom role agar mendukung super_admin, petugas, wakasek, wakapro
-        DB::statement("ALTER TABLE users MODIFY COLUMN role VARCHAR(50) DEFAULT 'petugas'");
+        // SQLite tidak mendukung MODIFY COLUMN, tapi kolom sudah bertipe TEXT sehingga bisa menyimpan nilai apa pun
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement("ALTER TABLE users MODIFY COLUMN role VARCHAR(50) DEFAULT 'petugas'");
+        }
 
         // Perbarui data yang ada jika masih 'admin' atau 'user'
         DB::table('users')->where('role', 'admin')->update(['role' => 'super_admin']);
@@ -38,6 +41,9 @@ return new class extends Migration
             }
         });
 
-        DB::statement("ALTER TABLE users MODIFY COLUMN role ENUM('admin', 'user') DEFAULT 'user'");
+        // SQLite tidak mendukung MODIFY COLUMN / ENUM
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement("ALTER TABLE users MODIFY COLUMN role ENUM('admin', 'user') DEFAULT 'user'");
+        }
     }
 };

@@ -137,12 +137,12 @@ const getItemJumlah = (item: InventarisItem): number =>
   Number(item.jumlah) || Number(item.volume) * Number(item.tarif_harga) || 0;
 
 const folderColorMap: Record<string, { bg: string; border: string; text: string; iconBg: string }> = {
-  blue:    { bg: 'bg-blue-50 hover:bg-blue-100/80',    border: 'border-blue-200',    text: 'text-blue-800',    iconBg: 'bg-blue-600' },
-  indigo:  { bg: 'bg-indigo-50 hover:bg-indigo-100/80', border: 'border-indigo-200', text: 'text-indigo-800', iconBg: 'bg-indigo-600' },
-  purple:  { bg: 'bg-purple-50 hover:bg-purple-100/80', border: 'border-purple-200', text: 'text-purple-800', iconBg: 'bg-purple-600' },
+  blue: { bg: 'bg-blue-50 hover:bg-blue-100/80', border: 'border-blue-200', text: 'text-blue-800', iconBg: 'bg-blue-600' },
+  indigo: { bg: 'bg-indigo-50 hover:bg-indigo-100/80', border: 'border-indigo-200', text: 'text-indigo-800', iconBg: 'bg-indigo-600' },
+  purple: { bg: 'bg-purple-50 hover:bg-purple-100/80', border: 'border-purple-200', text: 'text-purple-800', iconBg: 'bg-purple-600' },
   emerald: { bg: 'bg-emerald-50 hover:bg-emerald-100/80', border: 'border-emerald-200', text: 'text-emerald-800', iconBg: 'bg-emerald-600' },
-  amber:   { bg: 'bg-amber-50 hover:bg-amber-100/80',  border: 'border-amber-200',   text: 'text-amber-800',   iconBg: 'bg-amber-600' },
-  rose:    { bg: 'bg-rose-50 hover:bg-rose-100/80',   border: 'border-rose-200',    text: 'text-rose-800',    iconBg: 'bg-rose-600' },
+  amber: { bg: 'bg-amber-50 hover:bg-amber-100/80', border: 'border-amber-200', text: 'text-amber-800', iconBg: 'bg-amber-600' },
+  rose: { bg: 'bg-rose-50 hover:bg-rose-100/80', border: 'border-rose-200', text: 'text-rose-800', iconBg: 'bg-rose-600' },
 };
 
 const normCell = (v: unknown): string => String(v ?? '').trim().toLowerCase();
@@ -819,7 +819,7 @@ export default function CustomInventarisDrivePage() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-3xl font-extrabold text-white tracking-tight"> Rekap Belanja</h1>
+                <h1 className="text-3xl font-extrabold text-white tracking-tight"> Daftar Belanja</h1>
                 <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-white/20 text-white backdrop-blur-sm border border-white/20">
                   Modul Belanja & Pengadaan
                 </span>
@@ -839,21 +839,19 @@ export default function CustomInventarisDrivePage() {
             )}
             <button
               onClick={() => { setActiveFolderId(null); setViewMode('folders'); }}
-              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-                activeFolderId === null && viewMode === 'folders'
-                  ? 'bg-white text-indigo-700 shadow-md'
-                  : 'bg-white/10 text-white hover:bg-white/20 backdrop-blur-sm'
-              }`}
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${activeFolderId === null && viewMode === 'folders'
+                ? 'bg-white text-indigo-700 shadow-md'
+                : 'bg-white/10 text-white hover:bg-white/20 backdrop-blur-sm'
+                }`}
             >
               <Grid className="h-4 w-4" /> Daftar Folder
             </button>
             <button
               onClick={() => { setActiveFolderId(null); setViewMode('all'); }}
-              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-                activeFolderId === null && viewMode === 'all'
-                  ? 'bg-white text-indigo-700 shadow-md'
-                  : 'bg-white/10 text-white hover:bg-white/20 backdrop-blur-sm'
-              }`}
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${activeFolderId === null && viewMode === 'all'
+                ? 'bg-white text-indigo-700 shadow-md'
+                : 'bg-white/10 text-white hover:bg-white/20 backdrop-blur-sm'
+                }`}
             >
               <ListIcon className="h-4 w-4" /> Semua Barang
             </button>
@@ -1337,9 +1335,8 @@ export default function CustomInventarisDrivePage() {
                       key={color}
                       type="button"
                       onClick={() => setFolderForm(f => ({ ...f, warna: color }))}
-                      className={`w-7 h-7 rounded-full border-2 transition-transform ${folderColorMap[color].iconBg} ${
-                        folderForm.warna === color ? 'scale-110 border-slate-900 ring-2 ring-indigo-300' : 'border-transparent opacity-80 hover:opacity-100'
-                      }`}
+                      className={`w-7 h-7 rounded-full border-2 transition-transform ${folderColorMap[color].iconBg} ${folderForm.warna === color ? 'scale-110 border-slate-900 ring-2 ring-indigo-300' : 'border-transparent opacity-80 hover:opacity-100'
+                        }`}
                     />
                   ))}
                 </div>
@@ -1484,12 +1481,12 @@ export default function CustomInventarisDrivePage() {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-blue-700 mb-1">Volume</label>
-                  <input type="number" min="0" step="0.01" value={formData.volume} onChange={e => setFormData(f => ({ ...f, volume: e.target.value }))}
+                  <input type="number" min="0" step="1" value={formData.volume} onChange={e => setFormData(f => ({ ...f, volume: e.target.value }))}
                     className="w-full border border-blue-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-blue-50" />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-emerald-700 mb-1">Tarif Harga</label>
-                  <input type="number" min="0" step="0.01" value={formData.tarif_harga} onChange={e => setFormData(f => ({ ...f, tarif_harga: e.target.value }))}
+                  <input type="number" min="0" step="1" value={formData.tarif_harga} onChange={e => setFormData(f => ({ ...f, tarif_harga: e.target.value }))}
                     className="w-full border border-emerald-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-emerald-50" />
                 </div>
                 <div>
@@ -1664,61 +1661,61 @@ export default function CustomInventarisDrivePage() {
                             <th className="px-2 sm:px-3 py-2 sm:py-2.5 text-right font-bold text-indigo-700">Jumlah</th>
                             <th className="px-2 sm:px-3 py-2 sm:py-2.5 text-center font-bold text-slate-600 sticky right-0 bg-slate-100 shadow-[-2px_0_4px_rgba(0,0,0,0.05)]">Aksi</th>
                           </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {previewData.map((row, idx) => {
-                          const isEditing = editingPreviewIdx === idx;
-                          const eRow = editingPreviewRow!;
-                          const totalCalculated = (row.volume || 0) * (row.tarif_harga || 0);
-                          return (
-                            <tr key={idx} className={`transition-colors ${selectedRows.has(idx) ? 'bg-indigo-50/40' : 'hover:bg-slate-50'} ${isEditing ? 'bg-amber-50 ring-2 ring-inset ring-amber-400' : ''}`}>
-                              <td className="px-2 sm:px-3 py-2 text-center sticky left-0 bg-white border-r border-slate-100">
-                                <input type="checkbox" checked={selectedRows.has(idx)} onChange={() => toggleRow(idx)} className="w-3.5 h-3.5 rounded text-indigo-600 cursor-pointer" />
-                              </td>
-                              <td className="px-2 sm:px-3 py-2 text-slate-500 font-medium sticky left-10 bg-white border-r border-slate-100">{idx + 1}</td>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {previewData.map((row, idx) => {
+                            const isEditing = editingPreviewIdx === idx;
+                            const eRow = editingPreviewRow!;
+                            const totalCalculated = (row.volume || 0) * (row.tarif_harga || 0);
+                            return (
+                              <tr key={idx} className={`transition-colors ${selectedRows.has(idx) ? 'bg-indigo-50/40' : 'hover:bg-slate-50'} ${isEditing ? 'bg-amber-50 ring-2 ring-inset ring-amber-400' : ''}`}>
+                                <td className="px-2 sm:px-3 py-2 text-center sticky left-0 bg-white border-r border-slate-100">
+                                  <input type="checkbox" checked={selectedRows.has(idx)} onChange={() => toggleRow(idx)} className="w-3.5 h-3.5 rounded text-indigo-600 cursor-pointer" />
+                                </td>
+                                <td className="px-2 sm:px-3 py-2 text-slate-500 font-medium sticky left-10 bg-white border-r border-slate-100">{idx + 1}</td>
 
-                              {isEditing ? (
-                                <>
-                                  <td className="px-2 py-1"><input value={eRow.kode_program || ''} onChange={e => setEditingPreviewRow(r => r ? { ...r, kode_program: e.target.value } : r)} className="w-24 sm:w-28 border border-amber-300 rounded px-1.5 py-1 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-amber-400" /></td>
-                                  <td className="px-2 py-1"><input value={eRow.kode_rekening || ''} onChange={e => setEditingPreviewRow(r => r ? { ...r, kode_rekening: e.target.value } : r)} className="w-28 sm:w-32 border border-amber-300 rounded px-1.5 py-1 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-amber-400" /></td>
-                                  <td className="px-2 py-1"><input value={eRow.uraian} onChange={e => setEditingPreviewRow(r => r ? { ...r, uraian: e.target.value } : r)} className="w-40 sm:w-48 border border-amber-300 rounded px-1.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-amber-400" /></td>
-                                  <td className="px-2 py-1 text-center"><input type="number" min="1" value={eRow.volume} onChange={e => setEditingPreviewRow(r => r ? { ...r, volume: +e.target.value } : r)} className="w-14 sm:w-16 border border-blue-300 rounded px-1.5 py-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-blue-400 bg-blue-50 font-bold" /></td>
-                                  <td className="px-2 py-1 text-right"><input type="number" min="0" value={eRow.tarif_harga || 0} onChange={e => setEditingPreviewRow(r => r ? { ...r, tarif_harga: +e.target.value } : r)} className="w-24 sm:w-28 border border-emerald-300 rounded px-1.5 py-1 text-xs text-right focus:outline-none focus:ring-1 focus:ring-emerald-400 bg-emerald-50" /></td>
-                                  <td className="px-2 py-1 text-right font-bold text-indigo-700">Rp {((eRow.volume || 0) * (eRow.tarif_harga || 0)).toLocaleString('id-ID')}</td>
-                                  <td className="px-2 py-1 sticky right-0 bg-amber-50 border-l border-slate-100">
-                                    <div className="flex gap-1 justify-center">
-                                      <button onClick={() => saveEditPreview(idx)} className="p-1 bg-emerald-500 text-white rounded hover:bg-emerald-600 transition-colors" title="Simpan"><Save className="h-3 w-3" /></button>
-                                      <button onClick={cancelEditPreview} className="p-1 bg-slate-400 text-white rounded hover:bg-slate-500 transition-colors" title="Batal"><X className="h-3 w-3" /></button>
-                                    </div>
-                                  </td>
-                                </>
-                              ) : (
-                                <>
-                                  <td className="px-2 sm:px-3 py-2 text-slate-600 font-mono">{row.kode_program || '-'}</td>
-                                  <td className="px-2 sm:px-3 py-2 text-indigo-600 font-mono font-semibold">{row.kode_rekening || '-'}</td>
-                                  <td className="px-2 sm:px-3 py-2 font-medium text-slate-900">{row.uraian}</td>
-                                  <td className="px-2 sm:px-3 py-2 text-center font-bold text-blue-700">{row.volume} {row.satuan}</td>
-                                  <td className="px-2 sm:px-3 py-2 text-right font-semibold text-emerald-700">{row.tarif_harga ? `Rp ${row.tarif_harga.toLocaleString('id-ID')}` : '-'}</td>
-                                  <td className="px-2 sm:px-3 py-2 text-right font-bold text-indigo-700">{totalCalculated > 0 ? `Rp ${totalCalculated.toLocaleString('id-ID')}` : (row.jumlah ? `Rp ${row.jumlah.toLocaleString('id-ID')}` : '-')}</td>
-                                  <td className="px-2 sm:px-3 py-2 sticky right-0 bg-white border-l border-slate-100">
-                                    <div className="flex gap-1 justify-center">
-                                      <button onClick={() => startEditPreview(idx)} className="p-1 bg-indigo-100 text-indigo-600 rounded hover:bg-indigo-200 transition-colors" title="Edit baris ini">
-                                        <Edit2 className="h-3 w-3" />
-                                      </button>
-                                      <button onClick={() => deletePreviewRow(idx)} className="p-1 bg-red-100 text-red-600 rounded hover:bg-red-200 transition-colors" title="Hapus baris ini">
-                                        <Trash2 className="h-3 w-3" />
-                                      </button>
-                                    </div>
-                                  </td>
-                                </>
-                              )}
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
+                                {isEditing ? (
+                                  <>
+                                    <td className="px-2 py-1"><input value={eRow.kode_program || ''} onChange={e => setEditingPreviewRow(r => r ? { ...r, kode_program: e.target.value } : r)} className="w-24 sm:w-28 border border-amber-300 rounded px-1.5 py-1 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-amber-400" /></td>
+                                    <td className="px-2 py-1"><input value={eRow.kode_rekening || ''} onChange={e => setEditingPreviewRow(r => r ? { ...r, kode_rekening: e.target.value } : r)} className="w-28 sm:w-32 border border-amber-300 rounded px-1.5 py-1 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-amber-400" /></td>
+                                    <td className="px-2 py-1"><input value={eRow.uraian} onChange={e => setEditingPreviewRow(r => r ? { ...r, uraian: e.target.value } : r)} className="w-40 sm:w-48 border border-amber-300 rounded px-1.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-amber-400" /></td>
+                                    <td className="px-2 py-1 text-center"><input type="number" min="1" value={eRow.volume} onChange={e => setEditingPreviewRow(r => r ? { ...r, volume: +e.target.value } : r)} className="w-14 sm:w-16 border border-blue-300 rounded px-1.5 py-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-blue-400 bg-blue-50 font-bold" /></td>
+                                    <td className="px-2 py-1 text-right"><input type="number" min="0" value={eRow.tarif_harga || 0} onChange={e => setEditingPreviewRow(r => r ? { ...r, tarif_harga: +e.target.value } : r)} className="w-24 sm:w-28 border border-emerald-300 rounded px-1.5 py-1 text-xs text-right focus:outline-none focus:ring-1 focus:ring-emerald-400 bg-emerald-50" /></td>
+                                    <td className="px-2 py-1 text-right font-bold text-indigo-700">Rp {((eRow.volume || 0) * (eRow.tarif_harga || 0)).toLocaleString('id-ID')}</td>
+                                    <td className="px-2 py-1 sticky right-0 bg-amber-50 border-l border-slate-100">
+                                      <div className="flex gap-1 justify-center">
+                                        <button onClick={() => saveEditPreview(idx)} className="p-1 bg-emerald-500 text-white rounded hover:bg-emerald-600 transition-colors" title="Simpan"><Save className="h-3 w-3" /></button>
+                                        <button onClick={cancelEditPreview} className="p-1 bg-slate-400 text-white rounded hover:bg-slate-500 transition-colors" title="Batal"><X className="h-3 w-3" /></button>
+                                      </div>
+                                    </td>
+                                  </>
+                                ) : (
+                                  <>
+                                    <td className="px-2 sm:px-3 py-2 text-slate-600 font-mono">{row.kode_program || '-'}</td>
+                                    <td className="px-2 sm:px-3 py-2 text-indigo-600 font-mono font-semibold">{row.kode_rekening || '-'}</td>
+                                    <td className="px-2 sm:px-3 py-2 font-medium text-slate-900">{row.uraian}</td>
+                                    <td className="px-2 sm:px-3 py-2 text-center font-bold text-blue-700">{row.volume} {row.satuan}</td>
+                                    <td className="px-2 sm:px-3 py-2 text-right font-semibold text-emerald-700">{row.tarif_harga ? `Rp ${row.tarif_harga.toLocaleString('id-ID')}` : '-'}</td>
+                                    <td className="px-2 sm:px-3 py-2 text-right font-bold text-indigo-700">{totalCalculated > 0 ? `Rp ${totalCalculated.toLocaleString('id-ID')}` : (row.jumlah ? `Rp ${row.jumlah.toLocaleString('id-ID')}` : '-')}</td>
+                                    <td className="px-2 sm:px-3 py-2 sticky right-0 bg-white border-l border-slate-100">
+                                      <div className="flex gap-1 justify-center">
+                                        <button onClick={() => startEditPreview(idx)} className="p-1 bg-indigo-100 text-indigo-600 rounded hover:bg-indigo-200 transition-colors" title="Edit baris ini">
+                                          <Edit2 className="h-3 w-3" />
+                                        </button>
+                                        <button onClick={() => deletePreviewRow(idx)} className="p-1 bg-red-100 text-red-600 rounded hover:bg-red-200 transition-colors" title="Hapus baris ini">
+                                          <Trash2 className="h-3 w-3" />
+                                        </button>
+                                      </div>
+                                    </td>
+                                  </>
+                                )}
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
-                </div>
 
                   <div className="flex gap-3">
                     <button onClick={() => { setShowPreview(false); setImportFile(null); setPreviewData([]); setSelectedRows(new Set()); }}

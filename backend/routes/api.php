@@ -61,7 +61,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::apiResource('gedungs', GedungController::class)->except(['index']);
     Route::apiResource('ruangans', RuanganController::class)->except(['index', 'show']);
-    Route::apiResource('sumber-danas', SumberDanaController::class);
+    Route::apiResource('sumber-danas', SumberDanaController::class)->except(['index']);
     Route::get('kondisis/aset-rusak', [KondisiController::class, 'asetRusak']);
     Route::apiResource('kondisis', KondisiController::class);
 

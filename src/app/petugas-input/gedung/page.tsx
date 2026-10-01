@@ -1361,7 +1361,7 @@ export default function GedungDrivePage() {
                   onChange={e => setRuanganForm(f => ({ ...f, luas_ruangan: e.target.value }))}
                   placeholder="0"
                   min="0"
-                  step="0.01"
+                  step="1"
                   className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>

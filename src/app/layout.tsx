@@ -16,6 +16,7 @@ export const metadata: Metadata = {
 };
 
 import AuthTimeoutWatcher from "@/components/AuthTimeoutWatcher";
+import NumberInputDotBlocker from "@/components/NumberInputDotBlocker";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -31,6 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="min-h-full flex flex-col touch-manipulation">
         <AuthTimeoutWatcher />
+        <NumberInputDotBlocker />
         {children}
       </body>
     </html>
