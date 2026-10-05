@@ -1,4 +1,4 @@
-FROM php:8.2-apache
+FROM php:8.2-cli
 
 # Install system dependencies & PHP extensions
 RUN apt-get update && apt-get install -y \
@@ -10,54 +10,26 @@ RUN apt-get update && apt-get install -y \
     libzip-dev \
     zip \
     unzip \
-    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip \
-    && a2enmod rewrite
+    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip
 
 # Get latest Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Set working directory
-WORKDIR /var/www/html
+# Set working directory to backend
+WORKDIR /app/backend
 
 # Copy backend code
-COPY backend/ .
+COPY backend/ /app/backend/
 
-# Set permissions
-RUN chmod -R 777 storage bootstrap/cache
+# Create a blank .env if not exists so artisan commands don't crash
+RUN touch /app/backend/.env
 
-# Install composer dependencies (no scripts to avoid dotenv issues at build time)
-RUN composer install --no-dev --optimize-autoloader --no-scripts
+# Set permissions for storage and bootstrap/cache
+RUN chmod -R 777 /app/backend/storage /app/backend/bootstrap/cache
 
-# Configure Apache
-RUN echo '<VirtualHost *:80>\n\
-    DocumentRoot /var/www/html/public\n\
-    <Directory /var/www/html/public>\n\
-        AllowOverride All\n\
-        Require all granted\n\
-    </Directory>\n\
-</VirtualHost>' > /etc/apache2/sites-available/000-default.conf
+# Install composer dependencies
+RUN composer install --no-dev --optimize-autoloader
 
-EXPOSE 80
+EXPOSE 8080
 
-# Create .env at startup from only the known vars, then run migrations
-CMD bash -c '\
-  echo "APP_NAME=${APP_NAME:-SistemInventarisAset}" > .env && \
-  echo "APP_ENV=${APP_ENV:-production}" >> .env && \
-  echo "APP_KEY=${APP_KEY}" >> .env && \
-  echo "APP_DEBUG=${APP_DEBUG:-false}" >> .env && \
-  echo "APP_URL=${APP_URL:-http://localhost}" >> .env && \
-  echo "DB_CONNECTION=${DB_CONNECTION:-mysql}" >> .env && \
-  echo "DB_HOST=${DB_HOST:-127.0.0.1}" >> .env && \
-  echo "DB_PORT=${DB_PORT:-3306}" >> .env && \
-  echo "DB_DATABASE=${DB_DATABASE:-laravel}" >> .env && \
-  echo "DB_USERNAME=${DB_USERNAME:-root}" >> .env && \
-  echo "DB_PASSWORD=${DB_PASSWORD}" >> .env && \
-  echo "SESSION_DRIVER=${SESSION_DRIVER:-database}" >> .env && \
-  echo "SESSION_LIFETIME=${SESSION_LIFETIME:-120}" >> .env && \
-  echo "QUEUE_CONNECTION=${QUEUE_CONNECTION:-database}" >> .env && \
-  echo "CACHE_STORE=${CACHE_STORE:-database}" >> .env && \
-  echo "LOG_CHANNEL=${LOG_CHANNEL:-stack}" >> .env && \
-  echo "LOG_LEVEL=${LOG_LEVEL:-error}" >> .env && \
-  php artisan config:clear && \
-  php artisan migrate --force && \
-  apache2-foreground'
+CMD ["sh", "-c", "php artisan config:clear && php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=${PORT:-8080}"]
