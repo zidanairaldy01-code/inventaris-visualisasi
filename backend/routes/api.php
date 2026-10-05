@@ -45,12 +45,8 @@ Route::get('db-check', function () {
 
     return response()->json([
         'db_error' => $dbError,
-        'db_host_config' => config('database.connections.mysql.host'),
-        'db_database_config' => config('database.connections.mysql.database'),
-        'db_host_env' => env('DB_HOST'),
-        'db_host_getenv' => getenv('DB_HOST'),
-        'mysqlhost_getenv' => getenv('MYSQLHOST'),
-        'matched_server_vars' => $matchedKeys,
+        'getenv_keys' => array_keys(getenv()),
+        'server_keys' => array_keys($_SERVER),
     ]);
 });
 
