@@ -111,7 +111,7 @@ export default function PublicAsetKelasPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <img 
-                src="http://localhost:8000/storage/img/pgri-telagasari.jpg" 
+                src={`${API_URL}/storage/img/pgri-telagasari.jpg`} 
                 alt="Logo"
                 className="w-10 h-10 rounded-xl object-cover shadow-lg"
               />
