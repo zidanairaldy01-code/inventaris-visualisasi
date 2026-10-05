@@ -31,6 +31,26 @@ Route::options('{any}', function () {
     return response('', 200);
 })->where('any', '.*');
 
+Route::get('/ping', function () {
+    try {
+        \Illuminate\Support\Facades\DB::connection()->getPdo();
+        $tables = \Illuminate\Support\Facades\DB::select('SHOW TABLES');
+        return response()->json([
+            'status' => 'ok',
+            'database' => 'connected',
+            'tables_count' => count($tables),
+            'tables' => $tables,
+            'app_key_set' => !empty(config('app.key')),
+        ]);
+    } catch (\Throwable $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => $e->getMessage(),
+            'trace' => $e->getFile() . ':' . $e->getLine(),
+        ], 500);
+    }
+});
+
 Route::post('/login', [AuthController::class, 'login'])->name('login');
 
 // Public Routes for Directory
