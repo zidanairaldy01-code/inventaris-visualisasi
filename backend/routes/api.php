@@ -28,23 +28,30 @@ use App\Http\Controllers\Api\WorkshopController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('db-check', function () {
+    $dbError = null;
     try {
         \Illuminate\Support\Facades\DB::connection()->getPdo();
-        $tables = \Illuminate\Support\Facades\DB::select('SHOW TABLES');
-        return response()->json([
-            'status' => 'connected',
-            'tables_count' => count($tables),
-        ]);
     } catch (\Throwable $e) {
-        return response()->json([
-            'status' => 'error',
-            'message' => $e->getMessage(),
-            'host' => config('database.connections.mysql.host'),
-            'port' => config('database.connections.mysql.port'),
-            'database' => config('database.connections.mysql.database'),
-            'user' => config('database.connections.mysql.username'),
-        ], 500);
+        $dbError = $e->getMessage();
     }
+
+    // Filter server keys that contain DB, MYSQL, or APP
+    $matchedKeys = [];
+    foreach ($_SERVER as $k => $v) {
+        if (preg_match('/(DB|MYSQL|APP)/i', $k)) {
+            $matchedKeys[$k] = is_string($v) ? (str_contains(strtolower($k), 'pass') || str_contains(strtolower($k), 'key') ? '***' : $v) : $v;
+        }
+    }
+
+    return response()->json([
+        'db_error' => $dbError,
+        'db_host_config' => config('database.connections.mysql.host'),
+        'db_database_config' => config('database.connections.mysql.database'),
+        'db_host_env' => env('DB_HOST'),
+        'db_host_getenv' => getenv('DB_HOST'),
+        'mysqlhost_getenv' => getenv('MYSQLHOST'),
+        'matched_server_vars' => $matchedKeys,
+    ]);
 });
 
 Route::post('/login', [AuthController::class, 'login'])->name('login');
