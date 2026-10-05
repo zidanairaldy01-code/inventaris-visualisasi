@@ -3,6 +3,9 @@
 use Illuminate\Support\Str;
 use Pdo\Mysql;
 
+$dbUrl = env('DB_URL') ?: env('MYSQL_URL') ?: env('MYSQL_PRIVATE_URL');
+$parsedDb = $dbUrl ? parse_url($dbUrl) : null;
+
 return [
 
     /*
@@ -46,12 +49,12 @@ return [
 
         'mysql' => [
             'driver' => 'mysql',
-            'url' => env('DB_URL', env('MYSQL_URL')),
-            'host' => env('DB_HOST', env('MYSQLHOST', '127.0.0.1')),
-            'port' => env('DB_PORT', env('MYSQLPORT', '3306')),
-            'database' => env('DB_DATABASE', env('MYSQLDATABASE', 'inventaris_aset_db')),
-            'username' => env('DB_USERNAME', env('MYSQLUSER', 'root')),
-            'password' => env('DB_PASSWORD', env('MYSQLPASSWORD', '')),
+            'url' => $dbUrl,
+            'host' => env('DB_HOST') ?: ($parsedDb['host'] ?? env('MYSQLHOST', '127.0.0.1')),
+            'port' => env('DB_PORT') ?: ($parsedDb['port'] ?? env('MYSQLPORT', '3306')),
+            'database' => env('DB_DATABASE') ?: (isset($parsedDb['path']) ? ltrim($parsedDb['path'], '/') : env('MYSQLDATABASE', 'inventaris_aset_db')),
+            'username' => env('DB_USERNAME') ?: ($parsedDb['user'] ?? env('MYSQLUSER', 'root')),
+            'password' => env('DB_PASSWORD') !== null && env('DB_PASSWORD') !== '' ? env('DB_PASSWORD') : ($parsedDb['pass'] ?? env('MYSQLPASSWORD', '')),
             'unix_socket' => env('DB_SOCKET', ''),
             'charset' => env('DB_CHARSET', 'utf8mb4'),
             'collation' => env('DB_COLLATION', 'utf8mb4_unicode_ci'),
