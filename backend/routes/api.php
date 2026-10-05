@@ -33,17 +33,12 @@ Route::get('db-check', function () {
         $tables = \Illuminate\Support\Facades\DB::select('SHOW TABLES');
         return response()->json([
             'status' => 'connected',
-            'database' => \Illuminate\Support\Facades\DB::connection()->getDatabaseName(),
-            'tables' => $tables,
+            'tables_count' => count($tables),
         ]);
     } catch (\Throwable $e) {
         return response()->json([
             'status' => 'error',
             'message' => $e->getMessage(),
-            'host' => config('database.connections.mysql.host'),
-            'port' => config('database.connections.mysql.port'),
-            'database' => config('database.connections.mysql.database'),
-            'username' => config('database.connections.mysql.username'),
         ], 500);
     }
 });
