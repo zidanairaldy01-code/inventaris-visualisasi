@@ -32,6 +32,12 @@ Route::options('{any}', function () {
 })->where('any', '.*');
 
 Route::get('/ping', function () {
+    $dbConfig = config('database.connections.mysql');
+    // Hide password for safety
+    if (isset($dbConfig['password'])) {
+        $dbConfig['password'] = !empty($dbConfig['password']) ? '***SET***' : 'EMPTY';
+    }
+    
     try {
         \Illuminate\Support\Facades\DB::connection()->getPdo();
         $tables = \Illuminate\Support\Facades\DB::select('SHOW TABLES');
@@ -41,13 +47,15 @@ Route::get('/ping', function () {
             'tables_count' => count($tables),
             'tables' => $tables,
             'app_key_set' => !empty(config('app.key')),
+            'debug_db_config' => $dbConfig,
         ]);
     } catch (\Throwable $e) {
         return response()->json([
             'status' => 'error',
             'message' => $e->getMessage(),
+            'debug_db_config' => $dbConfig,
             'trace' => $e->getFile() . ':' . $e->getLine(),
-        ], 500);
+        ], 200);
     }
 });
 
