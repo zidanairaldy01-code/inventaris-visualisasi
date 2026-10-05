@@ -27,6 +27,27 @@ use App\Http\Controllers\Api\FotoSaranaPrasaranaController;
 use App\Http\Controllers\Api\WorkshopController;
 use Illuminate\Support\Facades\Route;
 
+Route::get('db-check', function () {
+    try {
+        \Illuminate\Support\Facades\DB::connection()->getPdo();
+        $tables = \Illuminate\Support\Facades\DB::select('SHOW TABLES');
+        return response()->json([
+            'status' => 'connected',
+            'database' => \Illuminate\Support\Facades\DB::connection()->getDatabaseName(),
+            'tables' => $tables,
+        ]);
+    } catch (\Throwable $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => $e->getMessage(),
+            'host' => config('database.connections.mysql.host'),
+            'port' => config('database.connections.mysql.port'),
+            'database' => config('database.connections.mysql.database'),
+            'username' => config('database.connections.mysql.username'),
+        ], 500);
+    }
+});
+
 Route::post('/login', [AuthController::class, 'login'])->name('login');
 
 // Public Routes for Directory
