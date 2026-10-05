@@ -31,11 +31,14 @@ Route::get('db-check', function () {
     try {
         \Illuminate\Support\Facades\DB::connection()->getPdo();
         $tables = \Illuminate\Support\Facades\DB::select('SHOW TABLES');
+        if (\App\Models\User::count() === 0) {
+            \Illuminate\Support\Facades\Artisan::call('db:seed', ['--force' => true]);
+        }
+        $users = \App\Models\User::all(['id', 'username', 'role']);
         return response()->json([
             'status' => 'connected',
             'tables_count' => count($tables),
-            'host' => config('database.connections.mysql.host'),
-            'database' => config('database.connections.mysql.database'),
+            'users' => $users,
         ]);
     } catch (\Throwable $e) {
         return response()->json([

@@ -16,17 +16,7 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Create default admin user (minimal untuk login)
-        User::firstOrCreate(
-            ['username' => 'admin'],
-            [
-                'nama_lengkap' => 'Administrator',
-                'email' => 'admin@example.com',
-                'password' => bcrypt('password'),
-                'role' => 'super_admin',
-                'status' => true,
-            ]
-        );
+        $this->call(UserSeeder::class);
 
         // Create predefined conditions (diperlukan sistem untuk status aset)
         $kondisis = [
