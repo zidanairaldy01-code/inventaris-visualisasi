@@ -47,7 +47,11 @@ CMD bash -c '\
   echo "APP_DEBUG=${APP_DEBUG:-false}" >> .env && \
   echo "APP_URL=${APP_URL:-http://localhost}" >> .env && \
   echo "DB_CONNECTION=${DB_CONNECTION:-mysql}" >> .env && \
-  echo "DB_URL=${DB_URL}" >> .env && \
+  echo "DB_HOST=${DB_HOST:-127.0.0.1}" >> .env && \
+  echo "DB_PORT=${DB_PORT:-3306}" >> .env && \
+  echo "DB_DATABASE=${DB_DATABASE:-laravel}" >> .env && \
+  echo "DB_USERNAME=${DB_USERNAME:-root}" >> .env && \
+  echo "DB_PASSWORD=${DB_PASSWORD}" >> .env && \
   echo "SESSION_DRIVER=${SESSION_DRIVER:-database}" >> .env && \
   echo "SESSION_LIFETIME=${SESSION_LIFETIME:-120}" >> .env && \
   echo "QUEUE_CONNECTION=${QUEUE_CONNECTION:-database}" >> .env && \
