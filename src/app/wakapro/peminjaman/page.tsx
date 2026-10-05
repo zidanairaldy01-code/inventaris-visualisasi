@@ -12,6 +12,19 @@ import {
   MobileCardActions 
 } from '@/components/MobileCard';
 
+interface BarangWorkshop {
+  id: number;
+  id_aset: number | null;
+  sarana_prasarana_id: number | null;
+  tipe: 'aset' | 'sarana_prasarana';
+  nama_barang: string;
+  kode: string | null;
+  kondisi: string;
+  jumlah: number;
+  satuan: string;
+  keterangan: string | null;
+}
+
 interface Aset {
   id: number;
   kode_aset: string | null;
@@ -38,7 +51,9 @@ interface PeminjamanItem {
 export default function WakaproPeminjamanPage() {
   const isMobile = useIsMobile();
   const [peminjamans, setPeminjamans] = useState<PeminjamanItem[]>([]);
-  const [asets, setAsets] = useState<Aset[]>([]);
+  const [barangWorkshop, setBarangWorkshop] = useState<BarangWorkshop[]>([]);
+  const [namaWorkshop, setNamaWorkshop] = useState<string>('');
+  const [workshopWarning, setWorkshopWarning] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -69,12 +84,19 @@ export default function WakaproPeminjamanPage() {
   const fetchData = async (showRefresh = false) => {
     if (showRefresh) setRefreshing(true); else setLoading(true);
     try {
-      const [peminjamanRes, asetRes] = await Promise.all([
+      const [peminjamanRes, workshopRes] = await Promise.all([
         axios.get('/api/peminjamans'),
-        axios.get('/api/asets'),
+        // Ambil HANYA barang yang ada di workshop wakapro yang sedang login
+        axios.get('/api/workshop/pilih-barang'),
       ]);
       setPeminjamans(peminjamanRes.data);
-      setAsets(asetRes.data);
+
+      const workshopData = workshopRes.data;
+      setBarangWorkshop(workshopData.items ?? []);
+      setNamaWorkshop(workshopData.ruangan?.nama_ruangan ?? '');
+      if (workshopData.warning) {
+        setWorkshopWarning(workshopData.warning);
+      }
     } catch (err) {
       console.error('Failed to fetch peminjaman data:', err);
     } finally {
@@ -85,8 +107,10 @@ export default function WakaproPeminjamanPage() {
 
   const openAddModal = () => {
     setEditingItem(null);
+    const firstBarang = barangWorkshop[0];
     setFormData({
-      id_aset: asets[0]?.id ? String(asets[0].id) : '',
+      // Gunakan id_aset jika tipe 'aset', atau id (sarana_prasarana_id) jika tipe 'sarana_prasarana'
+      id_aset: firstBarang?.id_aset ? String(firstBarang.id_aset) : firstBarang?.id ? String(firstBarang.id) : '',
       nama_peminjam: '',
       role_peminjam: 'Guru',
       jumlah: '1',
@@ -194,11 +218,18 @@ export default function WakaproPeminjamanPage() {
             <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center mr-3 shadow-sm shadow-indigo-500/20 flex-shrink-0">
               <Handshake className="h-4 w-4 text-white" />
             </div>
-            Peminjaman Aset (Laptop, Kamera, Dll)
+            Peminjaman Barang Workshop
           </h1>
           <p className="text-sm text-slate-400 mt-1 ml-11">
-            Pencatatan dan pemantauan barang sekolah yang dipinjam oleh Guru, Siswa, maupun Staf
+            {namaWorkshop
+              ? `Pencatatan peminjaman barang di ${namaWorkshop}`
+              : 'Pencatatan peminjaman barang di workshop Anda'}
           </p>
+          {workshopWarning && (
+            <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-2 ml-11">
+              ⚠️ {workshopWarning}
+            </p>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -400,19 +431,31 @@ export default function WakaproPeminjamanPage() {
 
             <form onSubmit={handleSubmit} className="p-5 space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Pilih Aset yang Dipinjam</label>
-                <select
-                  value={formData.id_aset}
-                  onChange={e => setFormData({ ...formData, id_aset: e.target.value })}
-                  required
-                  className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 focus:bg-white"
-                >
-                  {asets.map(a => (
-                    <option key={a.id} value={a.id}>
-                      {a.nama_aset} {a.kode_aset ? `(${a.kode_aset})` : ''} - Stok: {a.jumlah} {a.satuan}
-                    </option>
-                  ))}
-                </select>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Pilih Barang dari Workshop {namaWorkshop && `(${namaWorkshop})`}
+                </label>
+                {barangWorkshop.length === 0 ? (
+                  <div className="px-3 py-2.5 text-sm border border-amber-200 rounded-xl bg-amber-50 text-amber-700">
+                    Tidak ada barang di workshop Anda. Hubungi administrator.
+                  </div>
+                ) : (
+                  <select
+                    value={formData.id_aset}
+                    onChange={e => setFormData({ ...formData, id_aset: e.target.value })}
+                    required
+                    className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 focus:bg-white"
+                  >
+                    {barangWorkshop.map(b => {
+                      // Gunakan id_aset jika tipe 'aset', atau id jika 'sarana_prasarana'
+                      const nilai = b.id_aset ? String(b.id_aset) : String(b.id);
+                      return (
+                        <option key={`${b.tipe}-${b.id}`} value={nilai}>
+                          {b.nama_barang} {b.kode ? `(${b.kode})` : ''} — Stok: {b.jumlah} {b.satuan} · {b.kondisi}
+                        </option>
+                      );
+                    })}
+                  </select>
+                )}
               </div>
 
               <div className="grid grid-cols-3 gap-3">

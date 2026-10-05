@@ -38,7 +38,7 @@ Route::get('stats', [AsetController::class, 'publicStats']);
 Route::get('daftar-belanja/summary', [DaftarBelanjaController::class, 'summary']);
 Route::get('gedungs', [GedungController::class, 'index']);
 Route::get('sumber-danas', [SumberDanaController::class, 'index']);
-Route::get('peminjamans', [PeminjamanController::class, 'index']);
+
 
 // Public Routes for Jurusan & Kelas (untuk halaman public)
 Route::get('jurusans', [JurusanController::class, 'index']);
@@ -75,6 +75,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('histories', HistoryController::class)->only(['index', 'show']);
     Route::post('servises/{servis}', [ServisController::class, 'update']); // Support PUT via POST + _method for file uploads
     Route::apiResource('servises', ServisController::class);
+    Route::get('peminjamans', [PeminjamanController::class, 'index']); // Dipindahkan ke auth untuk mendukung filter per wakapro
     Route::apiResource('peminjamans', PeminjamanController::class)->except(['index']);
 
     // Laporan

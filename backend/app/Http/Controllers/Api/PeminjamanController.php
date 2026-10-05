@@ -4,16 +4,32 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Peminjaman;
+use App\Models\Aset;
 use App\Models\History;
 use Illuminate\Http\Request;
 
 class PeminjamanController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $peminjamans = Peminjaman::with(['aset.ruangan', 'aset.kategori'])
-            ->orderBy('created_at', 'desc')
-            ->get();
+        $user = $request->user();
+
+        $query = Peminjaman::with(['aset.ruangan', 'aset.kategori'])
+            ->orderBy('created_at', 'desc');
+
+        // Jika wakapro, batasi hanya peminjaman dari aset di ruangan workshop-nya
+        if ($user && $user->role === 'wakapro') {
+            if ($user->ruangan_id) {
+                $query->whereHas('aset', function ($q) use ($user) {
+                    $q->where('id_ruangan', $user->ruangan_id);
+                });
+            } else {
+                // Belum di-assign ke ruangan — kembalikan kosong
+                return response()->json([]);
+            }
+        }
+
+        $peminjamans = $query->get();
 
         return response()->json($peminjamans);
     }
@@ -30,6 +46,17 @@ class PeminjamanController extends Controller
             'keperluan'               => 'nullable|string',
             'status'                  => 'nullable|in:Dipinjam,Dikembalikan,Terlambat',
         ]);
+
+        // Jika wakapro, pastikan aset yang dipinjamkan berasal dari workshopnya sendiri
+        $user = $request->user();
+        if ($user && $user->role === 'wakapro' && $user->ruangan_id) {
+            $aset = Aset::find($validated['id_aset']);
+            if (!$aset || (int) $aset->id_ruangan !== (int) $user->ruangan_id) {
+                return response()->json([
+                    'message' => 'Anda hanya dapat meminjamkan barang yang berada di workshop Anda.'
+                ], 403);
+            }
+        }
 
         $peminjaman = Peminjaman::create($validated);
         $peminjaman->load(['aset.ruangan', 'aset.kategori']);
