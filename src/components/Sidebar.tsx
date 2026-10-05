@@ -250,7 +250,7 @@ function SidebarContent({
         <Link href="/dashboard" onClick={onLinkClick} className="flex items-center gap-3 group">
           <div className="relative flex-shrink-0">
             <img
-              src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/storage/img/pgri-telagasari.jpg`}
+              src="http://localhost:8000/storage/img/pgri-telagasari.jpg"
               alt="Logo SMK PGRI Telagasari"
               className="w-9 h-9 rounded-xl object-cover shadow-md ring-2 ring-white/15 group-hover:ring-blue-500/50 transition-all"
               onError={(e) => {

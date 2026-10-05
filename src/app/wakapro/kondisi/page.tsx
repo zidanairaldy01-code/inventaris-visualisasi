@@ -74,8 +74,7 @@ const getKondisiBadge = (nama: string) => {
 const getImageUrl = (path: string | null) => {
   if (!path) return null;
   if (path.startsWith('http')) return path;
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-  return `${baseUrl}${path}`;
+  return `http://localhost:8000${path}`;
 };
 
 export default function MasterKondisiPage() {

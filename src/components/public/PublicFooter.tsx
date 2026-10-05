@@ -12,7 +12,7 @@ export default function PublicFooter() {
           <div>
             <div className="flex items-center gap-2 mb-4">
               <img 
-                src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/storage/img/pgri-telagasari.jpg`}
+                src="http://localhost:8000/storage/img/pgri-telagasari.jpg" 
                 alt="Logo SMK PGRI Telagasari"
                 className="w-10 h-10 rounded-lg object-cover ring-2 ring-white/20"
               />

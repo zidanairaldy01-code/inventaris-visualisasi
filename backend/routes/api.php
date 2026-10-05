@@ -27,38 +27,6 @@ use App\Http\Controllers\Api\FotoSaranaPrasaranaController;
 use App\Http\Controllers\Api\WorkshopController;
 use Illuminate\Support\Facades\Route;
 
-Route::options('{any}', function () {
-    return response('', 200);
-})->where('any', '.*');
-
-Route::get('/ping', function () {
-    $dbConfig = config('database.connections.mysql');
-    // Hide password for safety
-    if (isset($dbConfig['password'])) {
-        $dbConfig['password'] = !empty($dbConfig['password']) ? '***SET***' : 'EMPTY';
-    }
-    
-    try {
-        \Illuminate\Support\Facades\DB::connection()->getPdo();
-        $tables = \Illuminate\Support\Facades\DB::select('SHOW TABLES');
-        return response()->json([
-            'status' => 'ok',
-            'database' => 'connected',
-            'tables_count' => count($tables),
-            'tables' => $tables,
-            'app_key_set' => !empty(config('app.key')),
-            'debug_db_config' => $dbConfig,
-        ]);
-    } catch (\Throwable $e) {
-        return response()->json([
-            'status' => 'error',
-            'message' => $e->getMessage(),
-            'debug_db_config' => $dbConfig,
-            'trace' => $e->getFile() . ':' . $e->getLine(),
-        ], 200);
-    }
-});
-
 Route::post('/login', [AuthController::class, 'login'])->name('login');
 
 // Public Routes for Directory
