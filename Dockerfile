@@ -1,4 +1,4 @@
-﻿FROM php:8.2-cli
+FROM php:8.2-cli
 
 # Install system dependencies & PHP extensions
 RUN apt-get update && apt-get install -y \
@@ -32,4 +32,4 @@ RUN composer install --no-dev --optimize-autoloader
 
 EXPOSE 8080
 
-CMD ["sh", "-c", "php artisan config:clear && php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=${PORT:-8080}"]
+CMD ["sh", "-c", "php artisan storage:link || true && php artisan optimize:clear && php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=${PORT:-8080}"]
