@@ -27,6 +27,10 @@ use App\Http\Controllers\Api\FotoSaranaPrasaranaController;
 use App\Http\Controllers\Api\WorkshopController;
 use Illuminate\Support\Facades\Route;
 
+Route::options('{any}', function () {
+    return response('', 200);
+})->where('any', '.*');
+
 Route::post('/login', [AuthController::class, 'login'])->name('login');
 
 // Public Routes for Directory
