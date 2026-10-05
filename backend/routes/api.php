@@ -39,6 +39,10 @@ Route::get('db-check', function () {
         return response()->json([
             'status' => 'error',
             'message' => $e->getMessage(),
+            'host' => config('database.connections.mysql.host'),
+            'port' => config('database.connections.mysql.port'),
+            'database' => config('database.connections.mysql.database'),
+            'user' => config('database.connections.mysql.username'),
         ], 500);
     }
 });
