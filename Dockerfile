@@ -1,4 +1,4 @@
-FROM php:8.2-cli
+FROM php:8.2-apache
 
 # Install system dependencies & PHP extensions
 RUN apt-get update && apt-get install -y \
@@ -10,26 +10,50 @@ RUN apt-get update && apt-get install -y \
     libzip-dev \
     zip \
     unzip \
-    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip
+    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip \
+    && a2enmod rewrite
 
 # Get latest Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Set working directory to backend
-WORKDIR /app/backend
+# Set working directory
+WORKDIR /var/www/html
 
 # Copy backend code
-COPY backend/ /app/backend/
+COPY backend/ .
 
-# Create a blank .env if not exists so artisan commands don't crash
-RUN touch /app/backend/.env
+# Set permissions
+RUN chmod -R 777 storage bootstrap/cache
 
-# Set permissions for storage and bootstrap/cache
-RUN chmod -R 777 /app/backend/storage /app/backend/bootstrap/cache
+# Install composer dependencies (no scripts to avoid dotenv issues at build time)
+RUN composer install --no-dev --optimize-autoloader --no-scripts
 
-# Install composer dependencies
-RUN composer install --no-dev --optimize-autoloader
+# Configure Apache
+RUN echo '<VirtualHost *:80>\n\
+    DocumentRoot /var/www/html/public\n\
+    <Directory /var/www/html/public>\n\
+        AllowOverride All\n\
+        Require all granted\n\
+    </Directory>\n\
+</VirtualHost>' > /etc/apache2/sites-available/000-default.conf
 
-EXPOSE 8080
+EXPOSE 80
 
-CMD ["sh", "-c", "printenv > /app/backend/.env && php artisan storage:link || true; php artisan config:clear || true; php artisan migrate --force || true; php artisan serve --host=0.0.0.0 --port=${PORT:-8080}"]
+# Create .env at startup from only the known vars, then run migrations
+CMD bash -c '\
+  echo "APP_NAME=${APP_NAME:-SistemInventarisAset}" > .env && \
+  echo "APP_ENV=${APP_ENV:-production}" >> .env && \
+  echo "APP_KEY=${APP_KEY}" >> .env && \
+  echo "APP_DEBUG=${APP_DEBUG:-false}" >> .env && \
+  echo "APP_URL=${APP_URL:-http://localhost}" >> .env && \
+  echo "DB_CONNECTION=${DB_CONNECTION:-mysql}" >> .env && \
+  echo "DB_URL=${DB_URL}" >> .env && \
+  echo "SESSION_DRIVER=${SESSION_DRIVER:-database}" >> .env && \
+  echo "SESSION_LIFETIME=${SESSION_LIFETIME:-120}" >> .env && \
+  echo "QUEUE_CONNECTION=${QUEUE_CONNECTION:-database}" >> .env && \
+  echo "CACHE_STORE=${CACHE_STORE:-database}" >> .env && \
+  echo "LOG_CHANNEL=${LOG_CHANNEL:-stack}" >> .env && \
+  echo "LOG_LEVEL=${LOG_LEVEL:-error}" >> .env && \
+  php artisan config:clear && \
+  php artisan migrate --force && \
+  apache2-foreground'
