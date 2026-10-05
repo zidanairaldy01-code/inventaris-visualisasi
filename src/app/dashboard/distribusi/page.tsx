@@ -19,6 +19,12 @@ import {
   Ban,
   Clock,
   AlertTriangle,
+  Eye,
+  X,
+  Search,
+  Calendar,
+  User,
+  FileText
 } from 'lucide-react'
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
@@ -29,12 +35,16 @@ interface Distribusi {
   nomor_pengiriman: string | null
   nomor_bast: string | null
   jumlah: number
+  harga_satuan?: number
+  total_harga?: number
   tanggal_kirim: string
   tanggal_terima: string | null
   status: string
   catatan_pengiriman: string | null
-  sarana_prasarana: { nama_barang: string; kode: string }
-  ruangan_tujuan: { nama_ruangan: string; gedung: { nama_gedung: string } }
+  catatan_penerimaan?: string | null
+  foto_kerusakan_url?: string | null
+  sarana_prasarana: { nama_barang: string; kode: string; kondisi?: string; satuan?: string }
+  ruangan_tujuan: { nama_ruangan: string; gedung?: { nama_gedung: string } | null }
   petugas_pengirim: { nama_lengkap: string }
   wakapro_penerima: { nama_lengkap: string } | null
 }
@@ -69,7 +79,7 @@ const getStatusBadge = (status: string) => {
 const getStatusLabel = (status: string) => {
   const m: Record<string, string> = {
     menunggu_konfirmasi: 'Menunggu',
-    diterima:            'Diterima',
+    diterima:            'Diterima (BAST)',
     ditolak:             'Ditolak',
     sebagian:            'Sebagian',
   }
@@ -148,8 +158,13 @@ export default function DistribusiPage() {
   // Accordion
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set())
 
+  // Detail & Lightbox state
+  const [detailItem, setDetailItem]     = useState<Distribusi | null>(null)
+  const [lightboxUrl, setLightboxUrl]   = useState<string | null>(null)
+
   // Print state
   const [printingId, setPrintingId]     = useState<number | null>(null)
+  const [printingBastId, setPrintingBastId] = useState<number | null>(null)
   const [printingBulk, setPrintingBulk] = useState<string | null>(null)
 
   useEffect(() => { fetchDistribusi() }, [filterStatus])
@@ -185,7 +200,7 @@ export default function DistribusiPage() {
   }, [])
 
   const handleCetakBast = useCallback(async (id: number) => {
-    setPrintingId(id)
+    setPrintingBastId(id)
     try {
       const { data } = await axios.get(`/api/distribusi-asets/${id}/bast`)
       generateBast(data)
@@ -193,7 +208,7 @@ export default function DistribusiPage() {
       console.error('Gagal cetak BAST:', err)
       alert('Gagal mengambil data BAST.')
     } finally {
-      setPrintingId(null)
+      setPrintingBastId(null)
     }
   }, [])
 
@@ -220,83 +235,155 @@ export default function DistribusiPage() {
     })
   }
 
-  // ── Filter & group ────────────────────────────────────────────────────────
-
-  const filtered = flatList.filter(item => {
+  // Filter pencarian
+  const filteredFlat = flatList.filter(item => {
     const q = searchTerm.toLowerCase()
     return (
       item.nomor_surat_jalan.toLowerCase().includes(q) ||
-      (item.nomor_pengiriman ?? '').toLowerCase().includes(q) ||
+      (item.nomor_pengiriman && item.nomor_pengiriman.toLowerCase().includes(q)) ||
+      (item.nomor_bast && item.nomor_bast.toLowerCase().includes(q)) ||
       item.sarana_prasarana.nama_barang.toLowerCase().includes(q) ||
-      item.ruangan_tujuan.nama_ruangan.toLowerCase().includes(q)
+      (item.sarana_prasarana.kode && item.sarana_prasarana.kode.toLowerCase().includes(q)) ||
+      (item.ruangan_tujuan?.nama_ruangan && item.ruangan_tujuan.nama_ruangan.toLowerCase().includes(q))
     )
   })
 
-  const grupList = groupDistribusi(filtered)
+  const grupList = groupDistribusi(filteredFlat)
 
-  // Summary counts (dari flat list asli)
-  const totalMenunggu = flatList.filter(d => d.status === 'menunggu_konfirmasi').length
-  const totalDiterima = flatList.filter(d => d.status === 'diterima').length
+  const totalMenunggu = flatList.filter(i => i.status === 'menunggu_konfirmasi').length
+  const totalDiterima = flatList.filter(i => i.status === 'diterima').length
+  const totalDitolak  = flatList.filter(i => i.status === 'ditolak').length
 
   return (
-    <div className="p-6">
-      <div className="bg-white rounded-lg shadow p-6">
+    <div className="p-4 sm:p-6 space-y-6">
+      {/* Lightbox */}
+      {lightboxUrl && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+          onClick={() => setLightboxUrl(null)}
+        >
+          <button
+            className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition"
+            onClick={() => setLightboxUrl(null)}
+          >
+            <X className="h-6 w-6" />
+          </button>
+          <img
+            src={lightboxUrl}
+            alt="Foto Kerusakan"
+            className="max-w-[90vw] max-h-[90vh] rounded-xl shadow-2xl object-contain"
+          />
+        </div>
+      )}
 
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
         {/* Header */}
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">Distribusi Aset ke Workshop</h1>
-            <p className="text-sm text-gray-600 mt-1">
-              Kelola pengiriman aset ke workshop dengan surat jalan &amp; BAST
+            <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-sm shadow-blue-500/20">
+                <Truck className="h-5 w-5" />
+              </div>
+              Distribusi Aset &amp; Riwayat BAST
+            </h1>
+            <p className="text-sm text-slate-500 mt-1 ml-11">
+              Pantau pengiriman aset ke workshop dengan Surat Jalan serta riwayat penerimaan Berita Acara Serah Terima (BAST)
             </p>
           </div>
           <button
             onClick={() => router.push('/dashboard/distribusi/bulk')}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-sm"
+            className="px-5 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-bold text-xs shadow-sm shadow-blue-500/20 flex items-center gap-2 transition"
           >
-            📦 Distribusi Bulk
+            <Package className="h-4 w-4" />
+            Distribusi Bulk Baru
           </button>
         </div>
 
-        {/* Filters */}
-        <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Cari</label>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+          <div className="bg-white p-4 rounded-xl border border-slate-200">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Pengiriman</p>
+            <p className="text-2xl font-extrabold text-slate-900 mt-1">{flatList.length}</p>
+          </div>
+          <div className="bg-white p-4 rounded-xl border border-amber-200">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-amber-600">Menunggu Konfirmasi</p>
+            <p className="text-2xl font-extrabold text-amber-700 mt-1">{totalMenunggu}</p>
+          </div>
+          <div className="bg-white p-4 rounded-xl border border-emerald-200">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-600">Sudah Diterima (BAST)</p>
+            <p className="text-2xl font-extrabold text-emerald-700 mt-1">{totalDiterima}</p>
+          </div>
+          <div className="bg-white p-4 rounded-xl border border-rose-200">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-rose-600">Ditolak</p>
+            <p className="text-2xl font-extrabold text-rose-700 mt-1">{totalDitolak}</p>
+          </div>
+        </div>
+
+        {/* Tabs & Search */}
+        <div className="mb-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0">
+            <button
+              onClick={() => setFilterStatus('')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${
+                filterStatus === '' ? 'bg-slate-800 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              Semua ({flatList.length})
+            </button>
+            <button
+              onClick={() => setFilterStatus('menunggu_konfirmasi')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap flex items-center gap-1.5 ${
+                filterStatus === 'menunggu_konfirmasi' ? 'bg-amber-500 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              <Clock className="h-3 w-3" />
+              Menunggu ({totalMenunggu})
+            </button>
+            <button
+              onClick={() => setFilterStatus('diterima')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap flex items-center gap-1.5 ${
+                filterStatus === 'diterima' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              <CheckCircle2 className="h-3 w-3" />
+              Sudah BAST ({totalDiterima})
+            </button>
+            <button
+              onClick={() => setFilterStatus('ditolak')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap flex items-center gap-1.5 ${
+                filterStatus === 'ditolak' ? 'bg-rose-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              <Ban className="h-3 w-3" />
+              Ditolak ({totalDitolak})
+            </button>
+          </div>
+
+          <div className="relative w-full lg:w-72">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
             <input
               type="text"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              placeholder="Cari no. surat jalan, no. pengiriman, barang, atau ruangan..."
-              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500"
+              placeholder="Cari SJ, BAST, barang, ruangan..."
+              className="w-full pl-9 pr-4 py-2 text-xs border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white"
             />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Filter Status</label>
-            <select
-              value={filterStatus}
-              onChange={e => setFilterStatus(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Semua Status</option>
-              <option value="menunggu_konfirmasi">Menunggu Konfirmasi</option>
-              <option value="diterima">Diterima</option>
-              <option value="ditolak">Ditolak</option>
-            </select>
           </div>
         </div>
 
         {/* Content */}
         {loading ? (
-          <div className="text-center py-12">
+          <div className="text-center py-16">
             <div className="inline-block animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full" />
-            <p className="mt-2 text-gray-600">Memuat data...</p>
+            <p className="mt-2 text-xs text-slate-500">Memuat riwayat pengiriman &amp; BAST...</p>
           </div>
         ) : grupList.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">
-            <p className="text-lg">Tidak ada data distribusi</p>
+          <div className="text-center py-16 text-slate-400">
+            <Truck className="h-12 w-12 opacity-20 mx-auto mb-2" />
+            <p className="font-bold text-slate-700 text-sm">Tidak ada data distribusi</p>
             <button
               onClick={() => router.push('/dashboard/distribusi/bulk')}
-              className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              className="mt-3 px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700"
             >
               Buat Distribusi Pertama
             </button>
@@ -359,7 +446,7 @@ export default function DistribusiPage() {
 
                       {/* Ruangan */}
                       <span className="text-xs text-indigo-600 font-medium hidden sm:inline">
-                        → {grup.ruangan_tujuan.nama_ruangan}
+                        → {grup.ruangan_tujuan?.nama_ruangan || '-'}
                       </span>
 
                       {/* Status */}
@@ -407,21 +494,22 @@ export default function DistribusiPage() {
                   {isOpen && (
                     <div className="border-t border-slate-100">
                       <div className="overflow-x-auto">
-                        <table className="w-full text-sm border-collapse">
+                        <table className="w-full text-xs border-collapse">
                           <thead>
-                            <tr className="bg-slate-50 border-b border-slate-100 text-xs text-slate-500 uppercase tracking-wide">
-                              <th className="px-4 py-2 text-left font-semibold">No. Surat Jalan</th>
-                              <th className="px-4 py-2 text-left font-semibold">Barang</th>
-                              <th className="px-4 py-2 text-center font-semibold">Jml</th>
-                              <th className="px-4 py-2 text-left font-semibold">Tgl Kirim</th>
-                              <th className="px-4 py-2 text-left font-semibold">Status</th>
-                              <th className="px-4 py-2 text-left font-semibold">No. BAST</th>
-                              <th className="px-4 py-2 text-left font-semibold">Cetak</th>
+                            <tr className="bg-slate-50 border-b border-slate-100 text-[11px] text-slate-500 uppercase tracking-wide">
+                              <th className="px-4 py-2.5 text-left font-semibold">No. Surat Jalan</th>
+                              <th className="px-4 py-2.5 text-left font-semibold">Barang</th>
+                              <th className="px-4 py-2.5 text-center font-semibold">Jml</th>
+                              <th className="px-4 py-2.5 text-left font-semibold">Tgl Kirim</th>
+                              <th className="px-4 py-2.5 text-left font-semibold">Status</th>
+                              <th className="px-4 py-2.5 text-left font-semibold">No. BAST</th>
+                              <th className="px-4 py-2.5 text-right font-semibold">Aksi &amp; Cetak</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-50">
                             {grup.items.map(item => {
                               const isPrinting  = printingId === item.id
+                              const isPrintingBast = printingBastId === item.id
                               const isDiterima  = item.status === 'diterima'
                               return (
                                 <tr key={item.id} className={`hover:bg-slate-50 transition-colors ${
@@ -433,7 +521,7 @@ export default function DistribusiPage() {
                                     {item.nomor_surat_jalan}
                                   </td>
                                   <td className="px-4 py-2.5">
-                                    <div className="font-medium text-slate-800">{item.sarana_prasarana.nama_barang}</div>
+                                    <div className="font-semibold text-slate-800">{item.sarana_prasarana.nama_barang}</div>
                                     <div className="text-[10px] text-slate-400 font-mono">{item.sarana_prasarana.kode}</div>
                                   </td>
                                   <td className="px-4 py-2.5 text-center font-bold">{item.jumlah}</td>
@@ -450,8 +538,8 @@ export default function DistribusiPage() {
                                       ? <span className="font-mono text-green-600 font-semibold text-xs">{item.nomor_bast}</span>
                                       : <span className="text-slate-300 text-xs">—</span>}
                                   </td>
-                                  <td className="px-4 py-2.5">
-                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                  <td className="px-4 py-2.5 text-right">
+                                    <div className="flex items-center justify-end gap-1.5 flex-wrap">
                                       {/* Cetak SJ per item (single) */}
                                       {!isBulk && (
                                         <button
@@ -468,14 +556,22 @@ export default function DistribusiPage() {
                                       {isDiterima && (
                                         <button
                                           onClick={() => handleCetakBast(item.id)}
-                                          disabled={isPrinting}
+                                          disabled={isPrintingBast}
                                           title="Cetak BAST"
                                           className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 disabled:opacity-50 transition-colors"
                                         >
-                                          {isPrinting ? <Loader2 className="h-3 w-3 animate-spin" /> : <FileCheck2 className="h-3 w-3" />}
+                                          {isPrintingBast ? <Loader2 className="h-3 w-3 animate-spin" /> : <FileCheck2 className="h-3 w-3" />}
                                           BAST
                                         </button>
                                       )}
+                                      {/* Detail */}
+                                      <button
+                                        onClick={() => setDetailItem(item)}
+                                        title="Lihat Detail BAST"
+                                        className="p-1.5 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-lg text-xs transition"
+                                      >
+                                        <Eye className="h-3.5 w-3.5" />
+                                      </button>
                                     </div>
                                   </td>
                                 </tr>
@@ -501,27 +597,128 @@ export default function DistribusiPage() {
             })}
           </div>
         )}
+      </div>
 
-        {/* Summary */}
-        {!loading && flatList.length > 0 && (
-          <div className="mt-6 pt-4 border-t">
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div>
-                <div className="text-2xl font-bold text-gray-800">{flatList.length}</div>
-                <div className="text-sm text-gray-600">Total Item</div>
+      {/* Detail Modal */}
+      {detailItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden animate-scaleIn">
+            <div className="p-5 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-blue-100 text-blue-700">
+                  <FileText className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-slate-900 text-sm">Detail Riwayat Pengiriman &amp; BAST</h3>
+                  <p className="text-[11px] text-slate-500">Informasi pengiriman ke workshop</p>
+                </div>
               </div>
-              <div>
-                <div className="text-2xl font-bold text-yellow-600">{totalMenunggu}</div>
-                <div className="text-sm text-gray-600">Menunggu Konfirmasi</div>
+              <button onClick={() => setDetailItem(null)} className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto text-xs">
+              <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
+                <div>
+                  <span className="text-slate-400 block text-[10px]">Nomor Surat Jalan</span>
+                  <span className="font-mono font-bold text-blue-600">{detailItem.nomor_surat_jalan}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px]">Nomor BAST</span>
+                  <span className="font-mono font-bold text-emerald-700">{detailItem.nomor_bast || '—'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px]">Status</span>
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border mt-0.5 ${getStatusBadge(detailItem.status)}`}>
+                    {getStatusLabel(detailItem.status)}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px]">Ruangan Tujuan</span>
+                  <span className="font-bold text-slate-800">
+                    {detailItem.ruangan_tujuan?.nama_ruangan || '-'}
+                    {detailItem.ruangan_tujuan?.gedung?.nama_gedung ? ` (${detailItem.ruangan_tujuan.gedung.nama_gedung})` : ''}
+                  </span>
+                </div>
               </div>
-              <div>
-                <div className="text-2xl font-bold text-green-600">{totalDiterima}</div>
-                <div className="text-sm text-gray-600">Diterima</div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between border-b border-slate-100 pb-2">
+                  <span className="text-slate-500">Nama Barang:</span>
+                  <span className="font-bold text-slate-900">{detailItem.sarana_prasarana.nama_barang}</span>
+                </div>
+                <div className="flex justify-between border-b border-slate-100 pb-2">
+                  <span className="text-slate-500">Kode Barang:</span>
+                  <span className="font-mono text-slate-700">{detailItem.sarana_prasarana.kode}</span>
+                </div>
+                <div className="flex justify-between border-b border-slate-100 pb-2">
+                  <span className="text-slate-500">Jumlah Unit:</span>
+                  <span className="font-bold text-slate-900">{detailItem.jumlah} {detailItem.sarana_prasarana.satuan || 'Unit'}</span>
+                </div>
+                <div className="flex justify-between border-b border-slate-100 pb-2">
+                  <span className="text-slate-500">Petugas Pengirim:</span>
+                  <span className="font-medium text-slate-800">{detailItem.petugas_pengirim?.nama_lengkap}</span>
+                </div>
+                <div className="flex justify-between border-b border-slate-100 pb-2">
+                  <span className="text-slate-500">Wakapro Penerima:</span>
+                  <span className="font-semibold text-blue-700">{detailItem.wakapro_penerima?.nama_lengkap || 'Belum Dikonfirmasi'}</span>
+                </div>
+                <div className="flex justify-between border-b border-slate-100 pb-2">
+                  <span className="text-slate-500">Tanggal Kirim:</span>
+                  <span>{new Date(detailItem.tanggal_kirim).toLocaleDateString('id-ID')}</span>
+                </div>
+                {detailItem.tanggal_terima && (
+                  <div className="flex justify-between border-b border-slate-100 pb-2">
+                    <span className="text-slate-500">Tanggal Diterima:</span>
+                    <span className="font-bold text-emerald-700">{new Date(detailItem.tanggal_terima).toLocaleDateString('id-ID')}</span>
+                  </div>
+                )}
+                {detailItem.catatan_penerimaan && (
+                  <div className="pt-1">
+                    <span className="text-slate-500 block mb-1">Catatan Penerimaan (Wakapro):</span>
+                    <p className="p-2.5 bg-slate-50 rounded-lg text-slate-700 border border-slate-200">
+                      {detailItem.catatan_penerimaan}
+                    </p>
+                  </div>
+                )}
+                {detailItem.foto_kerusakan_url && (
+                  <div className="pt-1">
+                    <span className="text-slate-500 block mb-1">Foto Bukti Kerusakan saat Tiba:</span>
+                    <img
+                      src={detailItem.foto_kerusakan_url}
+                      alt="Kerusakan"
+                      onClick={() => setLightboxUrl(detailItem.foto_kerusakan_url || null)}
+                      className="w-full h-36 object-cover rounded-xl border border-slate-200 cursor-pointer hover:opacity-90 transition"
+                    />
+                  </div>
+                )}
               </div>
             </div>
+
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex gap-2 justify-end">
+              {detailItem.status === 'diterima' && (
+                <button
+                  onClick={() => handleCetakBast(detailItem.id)}
+                  disabled={printingBastId === detailItem.id}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all"
+                >
+                  <Printer className="h-3.5 w-3.5" />
+                  Cetak BAST
+                </button>
+              )}
+              <button
+                onClick={() => handleCetakSuratJalan(detailItem.id)}
+                disabled={printingId === detailItem.id}
+                className="inline-flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all"
+              >
+                <Printer className="h-3.5 w-3.5" />
+                Cetak Surat Jalan
+              </button>
+            </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }

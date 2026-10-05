@@ -9,7 +9,7 @@ export function middleware(request: NextRequest) {
     if (token) {
       return NextResponse.redirect(new URL('/dashboard', request.url));
     }
-    return NextResponse.next();
+    return null;
   }
 
   // Protected routes

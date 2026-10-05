@@ -3,20 +3,22 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import axios from '@/lib/axios';
-import { Handshake, Plus, Search, RefreshCw, CheckCircle2, Clock, X, Trash2, Edit2, Loader2, RotateCcw, User, Laptop } from 'lucide-react';
+import { Handshake, Plus, Search, RefreshCw, CheckCircle2, Clock, X, Trash2, Edit2, Loader2, RotateCcw, User, Package } from 'lucide-react';
 
-interface Aset {
+interface SaranaPrasarana {
   id: number;
-  kode_aset: string | null;
-  nama_aset: string;
-  jumlah: number;
-  satuan: string;
-  ruangan?: { nama_ruangan: string };
+  kode: string | null;
+  nama_barang: string;
+  satuan: string | null;
+  stok_akhir: number;
+  kondisi: string | null;
+  folder?: { nama_folder: string };
 }
 
 interface PeminjamanItem {
   id: number;
-  id_aset: number;
+  id_aset?: number | null;
+  sarana_prasarana_id?: number | null;
   nama_peminjam: string;
   role_peminjam: string;
   jumlah: number;
@@ -25,12 +27,25 @@ interface PeminjamanItem {
   tanggal_kembali_aktual: string | null;
   keperluan: string | null;
   status: 'Dipinjam' | 'Dikembalikan' | 'Terlambat';
-  aset?: Aset;
+  aset?: {
+    id: number;
+    nama_aset: string;
+    kode_aset: string | null;
+    satuan: string;
+    ruangan?: { nama_ruangan: string };
+  };
+  sarana_prasarana?: {
+    id: number;
+    nama_barang: string;
+    kode: string | null;
+    satuan: string | null;
+    folder?: { nama_folder: string };
+  };
 }
 
 export default function PeminjamanPage() {
   const [peminjamans, setPeminjamans] = useState<PeminjamanItem[]>([]);
-  const [asets, setAsets] = useState<Aset[]>([]);
+  const [saranas, setSaranas] = useState<SaranaPrasarana[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -43,7 +58,7 @@ export default function PeminjamanPage() {
   const [submitting, setSubmitting] = useState(false);
   const [returningId, setReturningId] = useState<number | null>(null);
   const [formData, setFormData] = useState({
-    id_aset: '',
+    sarana_prasarana_id: '',
     nama_peminjam: '',
     role_peminjam: 'Guru',
     jumlah: '1',
@@ -61,12 +76,12 @@ export default function PeminjamanPage() {
   const fetchData = async (showRefresh = false) => {
     if (showRefresh) setRefreshing(true); else setLoading(true);
     try {
-      const [peminjamanRes, asetRes] = await Promise.all([
+      const [peminjamanRes, saranaRes] = await Promise.all([
         axios.get('/api/peminjamans'),
-        axios.get('/api/asets'),
+        axios.get('/api/sarana-prasaranas'),
       ]);
-      setPeminjamans(peminjamanRes.data);
-      setAsets(asetRes.data);
+      setPeminjamans(peminjamanRes.data || []);
+      setSaranas(saranaRes.data?.data || saranaRes.data || []);
     } catch (err) {
       console.error('Failed to fetch peminjaman data:', err);
     } finally {
@@ -78,7 +93,7 @@ export default function PeminjamanPage() {
   const openAddModal = () => {
     setEditingItem(null);
     setFormData({
-      id_aset: asets[0]?.id ? String(asets[0].id) : '',
+      sarana_prasarana_id: saranas[0]?.id ? String(saranas[0].id) : '',
       nama_peminjam: '',
       role_peminjam: 'Guru',
       jumlah: '1',
@@ -93,7 +108,7 @@ export default function PeminjamanPage() {
   const openEditModal = (item: PeminjamanItem) => {
     setEditingItem(item);
     setFormData({
-      id_aset: String(item.id_aset),
+      sarana_prasarana_id: item.sarana_prasarana_id ? String(item.sarana_prasarana_id) : '',
       nama_peminjam: item.nama_peminjam,
       role_peminjam: item.role_peminjam,
       jumlah: String(item.jumlah),
@@ -107,10 +122,15 @@ export default function PeminjamanPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.sarana_prasarana_id) {
+      alert('Pilih sarana prasarana yang dipinjam.');
+      return;
+    }
+
     setSubmitting(true);
     try {
       const payload = {
-        id_aset: Number(formData.id_aset),
+        sarana_prasarana_id: Number(formData.sarana_prasarana_id),
         nama_peminjam: formData.nama_peminjam,
         role_peminjam: formData.role_peminjam,
         jumlah: Number(formData.jumlah),
@@ -127,9 +147,9 @@ export default function PeminjamanPage() {
       }
       setIsModalOpen(false);
       fetchData(true);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert('Gagal menyimpan data peminjaman.');
+      alert(err.response?.data?.message || 'Gagal menyimpan data peminjaman.');
     } finally {
       setSubmitting(false);
     }
@@ -165,11 +185,14 @@ export default function PeminjamanPage() {
 
   const filtered = peminjamans.filter(p => {
     const q = search.toLowerCase();
+    const namaBarang = (p.sarana_prasarana?.nama_barang || p.aset?.nama_aset || '').toLowerCase();
+    const kodeBarang = (p.sarana_prasarana?.kode || p.aset?.kode_aset || '').toLowerCase();
     const matchSearch =
       p.nama_peminjam.toLowerCase().includes(q) ||
-      p.aset?.nama_aset.toLowerCase().includes(q) ||
+      namaBarang.includes(q) ||
+      kodeBarang.includes(q) ||
       p.role_peminjam.toLowerCase().includes(q) ||
-      p.keperluan?.toLowerCase().includes(q);
+      (p.keperluan?.toLowerCase().includes(q) ?? false);
     const matchStatus = !statusFilter || p.status === statusFilter;
     return matchSearch && matchStatus;
   });
@@ -186,10 +209,10 @@ export default function PeminjamanPage() {
             <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center mr-3 shadow-sm shadow-indigo-500/20 flex-shrink-0">
               <Handshake className="h-4 w-4 text-white" />
             </div>
-            Peminjaman Aset (Laptop, Kamera, Dll)
+            Peminjaman Sarana & Prasarana
           </h1>
           <p className="text-sm text-slate-400 mt-1 ml-11">
-            Pencatatan dan pemantauan barang sekolah yang dipinjam oleh Guru, Siswa, maupun Staf
+            Pencatatan dan pemantauan sarana & prasarana sekolah yang dipinjam oleh Guru, Siswa, maupun Staf
           </p>
         </div>
 
@@ -218,7 +241,7 @@ export default function PeminjamanPage() {
             <p className="text-xs font-semibold text-indigo-100 uppercase tracking-wider">Sedang Dipinjam</p>
           </div>
           <p className="text-3xl font-extrabold">{totalDipinjam} <span className="text-sm font-normal text-indigo-100">transaksi</span></p>
-          <p className="text-xs text-indigo-100 mt-1">Barang berada di luar ruangan</p>
+          <p className="text-xs text-indigo-100 mt-1">Barang berada di luar gudang</p>
         </div>
 
         <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
@@ -227,12 +250,12 @@ export default function PeminjamanPage() {
             <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Sudah Dikembalikan</p>
           </div>
           <p className="text-3xl font-extrabold text-slate-900">{totalDikembalikan} <span className="text-sm font-normal text-slate-400">transaksi</span></p>
-          <p className="text-xs text-slate-400 mt-1">Aset aman tersimpan</p>
+          <p className="text-xs text-slate-400 mt-1">Barang aman tersimpan</p>
         </div>
 
         <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
           <div className="flex items-center space-x-2 mb-2">
-            <Laptop className="h-4 w-4 text-blue-500" />
+            <Package className="h-4 w-4 text-blue-500" />
             <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Riwayat Pinjam</p>
           </div>
           <p className="text-3xl font-extrabold text-slate-900">{peminjamans.length} <span className="text-sm font-normal text-slate-400">kali</span></p>
@@ -278,7 +301,7 @@ export default function PeminjamanPage() {
               <tr className="bg-slate-50/80 border-b border-slate-100 text-slate-400 text-[11px] uppercase tracking-widest">
                 <th className="px-4 py-3.5 font-semibold">#</th>
                 <th className="px-4 py-3.5 font-semibold">Nama Peminjam</th>
-                <th className="px-4 py-3.5 font-semibold">Aset yang Dipinjam</th>
+                <th className="px-4 py-3.5 font-semibold">Barang yang Dipinjam</th>
                 <th className="px-4 py-3.5 font-semibold">Keperluan</th>
                 <th className="px-4 py-3.5 font-semibold">Tgl Pinjam</th>
                 <th className="px-4 py-3.5 font-semibold">Rencana Kembali</th>
@@ -298,78 +321,85 @@ export default function PeminjamanPage() {
                       <Handshake className="h-7 w-7 text-slate-300" />
                     </div>
                     <p className="font-semibold text-slate-500 text-sm">Belum ada catatan peminjaman</p>
-                    <p className="text-slate-400 text-xs mt-1">Klik "+ Catat Peminjaman" untuk mencatat peminjaman barang.</p>
+                    <p className="text-slate-400 text-xs mt-1">Klik &quot;+ Catat Peminjaman&quot; untuk mencatat peminjaman barang.</p>
                   </td>
                 </tr>
               ) : (
-                filtered.map((item, idx) => (
-                  <tr key={item.id} className="hover:bg-slate-50/80 transition-colors group">
-                    <td className="px-4 py-3.5 text-xs text-slate-400 font-medium">{idx + 1}</td>
-                    <td className="px-4 py-3.5">
-                      <p className="text-sm font-semibold text-slate-800 flex items-center">
-                        <User className="h-3.5 w-3.5 text-slate-400 mr-1.5" />
-                        {item.nama_peminjam}
-                      </p>
-                      <span className="inline-block mt-0.5 text-[10px] font-semibold px-2 py-0.5 bg-slate-100 text-slate-600 rounded">
-                        {item.role_peminjam}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <p className="text-sm font-semibold text-indigo-900">{item.aset?.nama_aset || 'Aset Dihapus'}</p>
-                      <p className="text-[11px] text-slate-400">
-                        {item.jumlah} {item.aset?.satuan || 'Unit'} · {item.aset?.ruangan?.nama_ruangan || '-'}
-                      </p>
-                    </td>
-                    <td className="px-4 py-3.5 text-xs text-slate-600 max-w-xs truncate">
-                      {item.keperluan || '—'}
-                    </td>
-                    <td className="px-4 py-3.5 text-xs text-slate-600 font-mono">{item.tanggal_pinjam}</td>
-                    <td className="px-4 py-3.5 text-xs text-slate-600 font-mono">
-                      {item.tanggal_kembali_rencana || '—'}
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <span className={`px-2.5 py-1 rounded-lg text-xs font-semibold ${
-                        item.status === 'Dikembalikan'
-                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                          : 'bg-amber-50 text-amber-700 border border-amber-200'
-                      }`}>
-                        {item.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3.5 text-right">
-                      <div className="flex items-center justify-end space-x-1">
-                        {item.status === 'Dipinjam' && (
+                filtered.map((item, idx) => {
+                  const namaBarang = item.sarana_prasarana?.nama_barang || item.aset?.nama_aset || 'Barang Dihapus';
+                  const kodeBarang = item.sarana_prasarana?.kode || item.aset?.kode_aset || null;
+                  const satuan = item.sarana_prasarana?.satuan || item.aset?.satuan || 'Unit';
+                  const lokasi = item.sarana_prasarana?.folder?.nama_folder || item.aset?.ruangan?.nama_ruangan || 'Sarana & Prasarana';
+
+                  return (
+                    <tr key={item.id} className="hover:bg-slate-50/80 transition-colors group">
+                      <td className="px-4 py-3.5 text-xs text-slate-400 font-medium">{idx + 1}</td>
+                      <td className="px-4 py-3.5">
+                        <p className="text-sm font-semibold text-slate-800 flex items-center">
+                          <User className="h-3.5 w-3.5 text-slate-400 mr-1.5" />
+                          {item.nama_peminjam}
+                        </p>
+                        <span className="inline-block mt-0.5 text-[10px] font-semibold px-2 py-0.5 bg-slate-100 text-slate-600 rounded">
+                          {item.role_peminjam}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <p className="text-sm font-semibold text-indigo-900">{namaBarang}</p>
+                        <p className="text-[11px] text-slate-400">
+                          {item.jumlah} {satuan} {kodeBarang ? `· ${kodeBarang}` : ''} · {lokasi}
+                        </p>
+                      </td>
+                      <td className="px-4 py-3.5 text-xs text-slate-600 max-w-xs truncate">
+                        {item.keperluan || '—'}
+                      </td>
+                      <td className="px-4 py-3.5 text-xs text-slate-600 font-mono">{item.tanggal_pinjam}</td>
+                      <td className="px-4 py-3.5 text-xs text-slate-600 font-mono">
+                        {item.tanggal_kembali_rencana || '—'}
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <span className={`px-2.5 py-1 rounded-lg text-xs font-semibold ${
+                          item.status === 'Dikembalikan'
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            : 'bg-amber-50 text-amber-700 border border-amber-200'
+                        }`}>
+                          {item.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3.5 text-right">
+                        <div className="flex items-center justify-end space-x-1">
+                          {item.status === 'Dipinjam' && (
+                            <button
+                              onClick={() => handleReturn(item.id)}
+                              disabled={returningId === item.id}
+                              className="inline-flex items-center px-2.5 py-1 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-all disabled:opacity-50"
+                            >
+                              {returningId === item.id ? (
+                                <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                              ) : (
+                                <RotateCcw className="h-3 w-3 mr-1" />
+                              )}
+                              Kembalikan
+                            </button>
+                          )}
                           <button
-                            onClick={() => handleReturn(item.id)}
-                            disabled={returningId === item.id}
-                            className="inline-flex items-center px-2.5 py-1 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-all disabled:opacity-50"
+                            onClick={() => openEditModal(item)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                            title="Edit"
                           >
-                            {returningId === item.id ? (
-                              <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                            ) : (
-                              <RotateCcw className="h-3 w-3 mr-1" />
-                            )}
-                            Kembalikan
+                            <Edit2 className="h-3.5 w-3.5" />
                           </button>
-                        )}
-                        <button
-                          onClick={() => openEditModal(item)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
-                          title="Edit"
-                        >
-                          <Edit2 className="h-3.5 w-3.5" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(item.id)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                          title="Hapus"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                          <button
+                            onClick={() => handleDelete(item.id)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                            title="Hapus"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -383,7 +413,7 @@ export default function PeminjamanPage() {
           <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col">
             <div className="flex items-center justify-between p-5 border-b border-slate-100">
               <h3 className="font-bold text-slate-900 text-base">
-                {editingItem ? 'Edit Peminjaman' : 'Catat Peminjaman Aset Baru'}
+                {editingItem ? 'Edit Peminjaman' : 'Catat Peminjaman Sarana & Prasarana'}
               </h3>
               <button onClick={() => setIsModalOpen(false)} className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg">
                 <X className="h-5 w-5" />
@@ -392,19 +422,23 @@ export default function PeminjamanPage() {
 
             <form onSubmit={handleSubmit} className="p-5 space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Pilih Aset yang Dipinjam</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Pilih Sarana & Prasarana yang Dipinjam</label>
                 <select
-                  value={formData.id_aset}
-                  onChange={e => setFormData({ ...formData, id_aset: e.target.value })}
+                  value={formData.sarana_prasarana_id}
+                  onChange={e => setFormData({ ...formData, sarana_prasarana_id: e.target.value })}
                   required
                   className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 focus:bg-white"
                 >
-                  {asets.map(a => (
-                    <option key={a.id} value={a.id}>
-                      {a.nama_aset} {a.kode_aset ? `(${a.kode_aset})` : ''} - Stok: {a.jumlah} {a.satuan}
+                  <option value="" disabled>-- Pilih Sarana & Prasarana --</option>
+                  {saranas.map(s => (
+                    <option key={s.id} value={s.id}>
+                      {s.nama_barang} {s.kode ? `(${s.kode})` : ''} - Stok: {s.stok_akhir ?? 0} {s.satuan || 'Unit'} ({s.kondisi || 'Baik'})
                     </option>
                   ))}
                 </select>
+                {saranas.length === 0 && (
+                  <p className="text-xs text-amber-600 mt-1">Belum ada data sarana prasarana yang tersedia.</p>
+                )}
               </div>
 
               <div className="grid grid-cols-3 gap-3">

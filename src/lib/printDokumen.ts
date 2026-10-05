@@ -30,14 +30,14 @@ export interface SuratJalanData {
     kondisi: string
     folder?: { nama_folder: string } | null
   }
-  ruangan_tujuan: {
+  ruangan_tujuan?: {
     nama_ruangan: string
-    gedung: { nama_gedung: string }
-  }
+    gedung?: { nama_gedung: string } | null
+  } | null
   petugas_pengirim: {
     nama_lengkap: string
   }
-  wakapro_penerima: {
+  wakapro_penerima?: {
     nama_lengkap: string
   } | null
 }
@@ -62,6 +62,22 @@ const fmtTanggal = (d: string | null): string => {
     month: 'long',
     year: 'numeric',
   })
+}
+
+const fmtTujuan = (ruangan?: { nama_ruangan?: string; gedung?: { nama_gedung?: string } | null } | null): string => {
+  if (!ruangan) return '-'
+  if (ruangan.gedung?.nama_gedung) {
+    return `${ruangan.nama_ruangan} – ${ruangan.gedung.nama_gedung}`
+  }
+  return ruangan.nama_ruangan || '-'
+}
+
+const fmtTujuanBastIntro = (ruangan?: { nama_ruangan?: string; gedung?: { nama_gedung?: string } | null } | null): string => {
+  if (!ruangan) return 'Ruangan Tujuan'
+  if (ruangan.gedung?.nama_gedung) {
+    return `${ruangan.nama_ruangan} (${ruangan.gedung.nama_gedung})`
+  }
+  return ruangan.nama_ruangan || 'Ruangan Tujuan'
 }
 
 const fmtStatus = (s: string) => {
@@ -193,8 +209,8 @@ export const generateSuratJalan = (data: SuratJalanData): void => {
   y += 6
   const infoRows: [string, string][] = [
     ['Tanggal Pengiriman', fmtTanggal(data.tanggal_kirim)],
-    ['Tujuan Pengiriman', `${data.ruangan_tujuan.nama_ruangan} – ${data.ruangan_tujuan.gedung.nama_gedung}`],
-    ['Dikirim Oleh', data.petugas_pengirim.nama_lengkap],
+    ['Tujuan Pengiriman', fmtTujuan(data.ruangan_tujuan)],
+    ['Dikirim Oleh', data.petugas_pengirim?.nama_lengkap ?? '-'],
     ['Penerima (Wakapro)', data.wakapro_penerima?.nama_lengkap ?? '(belum dikonfirmasi)'],
   ]
 
@@ -356,7 +372,7 @@ export const generateBast = (response: BastApiResponse): void => {
   doc.setFont('helvetica', 'normal')
   doc.setTextColor(30, 30, 30)
   const intro = doc.splitTextToSize(
-    `Pada hari ini, ${fmtTanggal(data.tanggal_terima)}, telah dilaksanakan serah terima barang/peralatan dari Bagian Sarana dan Prasarana kepada ${data.ruangan_tujuan.nama_ruangan} (${data.ruangan_tujuan.gedung.nama_gedung}), dengan rincian sebagai berikut:`,
+    `Pada hari ini, ${fmtTanggal(data.tanggal_terima)}, telah dilaksanakan serah terima barang/peralatan dari Bagian Sarana dan Prasarana kepada ${fmtTujuanBastIntro(data.ruangan_tujuan)}, dengan rincian sebagai berikut:`,
     pw - margin * 2,
   )
   doc.text(intro, margin, y)
@@ -368,8 +384,8 @@ export const generateBast = (response: BastApiResponse): void => {
     ['No. BAST',             data.nomor_bast],
     ['Tanggal Pengiriman',   fmtTanggal(data.tanggal_kirim)],
     ['Tanggal Penerimaan',   fmtTanggal(data.tanggal_terima)],
-    ['Ruangan Tujuan',       `${data.ruangan_tujuan.nama_ruangan} – ${data.ruangan_tujuan.gedung.nama_gedung}`],
-    ['Pihak Pengirim',       data.petugas_pengirim.nama_lengkap],
+    ['Ruangan Tujuan',       fmtTujuan(data.ruangan_tujuan)],
+    ['Pihak Pengirim',       data.petugas_pengirim?.nama_lengkap ?? '-'],
     ['Pihak Penerima',       data.wakapro_penerima?.nama_lengkap ?? '-'],
   ]
 
@@ -530,10 +546,10 @@ export const generateSuratJalanBulk = (response: SuratJalanBulkApiResponse): voi
   const infoRows: [string, string][] = [
     ['Nomor Pengiriman', nomor_pengiriman],
     ['Tanggal Pengiriman', fmtTanggal(first.tanggal_kirim)],
-    ['Tujuan Pengiriman', `${first.ruangan_tujuan.nama_ruangan} – ${first.ruangan_tujuan.gedung.nama_gedung}`],
-    ['Dikirim Oleh', first.petugas_pengirim.nama_lengkap],
+    ['Tujuan Pengiriman', fmtTujuan(first.ruangan_tujuan)],
+    ['Dikirim Oleh', first.petugas_pengirim?.nama_lengkap ?? '-'],
     ['Penerima (Wakapro)', first.wakapro_penerima?.nama_lengkap ?? '(belum dikonfirmasi)'],
-    ['Jumlah Jenis Barang', `${items.length} jenis (${items.reduce((s, i) => s + i.jumlah, 0)} unit total)`],
+    ['Jumlah Jenis Barang', `${items.length} jenis (${items.reduce((s, i) => s + (i.jumlah || 0), 0)} unit total)`],
   ]
 
   doc.setFontSize(8.5)

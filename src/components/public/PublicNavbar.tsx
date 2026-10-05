@@ -14,7 +14,7 @@ export default function PublicNavbar() {
           {/* Logo & Title */}
           <div className="flex items-center gap-3">
             <img 
-              src="http://localhost:8000/storage/img/pgri-telagasari.jpg" 
+              src="/img/pgri-telagasari.jpg" 
               alt="Logo SMK PGRI Telagasari"
               className="w-10 h-10 rounded-full object-cover shadow-sm ring-2 ring-gray-100 flex-shrink-0"
             />

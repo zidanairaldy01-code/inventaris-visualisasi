@@ -57,6 +57,11 @@ class SaranaPrasarana extends Model
         return $this->hasMany(\App\Models\FotoSaranaPrasarana::class, 'id_sarana_prasarana')->orderBy('urutan');
     }
 
+    public function distribusiAset()
+    {
+        return $this->hasMany(\App\Models\DistribusiAset::class, 'sarana_prasarana_id');
+    }
+
     // Auto calculate stok_akhir before saving
     protected static function booted()
     {

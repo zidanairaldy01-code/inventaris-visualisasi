@@ -26,11 +26,16 @@ export default function LandingPage() {
       axios.get('/api/stats'),
       axios.get('/api/ruangans'),
     ]).then(([statsRes, ruanganRes]) => {
-      const statsData = statsRes.data;
-      statsData.total_ruangan = ruanganRes.data.length;
+      const statsData = statsRes?.data && typeof statsRes.data === 'object' ? statsRes.data : {};
+      const rList = Array.isArray(ruanganRes?.data)
+        ? ruanganRes.data
+        : (Array.isArray(ruanganRes?.data?.data) ? ruanganRes.data.data : []);
+      statsData.total_ruangan = rList.length;
       setStats(statsData);
-      setRuanganCount(ruanganRes.data.length);
-    }).catch(console.error);
+      setRuanganCount(rList.length);
+    }).catch((err) => {
+      console.error('Error fetching landing stats:', err);
+    });
   }, []);
 
   return (

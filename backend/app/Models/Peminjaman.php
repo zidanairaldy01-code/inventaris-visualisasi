@@ -10,6 +10,7 @@ class Peminjaman extends Model
 
     protected $fillable = [
         'id_aset',
+        'sarana_prasarana_id',
         'nama_peminjam',
         'role_peminjam',
         'jumlah',
@@ -23,5 +24,10 @@ class Peminjaman extends Model
     public function aset()
     {
         return $this->belongsTo(Aset::class, 'id_aset');
+    }
+
+    public function saranaPrasarana()
+    {
+        return $this->belongsTo(SaranaPrasarana::class, 'sarana_prasarana_id');
     }
 }

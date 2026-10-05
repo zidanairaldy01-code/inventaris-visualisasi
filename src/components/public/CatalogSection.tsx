@@ -58,10 +58,20 @@ export default function CatalogSection() {
       axios.get('/api/ruangans'),
       axios.get('/api/gedungs'),
     ]).then(([ruanganRes, gedungRes]) => {
-      setRuangans(ruanganRes.data);
-      setGedungs(gedungRes.data);
-      if (gedungRes.data.length > 0) setActiveGedung(gedungRes.data[0].id);
-    }).catch(console.error);
+      const rData = Array.isArray(ruanganRes.data)
+        ? ruanganRes.data
+        : (Array.isArray(ruanganRes.data?.data) ? ruanganRes.data.data : []);
+      const gData = Array.isArray(gedungRes.data)
+        ? gedungRes.data
+        : (Array.isArray(gedungRes.data?.data) ? gedungRes.data.data : []);
+      setRuangans(rData);
+      setGedungs(gData);
+      if (gData.length > 0) setActiveGedung(gData[0].id);
+    }).catch((err) => {
+      console.error('Error fetching catalog data:', err);
+      setRuangans([]);
+      setGedungs([]);
+    });
   }, []);
 
   const handleSelectRuangan = async (ruangan: Ruangan) => {
@@ -79,39 +89,42 @@ export default function CatalogSection() {
     }
   };
 
+  const safeRuangans = useMemo(() => Array.isArray(ruangans) ? ruangans : [], [ruangans]);
+  const safeGedungs = useMemo(() => Array.isArray(gedungs) ? gedungs : [], [gedungs]);
+
   const kelasOptions = useMemo(() => {
     const set = new Set<string>();
-    ruangans.forEach(r => {
-      const match = r.nama_ruangan.match(/Kelas\s+(X{1,3}I{0,3}|IV|IX|VI{0,3})/i);
+    safeRuangans.forEach(r => {
+      const match = r.nama_ruangan?.match(/Kelas\s+(X{1,3}I{0,3}|IV|IX|VI{0,3})/i);
       if (match) set.add(match[1].toUpperCase());
     });
     return Array.from(set).sort();
-  }, [ruangans]);
+  }, [safeRuangans]);
 
   const jurusanOptions = useMemo(() => {
     const set = new Set<string>();
-    ruangans.forEach(r => {
-      const match = r.nama_ruangan.match(/Kelas\s+(?:X{1,3}I{0,3}|IV|IX|VI{0,3})[-\s]+([A-Z]+)/i);
+    safeRuangans.forEach(r => {
+      const match = r.nama_ruangan?.match(/Kelas\s+(?:X{1,3}I{0,3}|IV|IX|VI{0,3})[-\s]+([A-Z]+)/i);
       if (match) set.add(match[1].toUpperCase());
     });
     return Array.from(set).sort();
-  }, [ruangans]);
+  }, [safeRuangans]);
 
   const filteredRuangans = useMemo(() => {
-    return ruangans.filter(r => {
+    return safeRuangans.filter(r => {
       if (activeGedung && r.id_gedung !== activeGedung) return false;
-      if (searchQuery && !r.nama_ruangan.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+      if (searchQuery && !r.nama_ruangan?.toLowerCase().includes(searchQuery.toLowerCase())) return false;
       if (filterKelas) {
-        const match = r.nama_ruangan.match(/Kelas\s+(X{1,3}I{0,3}|IV|IX|VI{0,3})/i);
+        const match = r.nama_ruangan?.match(/Kelas\s+(X{1,3}I{0,3}|IV|IX|VI{0,3})/i);
         if (!match || match[1].toUpperCase() !== filterKelas) return false;
       }
       if (filterJurusan) {
-        const match = r.nama_ruangan.match(/Kelas\s+(?:X{1,3}I{0,3}|IV|IX|VI{0,3})[-\s]+([A-Z]+)/i);
+        const match = r.nama_ruangan?.match(/Kelas\s+(?:X{1,3}I{0,3}|IV|IX|VI{0,3})[-\s]+([A-Z]+)/i);
         if (!match || match[1].toUpperCase() !== filterJurusan) return false;
       }
       return true;
     });
-  }, [ruangans, activeGedung, filterKelas, filterJurusan, searchQuery]);
+  }, [safeRuangans, activeGedung, filterKelas, filterJurusan, searchQuery]);
 
   const hasActiveFilter = !!(filterKelas || filterJurusan || searchQuery);
 
@@ -167,7 +180,7 @@ export default function CatalogSection() {
                 className="appearance-none w-full pl-9 pr-8 py-2.5 text-sm border border-gray-300 rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-400 cursor-pointer"
               >
                 <option value="">Semua Gedung</option>
-                {gedungs.map(g => (
+                {safeGedungs.map(g => (
                   <option key={g.id} value={g.id}>{g.nama_gedung}</option>
                 ))}
               </select>

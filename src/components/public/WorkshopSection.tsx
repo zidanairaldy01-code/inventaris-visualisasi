@@ -25,9 +25,13 @@ export default function WorkshopSection() {
   const fetchWorkshops = async () => {
     try {
       const response = await axios.get('/api/workshops');
-      setWorkshops(response.data);
+      const data = Array.isArray(response.data)
+        ? response.data
+        : (Array.isArray(response.data?.data) ? response.data.data : []);
+      setWorkshops(data);
     } catch (error) {
       console.error('Error fetching workshops:', error);
+      setWorkshops([]);
     } finally {
       setIsLoading(false);
     }

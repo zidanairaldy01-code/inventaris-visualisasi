@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Peminjaman;
 use App\Models\Aset;
+use App\Models\SaranaPrasarana;
+use App\Models\DistribusiAset;
 use App\Models\History;
 use Illuminate\Http\Request;
 
@@ -14,14 +16,19 @@ class PeminjamanController extends Controller
     {
         $user = $request->user();
 
-        $query = Peminjaman::with(['aset.ruangan', 'aset.kategori'])
+        $query = Peminjaman::with(['aset.ruangan', 'aset.kategori', 'saranaPrasarana.folder'])
             ->orderBy('created_at', 'desc');
 
-        // Jika wakapro, batasi hanya peminjaman dari aset di ruangan workshop-nya
+        // Jika wakapro, batasi hanya peminjaman dari aset atau sarana prasarana di ruangan workshop-nya
         if ($user && $user->role === 'wakapro') {
             if ($user->ruangan_id) {
-                $query->whereHas('aset', function ($q) use ($user) {
-                    $q->where('id_ruangan', $user->ruangan_id);
+                $query->where(function ($q) use ($user) {
+                    $q->whereHas('aset', function ($qa) use ($user) {
+                        $qa->where('id_ruangan', $user->ruangan_id);
+                    })->orWhereHas('saranaPrasarana.distribusiAset', function ($qd) use ($user) {
+                        $qd->where('ruangan_tujuan_id', $user->ruangan_id)
+                           ->where('status', 'diterima');
+                    });
                 });
             } else {
                 // Belum di-assign ke ruangan — kembalikan kosong
@@ -37,7 +44,8 @@ class PeminjamanController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'id_aset'                 => 'required|exists:asets,id',
+            'id_aset'                 => 'nullable|exists:asets,id',
+            'sarana_prasarana_id'     => 'nullable|exists:sarana_prasaranas,id',
             'nama_peminjam'           => 'required|string|max:255',
             'role_peminjam'           => 'required|string|max:100',
             'jumlah'                  => 'required|integer|min:1',
@@ -47,11 +55,32 @@ class PeminjamanController extends Controller
             'status'                  => 'nullable|in:Dipinjam,Dikembalikan,Terlambat',
         ]);
 
-        // Jika wakapro, pastikan aset yang dipinjamkan berasal dari workshopnya sendiri
+        if (empty($validated['id_aset']) && empty($validated['sarana_prasarana_id'])) {
+            return response()->json([
+                'message' => 'Barang yang dipinjam wajib dipilih.'
+            ], 422);
+        }
+
+        // Jika wakapro, pastikan barang yang dipinjamkan berasal dari workshopnya sendiri
         $user = $request->user();
         if ($user && $user->role === 'wakapro' && $user->ruangan_id) {
-            $aset = Aset::find($validated['id_aset']);
-            if (!$aset || (int) $aset->id_ruangan !== (int) $user->ruangan_id) {
+            $valid = false;
+            if (!empty($validated['id_aset'])) {
+                $aset = Aset::find($validated['id_aset']);
+                if ($aset && (int) $aset->id_ruangan === (int) $user->ruangan_id) {
+                    $valid = true;
+                }
+            } elseif (!empty($validated['sarana_prasarana_id'])) {
+                $exists = DistribusiAset::where('sarana_prasarana_id', $validated['sarana_prasarana_id'])
+                    ->where('ruangan_tujuan_id', $user->ruangan_id)
+                    ->where('status', 'diterima')
+                    ->exists();
+                if ($exists) {
+                    $valid = true;
+                }
+            }
+
+            if (!$valid) {
                 return response()->json([
                     'message' => 'Anda hanya dapat meminjamkan barang yang berada di workshop Anda.'
                 ], 403);
@@ -59,15 +88,19 @@ class PeminjamanController extends Controller
         }
 
         $peminjaman = Peminjaman::create($validated);
-        $peminjaman->load(['aset.ruangan', 'aset.kategori']);
+        $peminjaman->load(['aset.ruangan', 'aset.kategori', 'saranaPrasarana.folder']);
+
+        $namaBarang = $peminjaman->saranaPrasarana?->nama_barang 
+            ?? $peminjaman->aset?->nama_aset 
+            ?? 'Barang';
 
         // Create history - BARANG KELUAR
         History::create([
-            'id_aset' => $validated['id_aset'],
-            'id_user' => $request->user()?->id,
-            'aksi' => 'PEMINJAMAN',
-            'keterangan' => "Barang dipinjam oleh {$validated['nama_peminjam']} ({$validated['role_peminjam']}) sejumlah {$validated['jumlah']} unit. Keperluan: " . ($validated['keperluan'] ?? '-'),
-            'tanggal' => now()
+            'id_aset'    => $validated['id_aset'] ?? null,
+            'id_user'    => $request->user()?->id,
+            'aksi'       => 'PEMINJAMAN',
+            'keterangan' => "{$namaBarang} dipinjam oleh {$validated['nama_peminjam']} ({$validated['role_peminjam']}) sejumlah {$validated['jumlah']} unit. Keperluan: " . ($validated['keperluan'] ?? '-'),
+            'tanggal'    => now()
         ]);
 
         return response()->json($peminjaman, 201);
@@ -75,7 +108,7 @@ class PeminjamanController extends Controller
 
     public function show($id)
     {
-        $peminjaman = Peminjaman::with(['aset.ruangan', 'aset.kategori'])->findOrFail($id);
+        $peminjaman = Peminjaman::with(['aset.ruangan', 'aset.kategori', 'saranaPrasarana.folder'])->findOrFail($id);
         return response()->json($peminjaman);
     }
 
@@ -84,7 +117,8 @@ class PeminjamanController extends Controller
         $peminjaman = Peminjaman::findOrFail($id);
 
         $validated = $request->validate([
-            'id_aset'                 => 'sometimes|required|exists:asets,id',
+            'id_aset'                 => 'nullable|exists:asets,id',
+            'sarana_prasarana_id'     => 'nullable|exists:sarana_prasaranas,id',
             'nama_peminjam'           => 'sometimes|required|string|max:255',
             'role_peminjam'           => 'sometimes|required|string|max:100',
             'jumlah'                  => 'sometimes|required|integer|min:1',
@@ -105,16 +139,20 @@ class PeminjamanController extends Controller
         }
 
         $peminjaman->update($validated);
-        $peminjaman->load(['aset.ruangan', 'aset.kategori']);
+        $peminjaman->load(['aset.ruangan', 'aset.kategori', 'saranaPrasarana.folder']);
 
         // Create history when returned
         if ($statusBerubah) {
+            $namaBarang = $peminjaman->saranaPrasarana?->nama_barang 
+                ?? $peminjaman->aset?->nama_aset 
+                ?? 'Barang';
+
             History::create([
-                'id_aset' => $peminjaman->id_aset,
-                'id_user' => $request->user()?->id,
-                'aksi' => 'PENGEMBALIAN',
-                'keterangan' => "Barang dikembalikan oleh {$peminjaman->nama_peminjam} sejumlah {$peminjaman->jumlah} unit pada " . ($validated['tanggal_kembali_aktual'] ?? now()->toDateString()),
-                'tanggal' => now()
+                'id_aset'    => $peminjaman->id_aset,
+                'id_user'    => $request->user()?->id,
+                'aksi'       => 'PENGEMBALIAN',
+                'keterangan' => "{$namaBarang} dikembalikan oleh {$peminjaman->nama_peminjam} sejumlah {$peminjaman->jumlah} unit pada " . ($validated['tanggal_kembali_aktual'] ?? now()->toDateString()),
+                'tanggal'    => now()
             ]);
         }
 

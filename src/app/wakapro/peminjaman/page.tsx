@@ -36,7 +36,8 @@ interface Aset {
 
 interface PeminjamanItem {
   id: number;
-  id_aset: number;
+  id_aset?: number | null;
+  sarana_prasarana_id?: number | null;
   nama_peminjam: string;
   role_peminjam: string;
   jumlah: number;
@@ -46,6 +47,12 @@ interface PeminjamanItem {
   keperluan: string | null;
   status: 'Dipinjam' | 'Dikembalikan' | 'Terlambat';
   aset?: Aset;
+  sarana_prasarana?: {
+    id: number;
+    nama_barang: string;
+    kode: string | null;
+    satuan: string | null;
+  };
 }
 
 export default function WakaproPeminjamanPage() {
@@ -66,7 +73,9 @@ export default function WakaproPeminjamanPage() {
   const [submitting, setSubmitting] = useState(false);
   const [returningId, setReturningId] = useState<number | null>(null);
   const [formData, setFormData] = useState({
+    item_key: '',
     id_aset: '',
+    sarana_prasarana_id: '',
     nama_peminjam: '',
     role_peminjam: 'Guru',
     jumlah: '1',
@@ -89,7 +98,7 @@ export default function WakaproPeminjamanPage() {
         // Ambil HANYA barang yang ada di workshop wakapro yang sedang login
         axios.get('/api/workshop/pilih-barang'),
       ]);
-      setPeminjamans(peminjamanRes.data);
+      setPeminjamans(peminjamanRes.data || []);
 
       const workshopData = workshopRes.data;
       setBarangWorkshop(workshopData.items ?? []);
@@ -105,12 +114,25 @@ export default function WakaproPeminjamanPage() {
     }
   };
 
+  const handleItemSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const val = e.target.value;
+    const selected = barangWorkshop.find(b => `${b.tipe}-${b.id}` === val);
+    setFormData(prev => ({
+      ...prev,
+      item_key: val,
+      id_aset: selected?.tipe === 'aset' ? String(selected.id) : '',
+      sarana_prasarana_id: selected?.tipe === 'sarana_prasarana' ? String(selected.id) : '',
+    }));
+  };
+
   const openAddModal = () => {
     setEditingItem(null);
     const firstBarang = barangWorkshop[0];
+    const initialKey = firstBarang ? `${firstBarang.tipe}-${firstBarang.id}` : '';
     setFormData({
-      // Gunakan id_aset jika tipe 'aset', atau id (sarana_prasarana_id) jika tipe 'sarana_prasarana'
-      id_aset: firstBarang?.id_aset ? String(firstBarang.id_aset) : firstBarang?.id ? String(firstBarang.id) : '',
+      item_key: initialKey,
+      id_aset: firstBarang?.tipe === 'aset' ? String(firstBarang.id) : '',
+      sarana_prasarana_id: firstBarang?.tipe === 'sarana_prasarana' ? String(firstBarang.id) : '',
       nama_peminjam: '',
       role_peminjam: 'Guru',
       jumlah: '1',
@@ -124,8 +146,15 @@ export default function WakaproPeminjamanPage() {
 
   const openEditModal = (item: PeminjamanItem) => {
     setEditingItem(item);
+    const itemKey = item.sarana_prasarana_id
+      ? `sarana_prasarana-${item.sarana_prasarana_id}`
+      : item.id_aset
+      ? `aset-${item.id_aset}`
+      : '';
     setFormData({
-      id_aset: String(item.id_aset),
+      item_key: itemKey,
+      id_aset: item.id_aset ? String(item.id_aset) : '',
+      sarana_prasarana_id: item.sarana_prasarana_id ? String(item.sarana_prasarana_id) : '',
       nama_peminjam: item.nama_peminjam,
       role_peminjam: item.role_peminjam,
       jumlah: String(item.jumlah),
@@ -139,10 +168,16 @@ export default function WakaproPeminjamanPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.id_aset && !formData.sarana_prasarana_id) {
+      alert('Pilih barang workshop yang dipinjam.');
+      return;
+    }
+
     setSubmitting(true);
     try {
       const payload = {
-        id_aset: Number(formData.id_aset),
+        id_aset: formData.id_aset ? Number(formData.id_aset) : null,
+        sarana_prasarana_id: formData.sarana_prasarana_id ? Number(formData.sarana_prasarana_id) : null,
         nama_peminjam: formData.nama_peminjam,
         role_peminjam: formData.role_peminjam,
         jumlah: Number(formData.jumlah),
@@ -159,9 +194,9 @@ export default function WakaproPeminjamanPage() {
       }
       setIsModalOpen(false);
       fetchData(true);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert('Gagal menyimpan data peminjaman.');
+      alert(err.response?.data?.message || 'Gagal menyimpan data peminjaman.');
     } finally {
       setSubmitting(false);
     }
@@ -197,11 +232,14 @@ export default function WakaproPeminjamanPage() {
 
   const filtered = peminjamans.filter(p => {
     const q = search.toLowerCase();
+    const namaBarang = (p.sarana_prasarana?.nama_barang || p.aset?.nama_aset || '').toLowerCase();
+    const kodeBarang = (p.sarana_prasarana?.kode || p.aset?.kode_aset || '').toLowerCase();
     const matchSearch =
       p.nama_peminjam.toLowerCase().includes(q) ||
-      p.aset?.nama_aset.toLowerCase().includes(q) ||
+      namaBarang.includes(q) ||
+      kodeBarang.includes(q) ||
       p.role_peminjam.toLowerCase().includes(q) ||
-      p.keperluan?.toLowerCase().includes(q);
+      (p.keperluan?.toLowerCase().includes(q) ?? false);
     const matchStatus = !statusFilter || p.status === statusFilter;
     return matchSearch && matchStatus;
   });
@@ -354,9 +392,11 @@ export default function WakaproPeminjamanPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3.5">
-                      <p className="text-sm font-semibold text-indigo-900">{item.aset?.nama_aset || 'Aset Dihapus'}</p>
+                      <p className="text-sm font-semibold text-indigo-900">
+                        {item.sarana_prasarana?.nama_barang || item.aset?.nama_aset || 'Barang Workshop'}
+                      </p>
                       <p className="text-[11px] text-slate-400">
-                        {item.jumlah} {item.aset?.satuan || 'Unit'} · {item.aset?.ruangan?.nama_ruangan || '-'}
+                        {item.jumlah} {item.sarana_prasarana?.satuan || item.aset?.satuan || 'Unit'} · {item.aset?.ruangan?.nama_ruangan || namaWorkshop || 'Workshop'}
                       </p>
                     </td>
                     <td className="px-4 py-3.5 text-xs text-slate-600 max-w-xs truncate">
@@ -422,7 +462,7 @@ export default function WakaproPeminjamanPage() {
           <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col">
             <div className="flex items-center justify-between p-5 border-b border-slate-100">
               <h3 className="font-bold text-slate-900 text-base">
-                {editingItem ? 'Edit Peminjaman' : 'Catat Peminjaman Aset Baru'}
+                {editingItem ? 'Edit Peminjaman' : 'Catat Peminjaman Barang Workshop'}
               </h3>
               <button onClick={() => setIsModalOpen(false)} className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg">
                 <X className="h-5 w-5" />
@@ -440,20 +480,17 @@ export default function WakaproPeminjamanPage() {
                   </div>
                 ) : (
                   <select
-                    value={formData.id_aset}
-                    onChange={e => setFormData({ ...formData, id_aset: e.target.value })}
+                    value={formData.item_key}
+                    onChange={handleItemSelectChange}
                     required
                     className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 focus:bg-white"
                   >
-                    {barangWorkshop.map(b => {
-                      // Gunakan id_aset jika tipe 'aset', atau id jika 'sarana_prasarana'
-                      const nilai = b.id_aset ? String(b.id_aset) : String(b.id);
-                      return (
-                        <option key={`${b.tipe}-${b.id}`} value={nilai}>
-                          {b.nama_barang} {b.kode ? `(${b.kode})` : ''} — Stok: {b.jumlah} {b.satuan} · {b.kondisi}
-                        </option>
-                      );
-                    })}
+                    <option value="" disabled>-- Pilih Barang Workshop --</option>
+                    {barangWorkshop.map(b => (
+                      <option key={`${b.tipe}-${b.id}`} value={`${b.tipe}-${b.id}`}>
+                        {b.nama_barang} {b.kode ? `(${b.kode})` : ''} — Stok: {b.jumlah} {b.satuan} · {b.kondisi}
+                      </option>
+                    ))}
                   </select>
                 )}
               </div>
