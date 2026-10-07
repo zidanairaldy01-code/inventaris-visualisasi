@@ -620,16 +620,18 @@ export default function Header({ onMenuClick }: HeaderProps) {
             </div>
             <div className="hidden md:block text-sm text-left">
               <div className="font-semibold text-slate-800 text-xs leading-tight">{user?.nama_lengkap || 'Memuat...'}</div>
-              <div className="text-[10px] text-slate-400 capitalize leading-tight">{user?.role || 'Admin'}</div>
+              <div className="text-[10px] text-slate-400 capitalize leading-tight">
+                {user?.role === 'super_admin' ? 'Super Admin' : user?.role === 'petugas' ? 'Petugas Input' : user?.role === 'wakapro' ? 'Waka Program' : user?.role === 'wakasek' ? 'Waka Sarpras' : (user?.role || 'Admin')}
+              </div>
             </div>
             <ChevronDown className={`h-3 w-3 text-slate-400 flex-shrink-0 hidden sm:block transition-transform duration-200 ${userMenuOpen ? 'rotate-180 text-blue-600' : ''}`} />
           </div>
 
           {/* Profile Dropdown Menu */}
           {userMenuOpen && (
-            <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-2xl border border-slate-200/80 shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-2xl border border-slate-200/90 shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
               {/* User Summary Header */}
-              <div className="p-4 bg-slate-50/80 border-b border-slate-100">
+              <div className="p-4 bg-slate-50/90 border-b border-slate-100">
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold text-base shadow-md">
                     {user?.nama_lengkap?.[0]?.toUpperCase() || 'A'}
@@ -638,9 +640,9 @@ export default function Header({ onMenuClick }: HeaderProps) {
                     <p className="text-xs font-bold text-slate-800 truncate">{user?.nama_lengkap || 'Pengguna'}</p>
                     <p className="text-[11px] text-slate-400 truncate">{user?.email || `@${user?.username}` || 'admin@smkpgri.sch.id'}</p>
                     <div className="mt-1 flex items-center gap-1">
-                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-700 capitalize">
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-100 text-blue-700">
                         <ShieldCheck className="w-3 h-3 mr-0.5" />
-                        {user?.role || 'admin'}
+                        {user?.role === 'super_admin' ? 'Super Admin' : user?.role === 'petugas' ? 'Petugas Input' : user?.role === 'wakapro' ? 'Waka Program' : user?.role === 'wakasek' ? 'Waka Sarpras' : (user?.role || 'Admin')}
                       </span>
                     </div>
                   </div>

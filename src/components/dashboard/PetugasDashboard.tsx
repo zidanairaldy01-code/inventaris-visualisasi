@@ -50,14 +50,14 @@ export default function PetugasDashboard({ user, greeting, petugasStats, loading
           {/* Quick Actions Petugas */}
           <div className="flex items-center gap-2.5 flex-wrap">
             <Link
-              href="/dashboard/sarana-prasarana"
+              href="/petugas-input/sarana-prasarana"
               className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-indigo-500/20 flex items-center gap-1.5"
             >
               <Plus className="h-4 w-4" />
               Input Sarana Baru
             </Link>
             <Link
-              href="/dashboard/distribusi"
+              href="/petugas-input/distribusi"
               className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5"
             >
               <Truck className="h-4 w-4 text-slate-400" />
@@ -158,7 +158,7 @@ export default function PetugasDashboard({ user, greeting, petugasStats, loading
               <Truck className="h-4 w-4 text-indigo-600" />
               Riwayat Distribusi Barang Ke Workshop
             </h3>
-            <Link href="/dashboard/distribusi" className="text-xs font-bold text-indigo-600 hover:text-indigo-700">
+            <Link href="/petugas-input/distribusi" className="text-xs font-bold text-indigo-600 hover:text-indigo-700">
               Kelola Distribusi
             </Link>
           </div>

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import {
   FileText, Building2, Warehouse, CheckCircle2, AlertTriangle,
-  ArrowRight, ShieldCheck, CheckSquare, Layers
+  ArrowRight, ShieldCheck, CheckSquare, Layers, Package
 } from 'lucide-react';
 
 interface WakasekStats {
@@ -62,18 +62,18 @@ export default function WakasekDashboard({ user, greeting, wakasekStats, loading
           {/* Quick Actions Wakasek */}
           <div className="flex items-center gap-2.5 flex-wrap">
             <Link
-              href="/dashboard/laporan"
+              href="/wakasek/laporan"
               className="px-4 py-2.5 bg-teal-600 hover:bg-teal-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-teal-500/20 flex items-center gap-1.5"
             >
               <FileText className="h-4 w-4" />
               Rekap Laporan Sarpras
             </Link>
             <Link
-              href="/dashboard/ruangan"
+              href="/wakasek/sarana-prasarana"
               className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5"
             >
-              <Building2 className="h-4 w-4 text-slate-400" />
-              Data Ruangan &amp; Bengkel
+              <Package className="h-4 w-4 text-slate-400" />
+              Data Sarana Prasarana
             </Link>
           </div>
         </div>
@@ -170,7 +170,7 @@ export default function WakasekDashboard({ user, greeting, wakasekStats, loading
               Monitoring fasilitas peralatan fisik dan kepala bengkel penanggung jawab
             </p>
           </div>
-          <Link href="/dashboard/ruangan" className="text-xs font-bold text-teal-600 hover:text-teal-700">
+          <Link href="/wakasek/sarana-prasarana" className="text-xs font-bold text-teal-600 hover:text-teal-700">
             Lihat Detail
           </Link>
         </div>
@@ -246,8 +246,8 @@ export default function WakasekDashboard({ user, greeting, wakasekStats, loading
               Rekapitulasi distribusi barang resmi yang telah diterima dan disetujui Kepala Bengkel
             </p>
           </div>
-          <Link href="/dashboard/distribusi" className="text-xs font-bold text-blue-600 hover:text-blue-700">
-            Lihat Semua Distribusi
+          <Link href="/wakasek/sarana-prasarana" className="text-xs font-bold text-blue-600 hover:text-blue-700">
+            Lihat Data Sarana
           </Link>
         </div>
 
