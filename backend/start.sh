@@ -49,12 +49,33 @@ echo "CORS_ALLOWED_ORIGINS = ${CORS_ALLOWED_ORIGINS}"
 echo "SUPABASE_URL = ${SUPABASE_URL}"
 echo "SUPABASE_STORAGE_BUCKET = ${SUPABASE_STORAGE_BUCKET}"
 
+# Verify Supabase config
+if [ -z "$SUPABASE_URL" ]; then
+    echo "⚠️  WARNING: SUPABASE_URL is not set!"
+else
+    echo "✓ SUPABASE_URL is configured"
+fi
+
+if [ -z "$SUPABASE_SERVICE_KEY" ]; then
+    echo "⚠️  WARNING: SUPABASE_SERVICE_KEY is not set!"
+else
+    echo "✓ SUPABASE_SERVICE_KEY is configured"
+fi
+
 # Create storage link
 php artisan storage:link || echo "⚠ Storage link already exists or failed"
 
-# Clear caches
+# Clear and cache config
+echo "Clearing config cache..."
 php artisan config:clear
 php artisan cache:clear
+
+echo "Caching config..."
+php artisan config:cache
+
+# Run migrations
+echo "Running migrations..."
+php artisan migrate --force
 
 echo "=== Starting Laravel Server ==="
 php artisan serve --host=0.0.0.0 --port=${PORT:-8000}
