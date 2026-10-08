@@ -28,20 +28,9 @@ class FotoSaranaPrasarana extends Model
             return $this->path_file;
         }
         
-        // Langsung baca dari ENV, bypass config cache
-        $appUrl = env('APP_URL');
+        // HARDCODED Railway URL - bypass semua env issues
+        $appUrl = 'https://inventaris-visualisasi-production.up.railway.app';
         
-        // Fallback ke config jika ENV tidak ada
-        if (!$appUrl || $appUrl === 'http://localhost') {
-            $appUrl = config('app.url');
-        }
-        
-        // Jika masih localhost, gunakan hardcoded Railway URL
-        if (!$appUrl || $appUrl === 'http://localhost') {
-            $appUrl = 'https://inventaris-visualisasi-production.up.railway.app';
-        }
-        
-        $appUrl = rtrim($appUrl, '/');
         $storagePath = ltrim($this->path_file, '/');
         
         return "{$appUrl}/storage/{$storagePath}";
