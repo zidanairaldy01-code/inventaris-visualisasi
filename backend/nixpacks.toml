@@ -5,33 +5,7 @@ nixPkgs = ['php82', 'php82Packages.composer']
 cmds = ['composer install --no-dev --optimize-autoloader']
 
 [phases.build]
-cmds = [
-    # Generate .env file from Railway environment variables
-    'echo "APP_NAME=${APP_NAME:-Laravel}" > .env',
-    'echo "APP_ENV=${APP_ENV:-production}" >> .env',
-    'echo "APP_KEY=${APP_KEY}" >> .env',
-    'echo "APP_DEBUG=${APP_DEBUG:-false}" >> .env',
-    'echo "APP_URL=${APP_URL:-http://localhost}" >> .env',
-    'echo "" >> .env',
-    'echo "DB_CONNECTION=${DB_CONNECTION:-mysql}" >> .env',
-    'echo "DB_HOST=${DB_HOST:-127.0.0.1}" >> .env',
-    'echo "DB_PORT=${DB_PORT:-3306}" >> .env',
-    'echo "DB_DATABASE=${DB_DATABASE:-laravel}" >> .env',
-    'echo "DB_USERNAME=${DB_USERNAME:-root}" >> .env',
-    'echo "DB_PASSWORD=${DB_PASSWORD}" >> .env',
-    'echo "" >> .env',
-    'echo "SESSION_DRIVER=${SESSION_DRIVER:-database}" >> .env',
-    'echo "CACHE_STORE=${CACHE_STORE:-database}" >> .env',
-    'echo "QUEUE_CONNECTION=${QUEUE_CONNECTION:-database}" >> .env',
-    'echo "LOG_CHANNEL=${LOG_CHANNEL:-stderr}" >> .env',
-    'echo "FILESYSTEM_DISK=${FILESYSTEM_DISK:-public}" >> .env',
-    # Create storage link and clear caches
-    'php artisan storage:link || true',
-    'php artisan config:clear || true',
-    'php artisan cache:clear || true',
-    # Show generated .env for debugging (optional, comment out in production)
-    'echo "=== Generated .env ===" && cat .env'
-]
+cmds = ['chmod +x start.sh']
 
 [start]
-cmd = 'php artisan serve --host=0.0.0.0 --port=${PORT:-8000}'
+cmd = './start.sh'
