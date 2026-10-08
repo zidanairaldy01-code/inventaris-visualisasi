@@ -104,6 +104,42 @@ class FotoSaranaPrasaranaController extends Controller
     }
 
     /**
+     * Ambil semua foto dari database (untuk dropdown picker tanpa perlu search).
+     */
+    public function getAllPhotos(Request $request)
+    {
+        $excludeId = $request->exclude_id;
+        $search    = $request->search; // opsional: filter nama barang
+
+        $query = FotoSaranaPrasarana::query()
+            ->with('saranaPrasarana:id,nama_barang')
+            ->select(['id', 'id_sarana_prasarana', 'nama_barang_ref', 'path_file', 'nama_file', 'keterangan', 'is_thumbnail']);
+
+        if ($excludeId) {
+            $query->where('id_sarana_prasarana', '!=', $excludeId);
+        }
+
+        if ($search && strlen($search) >= 1) {
+            $query->where('nama_barang_ref', 'like', '%' . $search . '%');
+        }
+
+        $fotos = $query
+            ->orderBy('nama_barang_ref')
+            ->orderByDesc('created_at')
+            ->limit(200)
+            ->get()
+            ->map(fn($f) => $f->append('url_foto'))
+            // Deduplicate berdasarkan path_file
+            ->unique('path_file')
+            ->values();
+
+        return response()->json([
+            'status' => 'success',
+            'data'   => $fotos,
+        ]);
+    }
+
+    /**
      * Cari foto dari barang lain berdasarkan nama barang yang mirip (untuk shared photo picker).
      */
     public function searchSharedPhotos(Request $request)

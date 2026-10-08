@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import axios from '@/lib/axios';
 import {
   X, Upload, Trash2, Star, ImageOff, Loader2, CheckCircle2,
-  AlertCircle, Database, Search, RefreshCw, Images
+  AlertCircle, Database, Search, Images
 } from 'lucide-react';
 
 interface FotoItem {
@@ -43,7 +43,7 @@ export default function SaranaPrasaranaFotoModal({ item, onClose, onUpdate }: Pr
 
   // Shared photo state
   const [sharedPhotos, setSharedPhotos] = useState<FotoItem[]>([]);
-  const [searchQuery, setSearchQuery] = useState(item.nama_barang);
+  const [filterQuery, setFilterQuery] = useState('');
   const [loadingShared, setLoadingShared] = useState(false);
   const [usingShared, setUsingShared] = useState<number | null>(null);
   const [sharedMessage, setSharedMessage] = useState<string>('');
@@ -104,31 +104,30 @@ export default function SaranaPrasaranaFotoModal({ item, onClose, onUpdate }: Pr
     }
   };
 
-  const searchSharedPhotos = useCallback(async (query: string) => {
-    if (!query.trim() || query.trim().length < 2) return;
+  const loadAllSharedPhotos = useCallback(async () => {
     setLoadingShared(true);
     setSharedMessage('');
     try {
-      const res = await axios.get('/api/foto-sarana-prasarana/search', {
-        params: { nama_barang: query, exclude_id: item.id },
+      const res = await axios.get('/api/foto-sarana-prasarana/all', {
+        params: { exclude_id: item.id },
       });
       const data: FotoItem[] = res.data?.data || [];
       setSharedPhotos(data);
       if (data.length === 0) {
-        setSharedMessage(`Tidak ada foto lain ditemukan untuk "${query}".`);
+        setSharedMessage('Tidak ada foto lain tersedia di database.');
       }
     } catch {
       setSharedPhotos([]);
-      setSharedMessage('Gagal mencari foto.');
+      setSharedMessage('Gagal memuat foto dari database.');
     } finally {
       setLoadingShared(false);
     }
   }, [item.id]);
 
-  // Auto-search when switching to shared tab
+  // Auto-load semua foto saat tab shared dibuka
   useEffect(() => {
     if (activeTab === 'shared') {
-      searchSharedPhotos(searchQuery);
+      loadAllSharedPhotos();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
@@ -302,40 +301,30 @@ export default function SaranaPrasaranaFotoModal({ item, onClose, onUpdate }: Pr
 
           {/* ── TAB: SHARED PHOTOS ── */}
           {activeTab === 'shared' && (
-            <div className="space-y-4">
+            <div className="space-y-3">
               <div className="bg-violet-50 border border-violet-200 rounded-xl p-3">
                 <p className="text-xs text-violet-700 font-medium">
-                  Pilih foto dari barang sejenis yang sudah ada di database. Foto tidak akan disalin — hanya referensinya yang digunakan bersama oleh barang ini.
+                  Pilih foto dari barang lain yang sudah ada di database. Klik foto untuk langsung menggunakannya.
                 </p>
               </div>
 
-              {/* Search */}
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && searchSharedPhotos(searchQuery)}
-                    placeholder="Cari nama barang..."
-                    className="w-full pl-9 pr-4 py-2 text-sm border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 transition-all"
-                  />
-                </div>
-                <button
-                  onClick={() => searchSharedPhotos(searchQuery)}
-                  disabled={loadingShared}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold rounded-xl transition-all disabled:opacity-60"
-                >
-                  {loadingShared ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-                  Cari
-                </button>
+              {/* Filter Input */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                <input
+                  type="text"
+                  value={filterQuery}
+                  onChange={e => setFilterQuery(e.target.value)}
+                  placeholder="Filter nama barang..."
+                  className="w-full pl-9 pr-4 py-2 text-sm border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 transition-all"
+                />
               </div>
 
-              {/* Results */}
+              {/* Dropdown List */}
               {loadingShared ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="h-7 w-7 text-violet-500 animate-spin" />
+                  <span className="ml-2 text-sm text-slate-500">Memuat foto dari database...</span>
                 </div>
               ) : sharedPhotos.length === 0 ? (
                 <div className="flex flex-col items-center py-10 text-center">
@@ -343,48 +332,74 @@ export default function SaranaPrasaranaFotoModal({ item, onClose, onUpdate }: Pr
                     <Database className="h-7 w-7 text-slate-300" />
                   </div>
                   <p className="font-semibold text-slate-400 text-sm">
-                    {sharedMessage || 'Ketik nama barang lalu klik Cari'}
+                    {sharedMessage || 'Tidak ada foto tersedia'}
                   </p>
                 </div>
-              ) : (
-                <div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">
-                    {sharedPhotos.length} Foto Ditemukan — Klik foto untuk menggunakannya
-                  </p>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                    {sharedPhotos.map(foto => (
-                      <div
-                        key={foto.id}
-                        className="relative group rounded-xl overflow-hidden border border-slate-200 hover:border-violet-400 hover:shadow-md transition-all bg-slate-50 aspect-square cursor-pointer"
-                        onClick={() => !usingShared && handleUseSharedPhoto(foto)}
-                      >
-                        <img
-                          src={foto.url_foto}
-                          alt={foto.nama_barang_ref || foto.nama_file}
-                          className="w-full h-full object-cover"
-                        />
-                        {/* Nama barang asal */}
-                        <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/70 to-transparent p-2">
-                          <p className="text-[10px] text-white font-semibold leading-tight truncate">
-                            {foto.sarana_prasarana?.nama_barang || foto.nama_barang_ref}
-                          </p>
+              ) : (() => {
+                const filtered = filterQuery.trim()
+                  ? sharedPhotos.filter(f =>
+                      (f.sarana_prasarana?.nama_barang || f.nama_barang_ref || '')
+                        .toLowerCase()
+                        .includes(filterQuery.toLowerCase())
+                    )
+                  : sharedPhotos;
+
+                return (
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
+                      {filtered.length} foto — klik untuk menggunakan
+                    </p>
+                    <div className="border border-slate-200 rounded-xl overflow-hidden divide-y divide-slate-100 max-h-[340px] overflow-y-auto">
+                      {filtered.length === 0 ? (
+                        <div className="flex flex-col items-center py-8 text-center text-slate-400">
+                          <ImageOff className="h-6 w-6 mb-2 text-slate-300" />
+                          <p className="text-xs">Tidak ada hasil untuk &ldquo;{filterQuery}&rdquo;</p>
                         </div>
-                        {/* Hover overlay */}
-                        <div className="absolute inset-0 bg-violet-600/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1.5">
-                          {usingShared === foto.id ? (
-                            <Loader2 className="h-6 w-6 text-white animate-spin" />
-                          ) : (
-                            <>
-                              <CheckCircle2 className="h-7 w-7 text-white" />
-                              <span className="text-[10px] text-white font-bold">Gunakan Foto Ini</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    ))}
+                      ) : (
+                        filtered.map(foto => (
+                          <button
+                            key={foto.id}
+                            onClick={() => !usingShared && handleUseSharedPhoto(foto)}
+                            disabled={!!usingShared}
+                            className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-violet-50 transition-colors text-left group disabled:opacity-60"
+                          >
+                            {/* Thumbnail */}
+                            <div className="relative flex-shrink-0 w-12 h-12 rounded-lg overflow-hidden border border-slate-200 bg-slate-100">
+                              <img
+                                src={foto.url_foto}
+                                alt={foto.nama_barang_ref || foto.nama_file}
+                                className="w-full h-full object-cover"
+                              />
+                              {foto.is_thumbnail && (
+                                <div className="absolute bottom-0 right-0 p-0.5 bg-amber-400 rounded-tl">
+                                  <Star className="h-2.5 w-2.5 text-white fill-current" />
+                                </div>
+                              )}
+                            </div>
+                            {/* Info */}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-slate-700 truncate group-hover:text-violet-700 transition-colors">
+                                {foto.sarana_prasarana?.nama_barang || foto.nama_barang_ref || foto.nama_file}
+                              </p>
+                              {foto.keterangan && (
+                                <p className="text-xs text-slate-400 truncate mt-0.5">{foto.keterangan}</p>
+                              )}
+                            </div>
+                            {/* Action indicator */}
+                            <div className="flex-shrink-0">
+                              {usingShared === foto.id ? (
+                                <Loader2 className="h-4 w-4 text-violet-500 animate-spin" />
+                              ) : (
+                                <CheckCircle2 className="h-4 w-4 text-slate-300 group-hover:text-violet-500 transition-colors" />
+                              )}
+                            </div>
+                          </button>
+                        ))
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
             </div>
           )}
         </div>

@@ -115,6 +115,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('sarana-prasaranas', SaranaPrasaranaController::class);
 
     // Foto Sarana Prasarana
+    Route::get('foto-sarana-prasarana/all', [FotoSaranaPrasaranaController::class, 'getAllPhotos']);
     Route::get('foto-sarana-prasarana/search', [FotoSaranaPrasaranaController::class, 'searchSharedPhotos']);
     Route::post('sarana-prasaranas/{id}/fotos', [FotoSaranaPrasaranaController::class, 'store']);
     Route::post('sarana-prasaranas/{id}/fotos/use-shared', [FotoSaranaPrasaranaController::class, 'useSharedPhoto']);
