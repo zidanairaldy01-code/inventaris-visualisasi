@@ -32,6 +32,9 @@ interface SaranaPrasaranaItem {
   nilai_harga_sekarang: number;
   kondisi?: string | null;
   keterangan: string | null;
+  id_user: number | null;
+  id_folder: number | null;
+  user?: { id: number; name: string };
   created_at?: string;
   updated_at?: string;
 }
