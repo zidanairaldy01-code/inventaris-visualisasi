@@ -198,18 +198,20 @@ export default function ServisPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.sarana_prasarana_id && !formData.id_aset) {
+    if (!editingItem && !formData.sarana_prasarana_id && !formData.id_aset) {
       alert('Silakan pilih barang / aset di workshop terlebih dahulu.');
       return;
     }
     setSubmitting(true);
     try {
       const fd = new FormData();
-      if (formData.sarana_prasarana_id) {
-        fd.append('sarana_prasarana_id', formData.sarana_prasarana_id);
-      }
-      if (formData.id_aset) {
-        fd.append('id_aset', formData.id_aset);
+      if (!editingItem) {
+        if (formData.sarana_prasarana_id) {
+          fd.append('sarana_prasarana_id', formData.sarana_prasarana_id);
+        }
+        if (formData.id_aset) {
+          fd.append('id_aset', formData.id_aset);
+        }
       }
       fd.append('jenis_perbaikan', formData.jenis_perbaikan);
       fd.append('tanggal_servis', formData.tanggal_servis);
@@ -530,33 +532,40 @@ export default function ServisPage() {
                     </span>
                   )}
                 </div>
-                <select
-                  value={formData.item_key}
-                  onChange={handleItemSelectChange}
-                  required
-                  className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 focus:bg-white font-medium text-slate-800 transition-all"
-                >
-                  <option value="">-- Pilih Barang di Workshop Anda --</option>
-                  {editingItem && formData.item_key && !barangList.some(item => `${item.tipe}-${item.id}` === formData.item_key) && (
-                    <option value={formData.item_key}>
-                      {editingItem.sarana_prasarana?.nama_barang ?? editingItem.aset?.nama_aset ?? 'Barang Terpilih'} (Sedang Diedit)
-                    </option>
-                  )}
-                  {barangList.map(item => (
-                    <option key={`${item.tipe}-${item.id}`} value={`${item.tipe}-${item.id}`}>
-                      {item.nama_barang} {item.kode ? `(${item.kode})` : ''} — Kondisi: {item.kondisi} ({item.jumlah} {item.satuan})
-                    </option>
-                  ))}
-                </select>
-                {barangList.length === 0 ? (
-                  <p className="text-xs text-rose-500 mt-1.5 flex items-center gap-1">
-                    <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0" />
-                    Belum ada barang di workshop Anda. Pastikan aset sudah diterima di menu Penerimaan.
-                  </p>
+                {editingItem ? (
+                  <div className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-between">
+                    <span className="font-medium">
+                      {editingItem.sarana_prasarana?.nama_barang ?? editingItem.aset?.nama_aset ?? 'Barang Terpilih'}
+                      {editingItem.sarana_prasarana?.kode ? ` (${editingItem.sarana_prasarana.kode})` : editingItem.aset?.kode_aset ? ` (${editingItem.aset.kode_aset})` : ''}
+                    </span>
+                    <span className="text-[11px] bg-slate-200 text-slate-500 px-2 py-0.5 rounded-md font-semibold tracking-wide ml-2 shrink-0">Terkunci</span>
+                  </div>
                 ) : (
-                  <p className="text-[11px] text-slate-400 mt-1">
-                    Hanya menampilkan aset yang berada di workshop Anda ({barangList.length} jenis barang).
-                  </p>
+                  <>
+                    <select
+                      value={formData.item_key}
+                      onChange={handleItemSelectChange}
+                      required
+                      className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 focus:bg-white font-medium text-slate-800 transition-all"
+                    >
+                      <option value="">-- Pilih Barang di Workshop Anda --</option>
+                      {barangList.map(item => (
+                        <option key={`${item.tipe}-${item.id}`} value={`${item.tipe}-${item.id}`}>
+                          {item.nama_barang} {item.kode ? `(${item.kode})` : ''} — Kondisi: {item.kondisi} ({item.jumlah} {item.satuan})
+                        </option>
+                      ))}
+                    </select>
+                    {barangList.length === 0 ? (
+                      <p className="text-xs text-rose-500 mt-1.5 flex items-center gap-1">
+                        <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0" />
+                        Belum ada barang di workshop Anda. Pastikan aset sudah diterima di menu Penerimaan.
+                      </p>
+                    ) : (
+                      <p className="text-[11px] text-slate-400 mt-1">
+                        Hanya menampilkan aset yang berada di workshop Anda ({barangList.length} jenis barang).
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
 

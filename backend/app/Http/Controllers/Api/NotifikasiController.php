@@ -23,6 +23,11 @@ class NotifikasiController extends Controller
             $query->where('is_read', false);
         }
 
+        if ($request->filled('tipe')) {
+            $types = explode(',', $request->query('tipe'));
+            $query->whereIn('tipe', array_map('trim', $types));
+        }
+
         $notifications = $query->take($limit)->get();
         $unreadCount = Notifikasi::forUser($user)->where('is_read', false)->count();
 

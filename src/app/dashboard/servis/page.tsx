@@ -29,6 +29,11 @@ interface ServisItem {
   foto_kerusakan_url: string | null;
   status: 'Selesai' | 'Proses' | 'Batal';
   sarana_prasarana?: SaranaPrasarana;
+  aset?: {
+    id: number;
+    kode_aset: string;
+    nama_aset: string;
+  };
 }
 
 const formatRupiah = (n: number) =>
@@ -138,7 +143,9 @@ export default function ServisPage() {
     setSubmitting(true);
     try {
       const fd = new FormData();
-      fd.append('sarana_prasarana_id', formData.sarana_prasarana_id);
+      if (!editingItem && formData.sarana_prasarana_id) {
+        fd.append('sarana_prasarana_id', formData.sarana_prasarana_id);
+      }
       fd.append('jenis_perbaikan', formData.jenis_perbaikan);
       fd.append('tanggal_servis', formData.tanggal_servis);
       fd.append('biaya_servis', formData.biaya_servis);
@@ -184,10 +191,12 @@ export default function ServisPage() {
 
   const filtered = servises.filter(s => {
     const q = search.toLowerCase();
-    const namaBarang = s.sarana_prasarana?.nama_barang?.toLowerCase() || '';
+    const namaBarang = (s.sarana_prasarana?.nama_barang || s.aset?.nama_aset || '').toLowerCase();
+    const kodeBarang = (s.sarana_prasarana?.kode || s.aset?.kode_aset || '').toLowerCase();
     const matchSearch =
       s.jenis_perbaikan.toLowerCase().includes(q) ||
       namaBarang.includes(q) ||
+      kodeBarang.includes(q) ||
       (s.teknisi_bengkel?.toLowerCase().includes(q) ?? false);
     const matchStatus = !statusFilter || s.status === statusFilter;
     return matchSearch && matchStatus;
@@ -337,8 +346,12 @@ export default function ServisPage() {
                     <td className="px-4 py-3.5 text-xs text-slate-400 font-medium">{idx + 1}</td>
                     <td className="px-4 py-3.5 text-xs text-slate-600 font-mono">{item.tanggal_servis}</td>
                     <td className="px-4 py-3.5">
-                      <p className="text-sm font-semibold text-slate-800">{item.sarana_prasarana?.nama_barang || '—'}</p>
-                      <p className="text-[11px] text-slate-400">{item.sarana_prasarana?.kode || '-'}</p>
+                      <p className="text-sm font-semibold text-slate-800">
+                        {item.sarana_prasarana?.nama_barang || item.aset?.nama_aset || '—'}
+                      </p>
+                      <p className="text-[11px] text-slate-400">
+                        {item.sarana_prasarana?.kode || item.aset?.kode_aset || '-'}
+                      </p>
                     </td>
                     <td className="px-4 py-3.5">
                       <p className="text-sm font-medium text-slate-700">{item.jenis_perbaikan}</p>
@@ -410,22 +423,32 @@ export default function ServisPage() {
             </div>
 
             <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto">
-              {/* Pilih Barang */}
+              {/* Barang / Aset */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Pilih Barang / Aset</label>
-                <select
-                  value={formData.sarana_prasarana_id}
-                  onChange={e => setFormData({ ...formData, sarana_prasarana_id: e.target.value })}
-                  required
-                  className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 focus:bg-white"
-                >
-                  <option value="">-- Pilih Barang --</option>
-                  {saranas.map(s => (
-                    <option key={s.id} value={s.id}>
-                      {s.nama_barang} {s.kode ? `(${s.kode})` : ''} — {s.kondisi}
-                    </option>
-                  ))}
-                </select>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Barang / Aset</label>
+                {editingItem ? (
+                  <div className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-between">
+                    <span className="font-medium">
+                      {editingItem.sarana_prasarana?.nama_barang || editingItem.aset?.nama_aset || 'Aset / Barang'}
+                      {editingItem.sarana_prasarana?.kode ? ` (${editingItem.sarana_prasarana.kode})` : editingItem.aset?.kode_aset ? ` (${editingItem.aset.kode_aset})` : ''}
+                    </span>
+                    <span className="text-[11px] bg-slate-200 text-slate-500 px-2 py-0.5 rounded-md font-semibold tracking-wide ml-2 shrink-0">Terkunci</span>
+                  </div>
+                ) : (
+                  <select
+                    value={formData.sarana_prasarana_id}
+                    onChange={e => setFormData({ ...formData, sarana_prasarana_id: e.target.value })}
+                    required
+                    className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 focus:bg-white"
+                  >
+                    <option value="">-- Pilih Barang --</option>
+                    {saranas.map(s => (
+                      <option key={s.id} value={s.id}>
+                        {s.nama_barang} {s.kode ? `(${s.kode})` : ''} — {s.kondisi}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
 
               {/* Jenis Perbaikan */}

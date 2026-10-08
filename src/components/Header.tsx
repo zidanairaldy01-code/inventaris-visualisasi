@@ -468,16 +468,16 @@ export default function Header({ onMenuClick }: HeaderProps) {
                   <div className={`p-1.5 rounded-lg border ${
                     user?.role === 'wakapro'
                       ? 'bg-blue-500/20 text-blue-300 border-blue-500/30'
-                      : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                      : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30'
                   }`}>
-                    {user?.role === 'wakapro' ? <Bell className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+                    <Bell className="h-4 w-4" />
                   </div>
                   <div>
                     <h4 className="text-xs font-bold leading-tight">
-                      {user?.role === 'wakapro' ? 'Pemberitahuan Workshop' : 'Laporan Kerusakan Aset'}
+                      {user?.role === 'wakapro' ? 'Pemberitahuan Workshop' : 'Notifikasi & Laporan'}
                     </h4>
                     <p className="text-[10px] text-slate-300">
-                      {user?.role === 'wakapro' ? 'Notifikasi Khusus Workshop Anda' : 'Notifikasi dari Wakapro Workshop'}
+                      {user?.role === 'wakapro' ? 'Notifikasi Khusus Workshop Anda' : 'Pemberitahuan Sistem & Workshop'}
                     </p>
                   </div>
                 </div>
@@ -501,12 +501,12 @@ export default function Header({ onMenuClick }: HeaderProps) {
                       <CheckCircle2 className="h-5 w-5" />
                     </div>
                     <p className="text-xs font-semibold text-slate-700">
-                      {user?.role === 'wakapro' ? 'Tidak Ada Notifikasi Baru' : 'Tidak Ada Laporan Baru'}
+                      Tidak Ada Notifikasi Baru
                     </p>
                     <p className="text-[11px] text-slate-400 max-w-xs mx-auto leading-relaxed">
                       {user?.role === 'wakapro'
                         ? 'Belum ada pengiriman aset baru maupun pemberitahuan khusus untuk workshop Anda.'
-                        : 'Semua aset di seluruh workshop terpantau aman dan belum ada laporan kerusakan dari Wakapro.'}
+                        : 'Semua fasilitas terpantau aman dan belum ada notifikasi laporan baru.'}
                     </p>
                   </div>
                 ) : (

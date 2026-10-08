@@ -137,22 +137,29 @@ export default function LoginPage() {
       {/* =========================================
           RIGHT MAIN PANEL (Mobile, Tablet, Desktop)
           ========================================= */}
-      <div className="flex-1 flex flex-col justify-center items-center p-4 sm:p-6 md:p-8 lg:p-12 relative min-h-screen">
-        {/* Ambient background decoration */}
-        <div className="absolute top-0 right-0 w-72 h-72 bg-blue-100/60 rounded-full blur-3xl pointer-events-none -z-0" />
-        <div className="absolute bottom-0 left-0 w-72 h-72 bg-indigo-100/60 rounded-full blur-3xl pointer-events-none -z-0" />
+      <div className="flex-1 flex flex-col justify-center items-center p-4 sm:p-6 md:p-8 lg:p-12 relative min-h-screen overflow-hidden">
+        {/* Background Image: Foto Cover Sekolah (Penuh, tidak di-zoom) */}
+        <div
+          className="absolute inset-0 bg-no-repeat bg-center transition-all duration-500"
+          style={{
+            backgroundImage: "url('/img/photo%20cover.jpeg')",
+            backgroundSize: '100% 100%',
+          }}
+        />
+        {/* Overlay gelap 30% */}
+        <div className="absolute inset-0 bg-black/30 pointer-events-none" />
 
         {/* Mobile Header (Only visible on small/medium screens < lg) */}
-        <div className="w-full max-w-md lg:hidden mb-6 flex flex-col items-center text-center">
+        <div className="w-full max-w-md lg:hidden mb-6 flex flex-col items-center text-center relative z-10">
           <div className="w-full flex items-center justify-between mb-4">
             <Link
               href="/"
-              className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-blue-700 bg-white hover:bg-slate-100 px-3 py-2 rounded-xl border border-slate-200/80 shadow-xs transition-all"
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-700 hover:text-blue-700 bg-white/90 backdrop-blur-md hover:bg-white px-3 py-2 rounded-xl border border-white/40 shadow-sm transition-all"
             >
               <ArrowLeft size={15} />
               <span>Beranda</span>
             </Link>
-            <span className="text-[11px] font-semibold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-200/60">
+            <span className="text-[11px] font-semibold text-blue-100 bg-blue-950/70 backdrop-blur-md px-2.5 py-1 rounded-full border border-blue-400/30 shadow-sm">
               SIM Aset Sekolah
             </span>
           </div>
@@ -161,19 +168,19 @@ export default function LoginPage() {
             <img
               src="/smk-pgri-telagasari.png"
               alt="Logo SMK PGRI Telagasari"
-              className="w-14 h-14 rounded-2xl object-cover bg-white p-1 shadow-md border border-slate-200/70 mb-2.5"
+              className="w-14 h-14 rounded-2xl object-cover bg-white p-1 shadow-lg ring-2 ring-white/30 mb-2.5"
             />
-            <h2 className="text-lg font-bold text-slate-900 leading-snug">
+            <h2 className="text-lg font-bold text-white drop-shadow-md leading-snug">
               SMK PGRI Telagasari
             </h2>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-blue-100/90 drop-shadow">
               Sistem Informasi Manajemen Aset
             </p>
           </div>
         </div>
 
         {/* Form Card */}
-        <div className="w-full max-w-md bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 md:p-9 border border-slate-200/80 shadow-xl shadow-slate-200/60 relative z-10">
+        <div className="w-full max-w-md bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-3xl p-6 sm:p-8 md:p-9 border border-white/60 shadow-2xl shadow-slate-950/25 relative z-10">
           {/* Desktop Back Link */}
           <div className="hidden lg:block mb-6">
             <Link
@@ -323,7 +330,7 @@ export default function LoginPage() {
         </div>
 
         {/* Footer info for mobile */}
-        <div className="w-full max-w-md mt-6 text-center text-[11px] text-slate-400 lg:hidden">
+        <div className="w-full max-w-md mt-6 text-center text-[11px] text-white/80 drop-shadow relative z-10 lg:hidden">
           &copy; {new Date().getFullYear()} SMK PGRI Telagasari. Hak Cipta Dilindungi.
         </div>
       </div>

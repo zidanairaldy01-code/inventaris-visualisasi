@@ -180,6 +180,9 @@ class ServisController extends Controller
             unset($validated['foto_kerusakan']);
         }
 
+        // Kunci aset: barang tidak boleh diubah saat update karena merupakan terusan dari admin
+        unset($validated['id_aset'], $validated['sarana_prasarana_id']);
+
         // Check if status changed to "Selesai"
         $statusBerubah = isset($validated['status']) && 
                         $validated['status'] === 'Selesai' && 

@@ -64,6 +64,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('ruangans', RuanganController::class)->except(['index', 'show']);
     Route::apiResource('sumber-danas', SumberDanaController::class)->except(['index']);
     Route::get('kondisis/aset-rusak', [KondisiController::class, 'asetRusak']);
+    Route::post('kondisis/lapor-kerusakan', [KondisiController::class, 'laporKondisi']);
     Route::apiResource('kondisis', KondisiController::class);
 
     Route::post('asets/import', [AsetController::class, 'importExcel']);

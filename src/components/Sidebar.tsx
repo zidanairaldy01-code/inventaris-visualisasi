@@ -49,11 +49,12 @@ const navigation: NavItem[] = [
   // Sirkulasi & Layanan
   { name: 'Peminjaman Aset',    href: '/dashboard/peminjaman',       icon: Handshake,          group: 'layanan', dynamicHref: true },
   { name: 'Servis & Perbaikan', href: '/dashboard/servis',           icon: Wrench,             group: 'layanan', dynamicHref: true },
+  { name: 'Monitoring Kondisi', href: '/wakapro/kondisi',            icon: SlidersHorizontal,  group: 'layanan', roles: ['wakapro'] },
 
   // Data Master
   { name: 'Master Gedung',      href: '/dashboard/gedung',           icon: Building2,          group: 'master',     roles: ['super_admin', 'petugas'], dynamicHref: true },
   { name: 'Ruangan Workshop',   href: '/dashboard/ruangan',          icon: Warehouse,          group: 'master',     roles: ['super_admin', 'petugas'], dynamicHref: true },
-  { name: 'Kondisi Aset',       href: '/dashboard/kondisi',          icon: SlidersHorizontal,  group: 'master', dynamicHref: true },
+  { name: 'Kondisi Aset',       href: '/dashboard/kondisi',          icon: SlidersHorizontal,  group: 'master', roles: ['super_admin', 'petugas', 'wakasek'], dynamicHref: true },
 
   // Laporan & Pengaturan
   { name: 'Riwayat Aktivitas',  href: '/dashboard/history',          icon: History,            group: 'laporan',    roles: ['super_admin', 'petugas', 'wakasek'], dynamicHref: true },

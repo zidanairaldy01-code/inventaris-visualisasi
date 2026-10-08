@@ -55,9 +55,15 @@ export default function AdminDashboard({
   useEffect(() => {
     const fetchNotifs = async () => {
       try {
-        const res = await axios.get('/api/notifikasis?unread_only=true&limit=5');
+        const res = await axios.get('/api/notifikasis?unread_only=true&tipe=kerusakan_aset_workshop,kerusakan_aset&limit=10');
         if (res.data?.status === 'success') {
-          setUnreadDamagedNotifs(res.data.data || []);
+          const onlyDamageReports = (res.data.data || []).filter((notif: any) => {
+            const isDamageType = notif.tipe === 'kerusakan_aset_workshop' || notif.tipe === 'kerusakan_aset';
+            const kondisi = String(notif.data?.kondisi || '').toLowerCase();
+            const isDamagedCondition = kondisi.includes('rusak') || kondisi.includes('tidak layak');
+            return isDamageType && (isDamagedCondition || !notif.data?.kondisi);
+          });
+          setUnreadDamagedNotifs(onlyDamageReports);
         }
       } catch {
         // ignore
@@ -126,7 +132,7 @@ export default function AdminDashboard({
                   </span>
                 </div>
                 <p className="text-xs text-slate-600 mt-1">
-                  Laporan terbaru: <strong className="text-slate-800">{unreadDamagedNotifs[0].data?.nama_barang || unreadDamagedNotifs[0].judul}</strong> di <strong className="text-slate-800">{unreadDamagedNotifs[0].data?.nama_ruangan || 'Workshop'}</strong> ({unreadDamagedNotifs[0].data?.kondisi || 'Rusak'}) oleh {unreadDamagedNotifs[0].data?.wakapro_nama || 'Wakapro'}.
+                  Laporan terbaru: <strong className="text-slate-800">{unreadDamagedNotifs[0].data?.nama_barang || unreadDamagedNotifs[0].judul}</strong> di <strong className="text-slate-800">{unreadDamagedNotifs[0].data?.nama_ruangan || 'Workshop'}</strong> {unreadDamagedNotifs[0].data?.kondisi ? `(${unreadDamagedNotifs[0].data.kondisi})` : ''} oleh {unreadDamagedNotifs[0].data?.wakapro_nama || 'Wakapro'}.
                 </p>
               </div>
             </div>
