@@ -11,11 +11,12 @@ use Illuminate\Support\Facades\Storage;
 
 class FotoSaranaPrasaranaController extends Controller
 {
-    protected SupabaseStorageService $supabase;
+    protected ?SupabaseStorageService $supabase = null;
 
-    public function __construct(SupabaseStorageService $supabase)
+    public function __construct()
     {
-        $this->supabase = $supabase;
+        // Jangan auto-inject untuk avoid error saat debug
+        // $this->supabase akan di-set manual di method yang membutuhkan
     }
 
     /**
@@ -36,6 +37,9 @@ class FotoSaranaPrasaranaController extends Controller
         }
 
         try {
+            // Instantiate service manual untuk error handling yang lebih baik
+            $this->supabase = app(SupabaseStorageService::class);
+            
             // Upload ke Supabase Storage
             $file = $request->file('foto');
             $folder = 'sarana-prasarana';
@@ -119,6 +123,8 @@ class FotoSaranaPrasaranaController extends Controller
         $foto = FotoSaranaPrasarana::findOrFail($id);
 
         try {
+            $this->supabase = app(SupabaseStorageService::class);
+            
             // Jika URL adalah Supabase URL, extract path dan delete dari Supabase
             if (str_contains($foto->path_file, 'supabase')) {
                 // URL format: https://xxx.supabase.co/storage/v1/object/public/bucket/path
@@ -192,30 +198,48 @@ class FotoSaranaPrasaranaController extends Controller
      */
     public function debugConfig()
     {
-        $supabaseUrl = config('services.supabase.url');
-        $supabaseBucket = config('services.supabase.storage_bucket');
-        $hasServiceKey = !empty(config('services.supabase.service_key'));
-        $hasAnonKey = !empty(config('services.supabase.anon_key'));
-        
-        return response()->json([
-            'status' => 'debug',
-            'environment' => config('app.env'),
-            'app_url' => config('app.url'),
-            'supabase_url' => $supabaseUrl,
-            'supabase_url_is_empty' => empty($supabaseUrl),
-            'supabase_url_is_valid' => filter_var($supabaseUrl, FILTER_VALIDATE_URL),
-            'supabase_bucket' => $supabaseBucket,
-            'has_service_key' => $hasServiceKey,
-            'has_anon_key' => $hasAnonKey,
-            'service_key_length' => $hasServiceKey ? strlen(config('services.supabase.service_key')) : 0,
-            'config_cached' => app()->configurationIsCached(),
-            'env_file_exists' => file_exists(base_path('.env')),
-            'php_version' => PHP_VERSION,
-            'all_supabase_config' => [
-                'url_raw' => env('SUPABASE_URL'),
-                'url_config' => config('services.supabase.url'),
-            ],
-        ]);
+        // Jangan instantiate service dulu, langsung akses config
+        try {
+            $supabaseUrl = config('services.supabase.url');
+            $supabaseBucket = config('services.supabase.storage_bucket');
+            $hasServiceKey = !empty(config('services.supabase.service_key'));
+            $hasAnonKey = !empty(config('services.supabase.anon_key'));
+            
+            // Get raw env values
+            $envUrl = env('SUPABASE_URL');
+            $envBucket = env('SUPABASE_STORAGE_BUCKET');
+            
+            return response()->json([
+                'status' => 'debug',
+                'environment' => config('app.env'),
+                'app_url' => config('app.url'),
+                'supabase_url' => $supabaseUrl,
+                'supabase_url_is_empty' => empty($supabaseUrl),
+                'supabase_url_is_valid' => $supabaseUrl ? filter_var($supabaseUrl, FILTER_VALIDATE_URL) : false,
+                'supabase_bucket' => $supabaseBucket,
+                'has_service_key' => $hasServiceKey,
+                'has_anon_key' => $hasAnonKey,
+                'service_key_length' => $hasServiceKey ? strlen(config('services.supabase.service_key')) : 0,
+                'config_cached' => app()->configurationIsCached(),
+                'env_file_exists' => file_exists(base_path('.env')),
+                'php_version' => PHP_VERSION,
+                'env_values' => [
+                    'SUPABASE_URL_raw' => $envUrl ?: 'NOT SET',
+                    'SUPABASE_STORAGE_BUCKET_raw' => $envBucket ?: 'NOT SET',
+                    'APP_ENV' => env('APP_ENV'),
+                ],
+                'config_values' => [
+                    'url' => config('services.supabase.url') ?: 'NOT SET',
+                    'bucket' => config('services.supabase.storage_bucket') ?: 'NOT SET',
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ], 500);
+        }
     }
 
     /**
