@@ -16,6 +16,27 @@ class SupabaseStorageService
         $this->url = config('services.supabase.url');
         $this->key = config('services.supabase.service_key'); // Use service_key for uploads
         $this->bucket = config('services.supabase.storage_bucket', 'inventaris-photo');
+        
+        // Validate configuration to prevent runtime errors
+        if (empty($this->url)) {
+            throw new \RuntimeException(
+                'SUPABASE_URL is not configured. Please set it in your environment variables. ' .
+                'Expected format: https://your-project.supabase.co'
+            );
+        }
+        
+        if (empty($this->key)) {
+            throw new \RuntimeException(
+                'SUPABASE_SERVICE_KEY is not configured. Please set it in your environment variables.'
+            );
+        }
+        
+        // Validate URL format
+        if (!filter_var($this->url, FILTER_VALIDATE_URL)) {
+            throw new \RuntimeException(
+                "Invalid SUPABASE_URL format: '{$this->url}'. Must include scheme (https://) and host."
+            );
+        }
     }
 
     /**
