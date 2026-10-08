@@ -19,13 +19,16 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => [
-        'http://localhost:3000',
-        'http://127.0.0.1:3000',
-        env('FRONTEND_URL', 'http://localhost:3000'),
-    ],
+    'allowed_origins' => env('APP_ENV') === 'production' 
+        ? array_filter(explode(',', env('CORS_ALLOWED_ORIGINS', '')))
+        : [
+            'http://localhost:3000',
+            'http://127.0.0.1:3000',
+        ],
 
-    'allowed_origins_patterns' => [],
+    'allowed_origins_patterns' => env('APP_ENV') === 'production'
+        ? ['/^https:\/\/.*\.vercel\.app$/', '/^https:\/\/.*\.railway\.app$/']
+        : [],
 
     'allowed_headers' => ['*'],
 

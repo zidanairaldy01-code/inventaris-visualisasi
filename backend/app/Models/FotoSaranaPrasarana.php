@@ -28,12 +28,9 @@ class FotoSaranaPrasarana extends Model
             return $this->path_file;
         }
         
-        // HARDCODED Railway URL - bypass semua env issues
-        $appUrl = 'https://inventaris-visualisasi-production.up.railway.app';
-        
-        $storagePath = ltrim($this->path_file, '/');
-        
-        return "{$appUrl}/storage/{$storagePath}";
+        // Gunakan Laravel Storage URL helper yang sudah proper
+        // Ini akan otomatis menggunakan APP_URL dari environment
+        return Storage::url($this->path_file);
     }
 
     public function saranaPrasarana()
