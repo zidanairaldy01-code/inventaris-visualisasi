@@ -39,7 +39,20 @@ class FotoSaranaPrasaranaController extends Controller
             // Upload ke Supabase Storage
             $file = $request->file('foto');
             $folder = 'sarana-prasarana';
+            
+            \Log::info('Starting Supabase upload', [
+                'folder' => $folder,
+                'filename' => $file->getClientOriginalName(),
+                'size' => $file->getSize(),
+                'mime' => $file->getMimeType(),
+                'supabase_url' => config('services.supabase.url'),
+                'bucket' => config('services.supabase.storage_bucket'),
+                'has_service_key' => !empty(config('services.supabase.service_key')),
+            ]);
+            
             $result = $this->supabase->uploadWithHash($file, $folder);
+            
+            \Log::info('Supabase upload result', $result);
 
             if ($request->boolean('is_thumbnail', false)) {
                 FotoSaranaPrasarana::where('id_sarana_prasarana', $item->id)
@@ -58,11 +71,19 @@ class FotoSaranaPrasaranaController extends Controller
                 'urutan'              => $existingCount + 1,
             ]);
 
+            \Log::info('Photo record created', ['foto_id' => $foto->id]);
+
             return response()->json($foto->append('url_foto'), 201);
 
         } catch (\Exception $e) {
+            \Log::error('Upload failed in controller', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            
             return response()->json([
-                'message' => 'Gagal upload foto: ' . $e->getMessage()
+                'message' => 'Gagal upload foto: ' . $e->getMessage(),
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
