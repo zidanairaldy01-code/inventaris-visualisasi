@@ -80,10 +80,43 @@ public function getUrlFotoAttribute(): string
 
 Setelah deployment:
 
+#### 1. Test Storage Configuration
+Buka URL ini di browser untuk melihat konfigurasi storage:
+```
+https://your-backend-url.up.railway.app/debug-storage
+```
+
+Response yang seharusnya:
+```json
+{
+  "app_url": "https://your-backend-url.up.railway.app",
+  "storage_disk": "public",
+  "public_disk_url": "https://your-backend-url.up.railway.app/storage",
+  "public_path_exists": true,
+  "storage_path_exists": true,
+  "is_symlink": true,
+  "storage_files": [...],
+  "sample_url": "https://your-backend-url.up.railway.app/storage/test.jpg"
+}
+```
+
+⚠️ **Penting**: Hapus route `/debug-storage` setelah selesai debugging untuk keamanan!
+
+#### 2. Test Upload & Preview
 1. **Upload foto baru** di sarana prasarana
-2. **Check database** - foto harus tersimpan dengan path seperti: `sarana-prasarana/xxxxx.jpg`
-3. **Check API response** - `url_foto` harus berisi URL lengkap seperti: `https://your-backend-url.up.railway.app/storage/sarana-prasarana/xxxxx.jpg`
-4. **Check frontend** - preview foto harus muncul dengan benar
+2. **Check browser DevTools** → Network tab → Cari request API response
+3. **Verify url_foto field** - harus berisi URL lengkap Railway seperti:
+   ```
+   https://your-backend-url.up.railway.app/storage/sarana-prasarana/xxxxx.jpg
+   ```
+4. **Click foto** - preview harus muncul dengan benar
+
+#### 3. Test Foto Langsung di Browser
+Ambil `url_foto` dari API response, paste ke browser address bar. File foto harus bisa di-download/tampil.
+
+Jika **404 Not Found**, berarti:
+- Storage link belum dibuat, atau
+- File tidak ada di `storage/app/public/`
 
 ### Common Issues
 
