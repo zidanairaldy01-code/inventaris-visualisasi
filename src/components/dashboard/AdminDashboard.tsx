@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import axios from '@/lib/axios';
+import axios, { getStorageUrl } from '@/lib/axios';
 import {
   Package, Building2, Warehouse, ArrowUpRight, TrendingUp,
   DollarSign, Layers, ShoppingCart, Handshake, Wrench, Clock,
@@ -283,7 +283,7 @@ export default function AdminDashboard({
                     {/* Foto thumbnail / nomor */}
                     <div className="flex-shrink-0 w-10 h-10 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 flex items-center justify-center">
                       {thumbnail ? (
-                        <img src={thumbnail.url_foto} alt={namaBarang} className="w-full h-full object-cover" />
+                        <img src={getStorageUrl(thumbnail.url_foto)} alt={namaBarang} className="w-full h-full object-cover" />
                       ) : (
                         <span className="text-xs font-bold text-slate-400">{idx + 1}</span>
                       )}

@@ -2,19 +2,19 @@
 
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import axios from '@/lib/axios';
+import axios, { getStorageUrl } from '@/lib/axios';
 import {
   X, Package, Tag, Layers, DollarSign, Calendar, FileText,
   ChevronLeft, ChevronRight, ImageOff, Loader2, Camera,
-  Edit2, Trash2, Star, TrendingUp, Info
+  Edit2, Trash2, Star, TrendingUp, Info, Maximize2, AlertCircle
 } from 'lucide-react';
 
 interface FotoItem {
   id: number;
   url_foto: string;
-  nama_file: string;
-  keterangan: string | null;
-  is_thumbnail: boolean;
+  nama_file?: string;
+  keterangan?: string | null;
+  is_thumbnail?: boolean;
 }
 
 interface SaranaPrasaranaItem {
@@ -35,6 +35,9 @@ interface SaranaPrasaranaItem {
   id_user: number | null;
   id_folder: number | null;
   user?: { id: number; name: string };
+  fotos?: FotoItem[];
+  foto_kerusakan?: string | null;
+  foto_kerusakan_url?: string | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -67,11 +70,26 @@ const kondisiColor = (k?: string | null) => {
 export default function SaranaPrasaranaPreviewCard({
   item, onClose, onEdit, onDelete, onOpenFoto, isSuperAdmin
 }: Props) {
-  const [fotos, setFotos] = useState<FotoItem[]>([]);
-  const [loadingFoto, setLoadingFoto] = useState(true);
+  // Inisialisasi awal jika item sudah membawa foto atau foto kerusakan
+  const [fotos, setFotos] = useState<FotoItem[]>(() => {
+    if (item.fotos && item.fotos.length > 0) return item.fotos;
+    if (item.foto_kerusakan_url) {
+      return [{
+        id: -1,
+        url_foto: item.foto_kerusakan_url,
+        nama_file: 'Foto Kerusakan',
+        keterangan: null,
+        is_thumbnail: true,
+      }];
+    }
+    return [];
+  });
+  const [loadingFoto, setLoadingFoto] = useState(() => !(item.fotos && item.fotos.length > 0));
   const [activeIdx, setActiveIdx] = useState(0);
   const [mounted, setMounted] = useState(false);
   const [visible, setVisible] = useState(false);
+  const [imgError, setImgError] = useState(false);
+  const [fullscreenFoto, setFullscreenFoto] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -79,23 +97,61 @@ export default function SaranaPrasaranaPreviewCard({
   }, []);
 
   useEffect(() => {
+    let isMounted = true;
     const fetchFotos = async () => {
-      setLoadingFoto(true);
+      // Hanya tampilkan loading jika belum ada foto awal
+      if (!item.fotos || item.fotos.length === 0) {
+        setLoadingFoto(true);
+      }
       try {
         const res = await axios.get(`/api/sarana-prasaranas/${item.id}`);
         const data = res.data?.data || res.data;
-        const fotoList: FotoItem[] = data?.fotos || [];
-        setFotos(fotoList);
-        const thumbIdx = fotoList.findIndex((f) => f.is_thumbnail);
-        setActiveIdx(thumbIdx >= 0 ? thumbIdx : 0);
+        let fotoList: FotoItem[] = data?.fotos || [];
+
+        // Fallback 1: Jika tidak ada foto gallery, gunakan foto_kerusakan_url jika ada
+        if (fotoList.length === 0 && (data?.foto_kerusakan_url || item.foto_kerusakan_url)) {
+          fotoList = [{
+            id: -1,
+            url_foto: (data?.foto_kerusakan_url || item.foto_kerusakan_url) as string,
+            nama_file: 'Foto Barang',
+            keterangan: null,
+            is_thumbnail: true,
+          }];
+        }
+
+        // Fallback 2: Jika masih kosong, cari foto shared berdasarkan nama barang yang sama
+        if (fotoList.length === 0 && item.nama_barang) {
+          try {
+            const sharedRes = await axios.get(`/api/foto-sarana-prasarana/search?nama_barang=${encodeURIComponent(item.nama_barang)}`);
+            const sharedData = sharedRes.data?.data || sharedRes.data;
+            if (Array.isArray(sharedData) && sharedData.length > 0) {
+              fotoList = sharedData;
+            }
+          } catch {
+            // silent ignore
+          }
+        }
+
+        if (isMounted) {
+          setFotos(fotoList);
+          const thumbIdx = fotoList.findIndex((f) => f.is_thumbnail);
+          setActiveIdx(thumbIdx >= 0 ? thumbIdx : 0);
+          setImgError(false);
+        }
       } catch {
-        setFotos([]);
+        // Tetap pertahankan foto awal jika request gagal
       } finally {
-        setLoadingFoto(false);
+        if (isMounted) {
+          setLoadingFoto(false);
+        }
       }
     };
     fetchFotos();
-  }, [item.id]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [item.id, item.nama_barang]);
 
   const handleClose = () => {
     setVisible(false);
@@ -190,28 +246,52 @@ export default function SaranaPrasaranaPreviewCard({
                 <p className="text-xs text-slate-400 group-hover:text-indigo-500 transition-colors font-medium">Belum ada foto — klik untuk upload</p>
               </div>
             ) : (
-              <div className="relative h-48 bg-slate-900">
-                <img
-                  src={activeFoto?.url_foto}
-                  alt={activeFoto?.keterangan || item.nama_barang}
-                  className="w-full h-full object-cover"
-                />
-                {activeFoto?.is_thumbnail && (
+              <div className="relative h-48 bg-slate-900 group">
+                {!imgError ? (
+                  <img
+                    src={getStorageUrl(activeFoto?.url_foto)}
+                    alt={activeFoto?.keterangan || item.nama_barang}
+                    className="w-full h-full object-cover cursor-zoom-in transition-transform duration-300 group-hover:scale-[1.02]"
+                    onClick={() => setFullscreenFoto(getStorageUrl(activeFoto?.url_foto))}
+                    onError={() => setImgError(true)}
+                  />
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center p-4 text-center bg-slate-800 text-slate-300">
+                    <AlertCircle className="h-8 w-8 text-amber-400 mb-2" />
+                    <p className="text-xs font-medium text-slate-200">Foto gagal dimuat dari server</p>
+                    <button
+                      onClick={() => onOpenFoto(item)}
+                      className="mt-2 px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[10px] font-bold transition-colors"
+                    >
+                      Unggah Ulang Foto
+                    </button>
+                  </div>
+                )}
+                {activeFoto?.is_thumbnail && !imgError && (
                   <div className="absolute top-2 left-2 flex items-center gap-1 bg-amber-400 text-white px-2 py-0.5 rounded-md text-[9px] font-bold shadow">
                     <Star className="h-2.5 w-2.5 fill-current" /> Utama
                   </div>
                 )}
+                {!imgError && (
+                  <button
+                    onClick={() => setFullscreenFoto(getStorageUrl(activeFoto?.url_foto))}
+                    className="absolute bottom-2 right-2 p-1.5 bg-black/50 hover:bg-black/75 rounded-lg text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Perbesar Foto"
+                  >
+                    <Maximize2 className="h-3.5 w-3.5" />
+                  </button>
+                )}
                 {fotos.length > 1 && (
                   <>
                     <button
-                      onClick={() => setActiveIdx(i => (i - 1 + fotos.length) % fotos.length)}
-                      className="absolute left-2 top-1/2 -translate-y-1/2 p-1 bg-black/40 hover:bg-black/60 rounded-full text-white transition-colors"
+                      onClick={() => { setActiveIdx(i => (i - 1 + fotos.length) % fotos.length); setImgError(false); }}
+                      className="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 bg-black/40 hover:bg-black/70 rounded-full text-white transition-colors"
                     >
                       <ChevronLeft className="h-4 w-4" />
                     </button>
                     <button
-                      onClick={() => setActiveIdx(i => (i + 1) % fotos.length)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 bg-black/40 hover:bg-black/60 rounded-full text-white transition-colors"
+                      onClick={() => { setActiveIdx(i => (i + 1) % fotos.length); setImgError(false); }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-black/40 hover:bg-black/70 rounded-full text-white transition-colors"
                     >
                       <ChevronRight className="h-4 w-4" />
                     </button>
@@ -219,7 +299,7 @@ export default function SaranaPrasaranaPreviewCard({
                       {fotos.map((_, i) => (
                         <button
                           key={i}
-                          onClick={() => setActiveIdx(i)}
+                          onClick={() => { setActiveIdx(i); setImgError(false); }}
                           className={`h-1.5 rounded-full transition-all ${i === activeIdx ? 'bg-white w-4' : 'bg-white/50 w-1.5'}`}
                         />
                       ))}
@@ -239,12 +319,12 @@ export default function SaranaPrasaranaPreviewCard({
               {fotos.map((f, i) => (
                 <button
                   key={f.id}
-                  onClick={() => setActiveIdx(i)}
+                  onClick={() => { setActiveIdx(i); setImgError(false); }}
                   className={`flex-shrink-0 w-10 h-10 rounded-lg overflow-hidden border-2 transition-all ${
-                    i === activeIdx ? 'border-indigo-500 scale-105' : 'border-slate-200 opacity-60 hover:opacity-100'
+                    i === activeIdx ? 'border-indigo-500 scale-105 shadow-sm' : 'border-slate-200 opacity-60 hover:opacity-100'
                   }`}
                 >
-                  <img src={f.url_foto} alt="" className="w-full h-full object-cover" />
+                  <img src={getStorageUrl(f.url_foto)} alt="" className="w-full h-full object-cover" />
                 </button>
               ))}
             </div>
@@ -381,6 +461,28 @@ export default function SaranaPrasaranaPreviewCard({
           </div>
         </div>
       </div>
+
+      {/* Fullscreen Zoom Lightbox */}
+      {fullscreenFoto && (
+        <div
+          className="fixed inset-0 z-[60] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={() => setFullscreenFoto(null)}
+        >
+          <button
+            onClick={() => setFullscreenFoto(null)}
+            className="absolute top-5 right-5 p-2.5 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors z-10"
+            title="Tutup"
+          >
+            <X className="h-6 w-6" />
+          </button>
+          <img
+            src={fullscreenFoto}
+            alt={item.nama_barang}
+            className="max-w-full max-h-[90vh] object-contain rounded-2xl shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </>
   );
 

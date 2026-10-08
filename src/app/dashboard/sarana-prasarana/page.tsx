@@ -54,6 +54,9 @@ interface SaranaPrasaranaItem {
   id_user: number | null;
   id_folder: number | null;
   user?: { id: number; name: string };
+  fotos?: any[];
+  foto_kerusakan?: string | null;
+  foto_kerusakan_url?: string | null;
   created_at?: string;
   updated_at?: string;
 }
