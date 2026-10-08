@@ -21,7 +21,8 @@ class FotoAsetController extends Controller
         ]);
 
         if ($request->hasFile('foto')) {
-            $path = $request->file('foto')->store('asets', 'public');
+            // Simpan ke public/storage/img/aset
+            $path = $request->file('foto')->store('img/aset', 'public');
             
             if ($request->is_thumbnail) {
                 FotoAset::where('id_aset', $aset->id)->update(['is_thumbnail' => false]);

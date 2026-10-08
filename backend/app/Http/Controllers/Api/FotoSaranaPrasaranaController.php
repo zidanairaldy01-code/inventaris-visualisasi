@@ -27,7 +27,8 @@ class FotoSaranaPrasaranaController extends Controller
             return response()->json(['message' => 'File tidak ditemukan'], 400);
         }
 
-        $path = $request->file('foto')->store('sarana-prasarana', 'public');
+        // Simpan ke public/storage/img/sarana-prasarana
+        $path = $request->file('foto')->store('img/sarana-prasarana', 'public');
 
         if ($request->boolean('is_thumbnail', false)) {
             FotoSaranaPrasarana::where('id_sarana_prasarana', $item->id)->update(['is_thumbnail' => false]);
