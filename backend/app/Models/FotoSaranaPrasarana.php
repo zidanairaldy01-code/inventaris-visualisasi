@@ -28,9 +28,11 @@ class FotoSaranaPrasarana extends Model
             return $this->path_file;
         }
         
-        // Gunakan Laravel Storage URL helper yang sudah proper
-        // Ini akan otomatis menggunakan APP_URL dari environment
-        return Storage::url($this->path_file);
+        // Gunakan full URL dengan APP_URL untuk cross-origin requests
+        $baseUrl = rtrim(config('app.url'), '/');
+        $storagePath = Storage::url($this->path_file);
+        
+        return $baseUrl . $storagePath;
     }
 
     public function saranaPrasarana()

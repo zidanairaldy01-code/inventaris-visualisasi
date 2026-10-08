@@ -53,6 +53,11 @@ export default function SaranaPrasaranaFotoModal({ item, onClose, onUpdate }: Pr
 
   useEffect(() => { setMounted(true); }, []);
 
+  // Update fotos when item.fotos changes
+  useEffect(() => {
+    setFotos(item.fotos || []);
+  }, [item.fotos]);
+
   const refreshFotos = useCallback(async () => {
     try {
       const res = await axios.get(`/api/sarana-prasaranas/${item.id}`);
