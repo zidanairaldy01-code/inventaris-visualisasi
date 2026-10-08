@@ -23,7 +23,16 @@ class FotoSaranaPrasarana extends Model
 
     public function getUrlFotoAttribute(): string
     {
-        return Storage::disk('public')->url($this->path_file);
+        // Jika path_file sudah berupa URL lengkap, return as-is
+        if (filter_var($this->path_file, FILTER_VALIDATE_URL)) {
+            return $this->path_file;
+        }
+        
+        // Generate URL menggunakan APP_URL dari config
+        $appUrl = rtrim(config('app.url'), '/');
+        $storagePath = ltrim($this->path_file, '/');
+        
+        return "{$appUrl}/storage/{$storagePath}";
     }
 
     public function saranaPrasarana()
