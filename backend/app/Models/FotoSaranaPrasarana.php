@@ -28,8 +28,12 @@ class FotoSaranaPrasarana extends Model
             return $this->path_file;
         }
         
-        // Gunakan full URL dengan APP_URL untuk cross-origin requests
-        $baseUrl = rtrim(config('app.url'), '/');
+        // Untuk development: gunakan Railway URL hardcoded agar selalu accessible
+        // Untuk production Railway: gunakan APP_URL dari environment
+        $baseUrl = config('app.env') === 'production' 
+            ? rtrim(config('app.url'), '/')
+            : 'https://inventaris-visualisasi-production.up.railway.app';
+        
         $storagePath = Storage::url($this->path_file);
         
         return $baseUrl . $storagePath;

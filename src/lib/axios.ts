@@ -3,9 +3,16 @@ import Cookies from 'js-cookie';
 
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
+// Helper untuk membuat full URL storage dengan backend URL
 export const getStorageUrl = (path: string | null): string | null => {
   if (!path) return null;
   if (path.startsWith('http')) return path;
+  
+  // Jika path dimulai dengan /storage/, tambahkan base backend URL
+  if (path.startsWith('/storage/')) {
+    return `${API_BASE_URL}${path}`;
+  }
+  
   return `${API_BASE_URL}${path.startsWith('/') ? '' : '/'}${path}`;
 };
 

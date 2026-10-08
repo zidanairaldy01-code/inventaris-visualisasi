@@ -18,9 +18,15 @@ class FotoAset extends Model
             return $this->path_file;
         }
         
-        // Gunakan Laravel Storage URL helper yang sudah proper
-        // Ini akan otomatis menggunakan APP_URL dari environment
-        return Storage::url($this->path_file);
+        // Untuk development: gunakan Railway URL hardcoded agar selalu accessible
+        // Untuk production Railway: gunakan APP_URL dari environment
+        $baseUrl = config('app.env') === 'production' 
+            ? rtrim(config('app.url'), '/')
+            : 'https://inventaris-visualisasi-production.up.railway.app';
+        
+        $storagePath = Storage::url($this->path_file);
+        
+        return $baseUrl . $storagePath;
     }
 
     public function aset()
