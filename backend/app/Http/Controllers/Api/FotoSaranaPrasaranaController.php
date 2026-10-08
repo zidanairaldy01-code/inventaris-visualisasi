@@ -5,11 +5,19 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\FotoSaranaPrasarana;
 use App\Models\SaranaPrasarana;
+use App\Services\SupabaseStorageService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class FotoSaranaPrasaranaController extends Controller
 {
+    protected SupabaseStorageService $supabase;
+
+    public function __construct(SupabaseStorageService $supabase)
+    {
+        $this->supabase = $supabase;
+    }
+
     /**
      * Upload foto baru untuk item sarana prasarana.
      */
@@ -27,26 +35,36 @@ class FotoSaranaPrasaranaController extends Controller
             return response()->json(['message' => 'File tidak ditemukan'], 400);
         }
 
-        // Simpan ke public/storage/img/sarana-prasarana
-        $path = $request->file('foto')->store('img/sarana-prasarana', 'public');
+        try {
+            // Upload ke Supabase Storage
+            $file = $request->file('foto');
+            $folder = 'sarana-prasarana';
+            $result = $this->supabase->uploadWithHash($file, $folder);
 
-        if ($request->boolean('is_thumbnail', false)) {
-            FotoSaranaPrasarana::where('id_sarana_prasarana', $item->id)->update(['is_thumbnail' => false]);
+            if ($request->boolean('is_thumbnail', false)) {
+                FotoSaranaPrasarana::where('id_sarana_prasarana', $item->id)
+                    ->update(['is_thumbnail' => false]);
+            }
+
+            $existingCount = FotoSaranaPrasarana::where('id_sarana_prasarana', $item->id)->count();
+
+            $foto = FotoSaranaPrasarana::create([
+                'id_sarana_prasarana' => $item->id,
+                'nama_barang_ref'     => $item->nama_barang,
+                'nama_file'           => $file->getClientOriginalName(),
+                'path_file'           => $result['url'], // Simpan full URL dari Supabase
+                'keterangan'          => $request->keterangan,
+                'is_thumbnail'        => $request->boolean('is_thumbnail', $existingCount === 0),
+                'urutan'              => $existingCount + 1,
+            ]);
+
+            return response()->json($foto->append('url_foto'), 201);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Gagal upload foto: ' . $e->getMessage()
+            ], 500);
         }
-
-        $existingCount = FotoSaranaPrasarana::where('id_sarana_prasarana', $item->id)->count();
-
-        $foto = FotoSaranaPrasarana::create([
-            'id_sarana_prasarana' => $item->id,
-            'nama_barang_ref'     => $item->nama_barang,
-            'nama_file'           => $request->file('foto')->getClientOriginalName(),
-            'path_file'           => $path,
-            'keterangan'          => $request->keterangan,
-            'is_thumbnail'        => $request->boolean('is_thumbnail', $existingCount === 0),
-            'urutan'              => $existingCount + 1,
-        ]);
-
-        return response()->json($foto->append('url_foto'), 201);
     }
 
     /**
@@ -56,13 +74,33 @@ class FotoSaranaPrasaranaController extends Controller
     {
         $foto = FotoSaranaPrasarana::findOrFail($id);
 
-        if (Storage::disk('public')->exists($foto->path_file)) {
-            Storage::disk('public')->delete($foto->path_file);
+        try {
+            // Jika URL adalah Supabase URL, extract path dan delete dari Supabase
+            if (str_contains($foto->path_file, 'supabase')) {
+                // URL format: https://xxx.supabase.co/storage/v1/object/public/bucket/path
+                // Extract path setelah bucket name
+                $urlParts = parse_url($foto->path_file);
+                if (isset($urlParts['path'])) {
+                    $pathSegments = explode('/', trim($urlParts['path'], '/'));
+                    // Remove 'storage', 'v1', 'object', 'public', 'bucket-name'
+                    $filePath = implode('/', array_slice($pathSegments, 5));
+                    $this->supabase->delete($filePath);
+                }
+            } else {
+                // Fallback: delete from local storage
+                if (Storage::disk('public')->exists($foto->path_file)) {
+                    Storage::disk('public')->delete($foto->path_file);
+                }
+            }
+
+            $foto->delete();
+            return response()->json(['message' => 'Foto berhasil dihapus']);
+
+        } catch (\Exception $e) {
+            // Tetap delete record dari database meskipun file tidak bisa dihapus
+            $foto->delete();
+            return response()->json(['message' => 'Foto berhasil dihapus dari database']);
         }
-
-        $foto->delete();
-
-        return response()->json(['message' => 'Foto berhasil dihapus']);
     }
 
     /**

@@ -13,13 +13,12 @@ class FotoAset extends Model
 
     public function getUrlFotoAttribute(): string
     {
-        // Jika path_file sudah berupa URL lengkap, return as-is
+        // Jika path_file sudah berupa URL lengkap (Supabase), return as-is
         if (filter_var($this->path_file, FILTER_VALIDATE_URL)) {
             return $this->path_file;
         }
         
-        // Untuk development: gunakan Railway URL hardcoded agar selalu accessible
-        // Untuk production Railway: gunakan APP_URL dari environment
+        // Fallback untuk foto lama yang masih di local storage
         $baseUrl = config('app.env') === 'production' 
             ? rtrim(config('app.url'), '/')
             : 'https://inventaris-visualisasi-production.up.railway.app';
