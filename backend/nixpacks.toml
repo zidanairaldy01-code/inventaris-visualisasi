@@ -6,10 +6,14 @@ cmds = ['composer install --no-dev --optimize-autoloader']
 
 [phases.build]
 cmds = [
-    'php artisan storage:link',
-    'php artisan config:clear',
-    'php artisan cache:clear'
+    'php artisan storage:link || true',
+    'php artisan config:clear || true',
+    'php artisan cache:clear || true'
 ]
 
 [start]
 cmd = 'php artisan serve --host=0.0.0.0 --port=${PORT:-8000}'
+
+[variables]
+APP_ENV = 'production'
+FILESYSTEM_DISK = 'public'
