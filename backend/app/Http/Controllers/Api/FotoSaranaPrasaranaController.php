@@ -40,15 +40,38 @@ class FotoSaranaPrasaranaController extends Controller
             $file = $request->file('foto');
             $folder = 'sarana-prasarana';
             
+            // Detailed logging untuk debugging
+            $supabaseUrl = config('services.supabase.url');
+            $supabaseBucket = config('services.supabase.storage_bucket');
+            $hasServiceKey = !empty(config('services.supabase.service_key'));
+            
             \Log::info('Starting Supabase upload', [
                 'folder' => $folder,
                 'filename' => $file->getClientOriginalName(),
                 'size' => $file->getSize(),
                 'mime' => $file->getMimeType(),
-                'supabase_url' => config('services.supabase.url'),
-                'bucket' => config('services.supabase.storage_bucket'),
-                'has_service_key' => !empty(config('services.supabase.service_key')),
+                'supabase_url' => $supabaseUrl,
+                'supabase_url_empty' => empty($supabaseUrl),
+                'bucket' => $supabaseBucket,
+                'has_service_key' => $hasServiceKey,
+                'all_env_vars' => [
+                    'APP_ENV' => config('app.env'),
+                    'APP_URL' => config('app.url'),
+                ],
             ]);
+            
+            // Validasi config sebelum upload
+            if (empty($supabaseUrl)) {
+                \Log::error('SUPABASE_URL is empty!', [
+                    'env_file_exists' => file_exists(base_path('.env')),
+                    'config_cached' => app()->configurationIsCached(),
+                ]);
+                throw new \Exception('SUPABASE_URL tidak dikonfigurasi. Cek Railway environment variables.');
+            }
+            
+            if (!$hasServiceKey) {
+                throw new \Exception('SUPABASE_SERVICE_KEY tidak dikonfigurasi. Cek Railway environment variables.');
+            }
             
             $result = $this->supabase->uploadWithHash($file, $folder);
             
@@ -161,6 +184,38 @@ class FotoSaranaPrasaranaController extends Controller
         ]);
 
         return response()->json($newFoto->append('url_foto'), 201);
+    }
+
+    /**
+     * Debug endpoint untuk cek konfigurasi Supabase (HANYA UNTUK DEBUGGING!)
+     * HAPUS atau PROTECT endpoint ini di production!
+     */
+    public function debugConfig()
+    {
+        $supabaseUrl = config('services.supabase.url');
+        $supabaseBucket = config('services.supabase.storage_bucket');
+        $hasServiceKey = !empty(config('services.supabase.service_key'));
+        $hasAnonKey = !empty(config('services.supabase.anon_key'));
+        
+        return response()->json([
+            'status' => 'debug',
+            'environment' => config('app.env'),
+            'app_url' => config('app.url'),
+            'supabase_url' => $supabaseUrl,
+            'supabase_url_is_empty' => empty($supabaseUrl),
+            'supabase_url_is_valid' => filter_var($supabaseUrl, FILTER_VALIDATE_URL),
+            'supabase_bucket' => $supabaseBucket,
+            'has_service_key' => $hasServiceKey,
+            'has_anon_key' => $hasAnonKey,
+            'service_key_length' => $hasServiceKey ? strlen(config('services.supabase.service_key')) : 0,
+            'config_cached' => app()->configurationIsCached(),
+            'env_file_exists' => file_exists(base_path('.env')),
+            'php_version' => PHP_VERSION,
+            'all_supabase_config' => [
+                'url_raw' => env('SUPABASE_URL'),
+                'url_config' => config('services.supabase.url'),
+            ],
+        ]);
     }
 
     /**
