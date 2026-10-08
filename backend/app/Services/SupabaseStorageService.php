@@ -30,22 +30,40 @@ class SupabaseStorageService
     {
         $url = "{$this->url}/storage/v1/object/{$this->bucket}/{$path}";
         
+        // Read file content
+        $fileContent = file_get_contents($file->getRealPath());
+        
+        // Upload using HTTP PUT with file content directly in body
         $response = Http::withHeaders([
             'Authorization' => "Bearer {$this->key}",
             'Content-Type' => $file->getMimeType(),
-        ])->attach(
-            'file', 
-            file_get_contents($file->getRealPath()),
-            $file->getClientOriginalName()
-        )->post($url, [
-            'file' => $file
-        ]);
+            'x-upsert' => 'true', // Allow overwrite if file exists
+        ])->withBody($fileContent, $file->getMimeType())
+          ->post($url);
 
         if (!$response->successful()) {
-            throw new \Exception('Failed to upload to Supabase: ' . $response->body());
+            $errorBody = $response->body();
+            $errorStatus = $response->status();
+            
+            \Log::error('Supabase upload failed', [
+                'status' => $errorStatus,
+                'body' => $errorBody,
+                'path' => $path,
+                'url' => $url,
+                'bucket' => $this->bucket,
+                'file_size' => strlen($fileContent),
+                'mime_type' => $file->getMimeType(),
+            ]);
+            
+            throw new \Exception("Failed to upload to Supabase (HTTP {$errorStatus}): {$errorBody}");
         }
 
         $publicUrl = $this->getPublicUrl($path);
+
+        \Log::info('Supabase upload successful', [
+            'path' => $path,
+            'url' => $publicUrl,
+        ]);
 
         return [
             'url' => $publicUrl,
