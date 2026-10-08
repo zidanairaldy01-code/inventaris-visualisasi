@@ -1,7 +1,9 @@
 #!/bin/bash
 set -e
 
-echo "=== Railway Laravel Startup Script ==="
+echo "========================================="
+echo "  Railway Laravel Startup Script v2.0   "
+echo "========================================="
 
 # Generate .env from Railway environment variables
 cat > .env << EOF

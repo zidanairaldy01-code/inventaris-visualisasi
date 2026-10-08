@@ -1,3 +1,6 @@
+# Railway Nixpacks Configuration for Laravel
+# Forces Railway to use start.sh for proper environment variable loading
+
 [phases.setup]
 nixPkgs = ['php82', 'php82Packages.composer']
 
