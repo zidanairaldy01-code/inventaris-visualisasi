@@ -11,6 +11,7 @@ export const getStorageUrl = (path: string | null): string | null => {
 
 const axiosInstance = axios.create({
   baseURL: API_BASE_URL,
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
