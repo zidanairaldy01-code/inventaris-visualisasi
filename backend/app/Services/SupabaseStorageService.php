@@ -14,8 +14,8 @@ class SupabaseStorageService
     public function __construct()
     {
         $this->url = config('services.supabase.url');
-        $this->key = config('services.supabase.anon_key');
-        $this->bucket = config('services.supabase.storage_bucket', 'inventaris-photos');
+        $this->key = config('services.supabase.service_key'); // Use service_key for uploads
+        $this->bucket = config('services.supabase.storage_bucket', 'inventaris-photo');
     }
 
     /**
