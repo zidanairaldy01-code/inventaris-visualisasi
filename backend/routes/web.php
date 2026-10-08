@@ -17,5 +17,3 @@ Route::get('/test-supabase', function () {
         'bucket_url' => config('services.supabase.url') . '/storage/v1/bucket/' . config('services.supabase.storage_bucket'),
     ]);
 });
-
-require __DIR__.'/auth.php';
