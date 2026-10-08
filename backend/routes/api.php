@@ -40,6 +40,9 @@ Route::get('daftar-belanja/summary', [DaftarBelanjaController::class, 'summary']
 Route::get('gedungs', [GedungController::class, 'index']);
 Route::get('sumber-danas', [SumberDanaController::class, 'index']);
 
+// DEBUG ENDPOINT - HAPUS SETELAH DEBUGGING SELESAI!
+Route::get('debug/supabase-config', [FotoSaranaPrasaranaController::class, 'debugConfig']);
+
 
 // Public Routes for Jurusan & Kelas (untuk halaman public)
 Route::get('jurusans', [JurusanController::class, 'index']);
@@ -115,7 +118,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('sarana-prasaranas', SaranaPrasaranaController::class);
 
     // Foto Sarana Prasarana
-    Route::get('foto-sarana-prasarana/debug-config', [FotoSaranaPrasaranaController::class, 'debugConfig']); // DEBUG ONLY - HAPUS DI PRODUCTION!
     Route::get('foto-sarana-prasarana/all', [FotoSaranaPrasaranaController::class, 'getAllPhotos']);
     Route::get('foto-sarana-prasarana/search', [FotoSaranaPrasaranaController::class, 'searchSharedPhotos']);
     Route::post('sarana-prasaranas/{id}/fotos', [FotoSaranaPrasaranaController::class, 'store']);
