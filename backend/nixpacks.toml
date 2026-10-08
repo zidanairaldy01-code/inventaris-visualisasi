@@ -5,7 +5,11 @@ nixPkgs = ['php82', 'php82Packages.composer']
 cmds = ['composer install --no-dev --optimize-autoloader']
 
 [phases.build]
-cmds = ['php artisan storage:link', 'php artisan config:cache', 'php artisan route:cache']
+cmds = [
+    'php artisan storage:link',
+    'php artisan config:clear',
+    'php artisan cache:clear'
+]
 
 [start]
 cmd = 'php artisan serve --host=0.0.0.0 --port=${PORT:-8000}'
