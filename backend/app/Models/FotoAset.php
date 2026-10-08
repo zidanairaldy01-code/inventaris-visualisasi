@@ -13,6 +13,11 @@ class FotoAset extends Model
 
     public function getUrlFotoAttribute(): string
     {
+        $appUrl = config('app.url');
+        if (!app()->runningInConsole() && (empty($appUrl) || str_contains($appUrl, 'localhost') || str_contains($appUrl, '127.0.0.1'))) {
+            $root = request()->getSchemeAndHttpHost();
+            return rtrim($root, '/') . '/storage/' . ltrim($this->path_file, '/');
+        }
         return Storage::disk('public')->url($this->path_file);
     }
 

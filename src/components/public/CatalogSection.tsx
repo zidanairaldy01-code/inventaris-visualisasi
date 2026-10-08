@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { MapPin, Package, X, ChevronRight, Search, ChevronDown, RotateCcw, Building2 } from 'lucide-react';
-import axios from '@/lib/axios';
+import axios, { getStorageUrl } from '@/lib/axios';
 
 interface Ruangan {
   id: number;
@@ -318,7 +318,7 @@ export default function CatalogSection() {
                       <div key={aset.id} className="border border-gray-200 rounded-xl overflow-hidden bg-white hover:border-blue-300 hover:shadow-md transition-all">
                         <div className="relative w-full h-40 bg-gray-100">
                           {thumbnail ? (
-                            <img src={thumbnail.url_foto} alt={aset.nama_aset} className="w-full h-full object-cover" />
+                            <img src={getStorageUrl(thumbnail.url_foto)} alt={aset.nama_aset} className="w-full h-full object-cover" />
                           ) : (
                             <div className="w-full h-full flex flex-col items-center justify-center text-gray-300">
                               <Package className="w-10 h-10 mb-1" />

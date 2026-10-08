@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import axios from '@/lib/axios';
+import axios, { getStorageUrl } from '@/lib/axios';
 import {
   X, Upload, Trash2, Star, ImageOff, Loader2, CheckCircle2,
   AlertCircle, Database, Search, Images
@@ -268,10 +268,10 @@ export default function SaranaPrasaranaFotoModal({ item, onClose, onUpdate }: Pr
                         className="relative group rounded-xl overflow-hidden border border-slate-200 hover:border-blue-300 transition-colors bg-slate-50 aspect-square"
                       >
                         <img
-                          src={foto.url_foto}
+                          src={getStorageUrl(foto.url_foto)}
                           alt={foto.keterangan || item.nama_barang}
                           className="w-full h-full object-cover cursor-zoom-in"
-                          onClick={() => setPreview(foto.url_foto)}
+                          onClick={() => setPreview(getStorageUrl(foto.url_foto))}
                         />
                         {foto.is_thumbnail && (
                           <div className="absolute top-1.5 left-1.5 bg-amber-400 text-white rounded-md px-1.5 py-0.5 text-[9px] font-bold flex items-center shadow gap-0.5">
@@ -366,7 +366,7 @@ export default function SaranaPrasaranaFotoModal({ item, onClose, onUpdate }: Pr
                             {/* Thumbnail */}
                             <div className="relative flex-shrink-0 w-12 h-12 rounded-lg overflow-hidden border border-slate-200 bg-slate-100">
                               <img
-                                src={foto.url_foto}
+                                src={getStorageUrl(foto.url_foto)}
                                 alt={foto.nama_barang_ref || foto.nama_file}
                                 className="w-full h-full object-cover"
                               />
