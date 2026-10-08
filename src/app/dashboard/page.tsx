@@ -95,16 +95,7 @@ export default function DashboardPage() {
       }
 
       if (saranaRes?.data?.data && Array.isArray(saranaRes.data.data)) {
-        // Urutkan berdasarkan created_at terbaru
-        const sorted = [...saranaRes.data.data].sort((a: any, b: any) => {
-          return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
-        });
-        setRecentSarana(sorted.slice(0, 5));
-      } else if (saranaRes?.data && Array.isArray(saranaRes.data)) {
-        const sorted = [...saranaRes.data].sort((a: any, b: any) => {
-          return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
-        });
-        setRecentSarana(sorted.slice(0, 5));
+        setRecentSarana(saranaRes.data.data.slice(0, 5));
       }
     } catch (error: any) {
       console.error('Error loading dashboard data:', error);

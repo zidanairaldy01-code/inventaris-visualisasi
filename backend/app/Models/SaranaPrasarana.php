@@ -39,11 +39,6 @@ class SaranaPrasarana extends Model
         if (!$this->foto_kerusakan) {
             return null;
         }
-        $appUrl = config('app.url');
-        if (!app()->runningInConsole() && (empty($appUrl) || str_contains($appUrl, 'localhost') || str_contains($appUrl, '127.0.0.1'))) {
-            $root = request()->getSchemeAndHttpHost();
-            return rtrim($root, '/') . '/storage/' . ltrim($this->foto_kerusakan, '/');
-        }
         return \Illuminate\Support\Facades\Storage::disk('public')->url($this->foto_kerusakan);
     }
 

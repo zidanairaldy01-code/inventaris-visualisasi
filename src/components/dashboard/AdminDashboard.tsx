@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import axios, { getStorageUrl } from '@/lib/axios';
+import axios from '@/lib/axios';
 import {
   Package, Building2, Warehouse, ArrowUpRight, TrendingUp,
   DollarSign, Layers, ShoppingCart, Handshake, Wrench, Clock,
@@ -238,87 +238,48 @@ export default function AdminDashboard({
               <Package className="h-4 w-4 text-indigo-600" />
               Aset Sarana Prasarana Terbaru
             </h3>
-            <Link href="/dashboard/sarana-prasarana" className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1">
-              Lihat Semua <ChevronRight className="h-3.5 w-3.5" />
+            <Link href="/dashboard/sarana-prasarana" className="text-xs font-bold text-indigo-600 hover:text-indigo-700">
+              Lihat Semua
             </Link>
           </div>
 
           {loading ? (
             <div className="space-y-3">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="h-16 bg-slate-100 rounded-xl animate-pulse" />
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="h-14 bg-slate-100 rounded-xl animate-pulse" />
               ))}
             </div>
-          ) : recentSarana.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center mb-3">
-                <Package className="h-6 w-6 text-slate-300" />
-              </div>
-              <p className="text-sm font-semibold text-slate-400">Belum ada data sarana prasarana</p>
-              <Link href="/dashboard/sarana-prasarana" className="mt-3 text-xs font-bold text-indigo-600 hover:underline">
-                + Tambah sekarang
-              </Link>
-            </div>
           ) : (
-            <div className="space-y-2">
-              {recentSarana.map((s: any, idx: number) => {
-                const kondisi = (s.kondisi || 'baik').toLowerCase();
-                const kondisiBadge = kondisi.includes('rusak berat')
-                  ? 'bg-red-100 text-red-700'
-                  : kondisi.includes('rusak')
-                  ? 'bg-orange-100 text-orange-700'
-                  : 'bg-emerald-100 text-emerald-700';
-                const namaBarang = s.nama_sarana || s.nama_barang || '-';
-                const kode = s.kode_sarana || s.kode || null;
-                const jumlah = s.luas_jumlah || (s.stok_akhir ? `${s.stok_akhir} ${s.satuan || 'Unit'}` : `1 ${s.satuan || 'Unit'}`);
-                const harga = s.harga_pembelian ?? s.nilai_harga_pembelian ?? 0;
-                const thumbnail = s.fotos?.find((f: any) => f.is_thumbnail) || s.fotos?.[0];
-
-                return (
-                  <Link
-                    key={s.id}
-                    href="/dashboard/sarana-prasarana"
-                    className="flex items-center gap-3 p-3 rounded-2xl hover:bg-indigo-50/60 transition-colors group border border-transparent hover:border-indigo-100"
-                  >
-                    {/* Foto thumbnail / nomor */}
-                    <div className="flex-shrink-0 w-10 h-10 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 flex items-center justify-center">
-                      {thumbnail ? (
-                        <img src={getStorageUrl(thumbnail.url_foto)} alt={namaBarang} className="w-full h-full object-cover" />
-                      ) : (
-                        <span className="text-xs font-bold text-slate-400">{idx + 1}</span>
-                      )}
-                    </div>
-
-                    {/* Info utama */}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-slate-800 truncate group-hover:text-indigo-700 transition-colors">
-                        {namaBarang}
-                      </p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        {kode && <span className="text-[10px] font-mono text-slate-400">{kode}</span>}
-                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${kondisiBadge}`}>
-                          {s.kondisi || 'Baik'}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Jumlah */}
-                    <div className="flex-shrink-0 text-center">
-                      <p className="text-xs font-bold text-slate-700">{jumlah}</p>
-                    </div>
-
-                    {/* Harga */}
-                    <div className="flex-shrink-0 text-right">
-                      <p className="text-xs font-semibold text-emerald-600">{formatRupiah(harga)}</p>
-                      {s.created_at && (
-                        <p className="text-[9px] text-slate-400 mt-0.5">
-                          {new Date(s.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
-                        </p>
-                      )}
-                    </div>
-                  </Link>
-                );
-              })}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-100 text-slate-400 font-semibold">
+                    <th className="py-2.5 px-3">Kode &amp; Nama Sarana</th>
+                    <th className="py-2.5 px-3">Merek / Spek</th>
+                    <th className="py-2.5 px-3 text-center">Jumlah</th>
+                    <th className="py-2.5 px-3 text-right">Nilai Pembelian</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {recentSarana.map((s: any) => (
+                    <tr key={s.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="py-3 px-3">
+                        <p className="font-bold text-slate-900">{s.nama_sarana || s.nama_barang}</p>
+                        <p className="text-[10px] font-mono text-slate-400">{s.kode_sarana || s.kode}</p>
+                      </td>
+                      <td className="py-3 px-3 text-slate-600">
+                        {s.merek || s.spesifikasi || '-'}
+                      </td>
+                      <td className="py-3 px-3 text-center font-bold text-slate-900">
+                        {s.jumlah || 1} Unit
+                      </td>
+                      <td className="py-3 px-3 text-right font-semibold text-emerald-600">
+                        {formatRupiah(s.harga_pembelian)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>

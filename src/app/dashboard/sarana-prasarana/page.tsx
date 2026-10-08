@@ -13,7 +13,6 @@ import {
 import * as XLSX from 'xlsx';
 import Toast from '@/components/Toast';
 import SaranaPrasaranaFotoModal from '@/components/SaranaPrasaranaFotoModal';
-import SaranaPrasaranaPreviewCard from '@/components/SaranaPrasaranaPreviewCard';
 
 /* ─────────────────────── Types ─────────────────────── */
 interface MasterItem {
@@ -54,9 +53,6 @@ interface SaranaPrasaranaItem {
   id_user: number | null;
   id_folder: number | null;
   user?: { id: number; name: string };
-  fotos?: any[];
-  foto_kerusakan?: string | null;
-  foto_kerusakan_url?: string | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -373,9 +369,6 @@ export default function SaranaPrasaranaPage() {
   const [fotoModalItem, setFotoModalItem] = useState<SaranaPrasaranaItem | null>(null);
   const [fotoModalItemFotos, setFotoModalItemFotos] = useState<any[]>([]);
   const [loadingFotos, setLoadingFotos] = useState(false);
-
-  // Preview card
-  const [previewItem, setPreviewItem] = useState<SaranaPrasaranaItem | null>(null);
 
   // Edit/Add modal
   const [showFormModal, setShowFormModal] = useState(false);
@@ -1192,11 +1185,7 @@ export default function SaranaPrasaranaPage() {
                   {paged.map((aset, i) => {
                     const isSelected = selectedItemIds.has(aset.id);
                     return (
-                      <tr
-                        key={aset.id}
-                        className={`transition-colors group cursor-pointer ${isSelected ? 'bg-indigo-50/50' : 'hover:bg-slate-50/80'}`}
-                        onClick={() => setPreviewItem(aset)}
-                      >
+                      <tr key={aset.id} className={`transition-colors group ${isSelected ? 'bg-indigo-50/50' : 'hover:bg-slate-50/80'}`}>
                         {isSelectMode && (
                           <td className="px-4 py-3">
                             <input
@@ -1235,14 +1224,14 @@ export default function SaranaPrasaranaPage() {
                         </td>
                         <td className="px-4 py-3 text-center">
                           <div className="flex items-center justify-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={(e) => { e.stopPropagation(); openFotoModal(aset); }} className="p-1.5 hover:bg-blue-50 text-blue-500 rounded-lg transition-colors" title="Foto Barang">
+                            <button onClick={() => openFotoModal(aset)} className="p-1.5 hover:bg-blue-50 text-blue-500 rounded-lg transition-colors" title="Foto Barang">
                               <Camera className="h-4 w-4" />
                             </button>
-                            <button onClick={(e) => { e.stopPropagation(); openEditModal(aset); }} className="p-1.5 hover:bg-amber-50 text-amber-600 rounded-lg transition-colors" title="Edit">
+                            <button onClick={() => openEditModal(aset)} className="p-1.5 hover:bg-amber-50 text-amber-600 rounded-lg transition-colors" title="Edit">
                               <Edit2 className="h-4 w-4" />
                             </button>
                             {isSuperAdmin && (
-                              <button onClick={(e) => { e.stopPropagation(); setDeleteTarget(aset); }} className="p-1.5 hover:bg-rose-50 text-rose-600 rounded-lg transition-colors" title="Hapus">
+                              <button onClick={() => setDeleteTarget(aset)} className="p-1.5 hover:bg-rose-50 text-rose-600 rounded-lg transition-colors" title="Hapus">
                                 <Trash2 className="h-4 w-4" />
                               </button>
                             )}
@@ -1275,19 +1264,7 @@ export default function SaranaPrasaranaPage() {
         </div>
       )}
 
-      {/* Preview Card */}
-      {previewItem && (
-        <SaranaPrasaranaPreviewCard
-          item={previewItem}
-          onClose={() => setPreviewItem(null)}
-          onEdit={(aset) => { setPreviewItem(null); openEditModal(aset); }}
-          onDelete={(aset) => { setPreviewItem(null); setDeleteTarget(aset); }}
-          onOpenFoto={(aset) => { setPreviewItem(null); openFotoModal(aset); }}
-          isSuperAdmin={isSuperAdmin}
-        />
-      )}
-
-      {/* FOTO BARANG MODAL */}
+      {/* ════════ FOTO BARANG MODAL ════════ */}
       {fotoModalItem && !loadingFotos && (
         <SaranaPrasaranaFotoModal
           item={{ ...fotoModalItem, kode: fotoModalItem.kode, fotos: fotoModalItemFotos }}

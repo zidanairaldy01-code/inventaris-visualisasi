@@ -15,7 +15,7 @@ class SaranaPrasaranaController extends Controller
      */
     public function index(Request $request)
     {
-        $query = SaranaPrasarana::with(['user', 'fotos']);
+        $query = SaranaPrasarana::with(['user']);
 
         $items = $query->orderBy('tanggal_pengambilan', 'desc')
             ->orderBy('created_at', 'desc')
@@ -89,17 +89,6 @@ class SaranaPrasaranaController extends Controller
     public function show(string $id)
     {
         $item = SaranaPrasarana::with(['user', 'fotos'])->findOrFail($id);
-
-        // Fallback: Jika belum ada foto langsung, cari foto berdasarkan nama_barang_ref yang sama
-        if ($item->fotos->isEmpty() && !empty($item->nama_barang)) {
-            $sharedFotos = \App\Models\FotoSaranaPrasarana::where('nama_barang_ref', $item->nama_barang)
-                ->orderBy('urutan')
-                ->get();
-            if ($sharedFotos->isNotEmpty()) {
-                $item->setRelation('fotos', $sharedFotos);
-            }
-        }
-
         return response()->json([
             'status' => 'success',
             'data'   => $item,

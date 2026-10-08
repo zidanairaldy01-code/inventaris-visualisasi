@@ -3,33 +3,10 @@ import Cookies from 'js-cookie';
 
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
-export const getStorageUrl = (path: string | null | undefined): string => {
-  if (!path) return '';
-
-  const cleanBase = (API_BASE_URL || '').replace(/\/+$/, '');
-
-  // 1. Ganti host localhost / 127.0.0.1 (dengan port apa pun atau tanpa port) ke cleanBase
-  let normalized = path.replace(
-    /^https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?\/(?:storage\/)?/i,
-    `${cleanBase}/storage/`
-  );
-
-  // 2. Jika sudah merupakan URL absolut http:// atau https://
-  if (/^https?:\/\//i.test(normalized)) {
-    // Jika frontend berjalan di HTTPS atau API_BASE_URL HTTPS, upgrade ke https:// agar tidak terblokir Mixed Content
-    const isHttpsEnv = (typeof window !== 'undefined' && window.location.protocol === 'https:') || cleanBase.startsWith('https://');
-    if (isHttpsEnv && normalized.startsWith('http://') && !normalized.includes('localhost') && !normalized.includes('127.0.0.1')) {
-      normalized = normalized.replace(/^http:\/\//i, 'https://');
-    }
-    return normalized;
-  }
-
-  // 3. Jika berupa path relatif
-  const trimmed = normalized.replace(/^\/+/, '');
-  if (trimmed.startsWith('storage/')) {
-    return `${cleanBase}/${trimmed}`;
-  }
-  return `${cleanBase}/storage/${trimmed}`;
+export const getStorageUrl = (path: string | null): string | null => {
+  if (!path) return null;
+  if (path.startsWith('http')) return path;
+  return `${API_BASE_URL}${path.startsWith('/') ? '' : '/'}${path}`;
 };
 
 const axiosInstance = axios.create({

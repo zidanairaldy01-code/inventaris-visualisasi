@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import axios, { getStorageUrl } from '@/lib/axios';
+import axios from '@/lib/axios';
 import { X, Upload, Trash2, Star, ImageOff, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 
 interface Foto {
@@ -167,10 +167,10 @@ export default function AsetFotoModal({ aset, onClose, onUpdate }: Props) {
                 {fotos.map(foto => (
                   <div key={foto.id} className="relative group rounded-xl overflow-hidden border border-gray-200 hover:border-blue-300 transition-colors bg-gray-50 aspect-square">
                     <img
-                      src={getStorageUrl(foto.url_foto)}
+                      src={foto.url_foto}
                       alt={foto.keterangan || aset.nama_aset}
                       className="w-full h-full object-cover cursor-zoom-in"
-                      onClick={() => setPreview(getStorageUrl(foto.url_foto))}
+                      onClick={() => setPreview(foto.url_foto)}
                     />
 
                     {/* Thumbnail badge */}
