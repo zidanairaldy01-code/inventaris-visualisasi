@@ -5,19 +5,12 @@ export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost
 
 export const getStorageUrl = (path: string | null | undefined): string => {
   if (!path) return '';
-  // Fix localhost or 127.0.0.1 on port 80 / without port (when Laravel APP_URL default was http://localhost)
-  if (/^https?:\/\/localhost(?::80)?(\/.*)$/.test(path)) {
-    const match = path.match(/^https?:\/\/localhost(?::80)?(\/.*)$/);
-    return `${API_BASE_URL}${match ? match[1] : ''}`;
+  // Fix localhost / 127.0.0.1 without port 8000 (default Laravel APP_URL)
+  const normalized = path.replace(/^https?:\/\/(?:localhost|127\.0\.0\.1)(?::80)?\/storage\//, `${API_BASE_URL}/storage/`);
+  if (normalized.startsWith('http://') || normalized.startsWith('https://')) {
+    return normalized;
   }
-  if (/^https?:\/\/127\.0\.0\.1(?::80)?(\/.*)$/.test(path)) {
-    const match = path.match(/^https?:\/\/127\.0\.0\.1(?::80)?(\/.*)$/);
-    return `${API_BASE_URL}${match ? match[1] : ''}`;
-  }
-  if (path.startsWith('http://') || path.startsWith('https://')) {
-    return path;
-  }
-  return `${API_BASE_URL}${path.startsWith('/') ? '' : '/'}${path}`;
+  return `${API_BASE_URL}${normalized.startsWith('/') ? '' : '/'}${normalized}`;
 };
 
 const axiosInstance = axios.create({

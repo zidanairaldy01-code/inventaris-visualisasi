@@ -70,7 +70,6 @@ const kondisiColor = (k?: string | null) => {
 export default function SaranaPrasaranaPreviewCard({
   item, onClose, onEdit, onDelete, onOpenFoto, isSuperAdmin
 }: Props) {
-  // Inisialisasi awal jika item sudah membawa foto atau foto kerusakan
   const [fotos, setFotos] = useState<FotoItem[]>(() => {
     if (item.fotos && item.fotos.length > 0) return item.fotos;
     if (item.foto_kerusakan_url) {
@@ -88,7 +87,7 @@ export default function SaranaPrasaranaPreviewCard({
   const [activeIdx, setActiveIdx] = useState(0);
   const [mounted, setMounted] = useState(false);
   const [visible, setVisible] = useState(false);
-  const [imgError, setImgError] = useState(false);
+  const [brokenUrls, setBrokenUrls] = useState<Set<string>>(new Set());
   const [fullscreenFoto, setFullscreenFoto] = useState<string | null>(null);
 
   useEffect(() => {
@@ -96,13 +95,33 @@ export default function SaranaPrasaranaPreviewCard({
     setTimeout(() => setVisible(true), 10);
   }, []);
 
+  // Sinkronisasi state saat item berubah
+  useEffect(() => {
+    setActiveIdx(0);
+    setBrokenUrls(new Set());
+    if (item.fotos && item.fotos.length > 0) {
+      setFotos(item.fotos);
+      setLoadingFoto(false);
+      const thumbIdx = item.fotos.findIndex((f) => f.is_thumbnail);
+      setActiveIdx(thumbIdx >= 0 ? thumbIdx : 0);
+    } else if (item.foto_kerusakan_url) {
+      setFotos([{
+        id: -1,
+        url_foto: item.foto_kerusakan_url,
+        nama_file: 'Foto Kerusakan',
+        keterangan: null,
+        is_thumbnail: true,
+      }]);
+      setLoadingFoto(false);
+    } else {
+      setFotos([]);
+      setLoadingFoto(true);
+    }
+  }, [item.id, item.fotos, item.foto_kerusakan_url]);
+
   useEffect(() => {
     let isMounted = true;
     const fetchFotos = async () => {
-      // Hanya tampilkan loading jika belum ada foto awal
-      if (!item.fotos || item.fotos.length === 0) {
-        setLoadingFoto(true);
-      }
       try {
         const res = await axios.get(`/api/sarana-prasaranas/${item.id}`);
         const data = res.data?.data || res.data;
@@ -136,7 +155,6 @@ export default function SaranaPrasaranaPreviewCard({
           setFotos(fotoList);
           const thumbIdx = fotoList.findIndex((f) => f.is_thumbnail);
           setActiveIdx(thumbIdx >= 0 ? thumbIdx : 0);
-          setImgError(false);
         }
       } catch {
         // Tetap pertahankan foto awal jika request gagal
@@ -245,72 +263,84 @@ export default function SaranaPrasaranaPreviewCard({
                 </div>
                 <p className="text-xs text-slate-400 group-hover:text-indigo-500 transition-colors font-medium">Belum ada foto — klik untuk upload</p>
               </div>
-            ) : (
-              <div className="relative h-48 bg-slate-900 group">
-                {!imgError ? (
-                  <img
-                    src={getStorageUrl(activeFoto?.url_foto)}
-                    alt={activeFoto?.keterangan || item.nama_barang}
-                    className="w-full h-full object-cover cursor-zoom-in transition-transform duration-300 group-hover:scale-[1.02]"
-                    onClick={() => setFullscreenFoto(getStorageUrl(activeFoto?.url_foto))}
-                    onError={() => setImgError(true)}
-                  />
-                ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center p-4 text-center bg-slate-800 text-slate-300">
-                    <AlertCircle className="h-8 w-8 text-amber-400 mb-2" />
-                    <p className="text-xs font-medium text-slate-200">Foto gagal dimuat dari server</p>
-                    <button
-                      onClick={() => onOpenFoto(item)}
-                      className="mt-2 px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[10px] font-bold transition-colors"
-                    >
-                      Unggah Ulang Foto
-                    </button>
-                  </div>
-                )}
-                {activeFoto?.is_thumbnail && !imgError && (
-                  <div className="absolute top-2 left-2 flex items-center gap-1 bg-amber-400 text-white px-2 py-0.5 rounded-md text-[9px] font-bold shadow">
-                    <Star className="h-2.5 w-2.5 fill-current" /> Utama
-                  </div>
-                )}
-                {!imgError && (
-                  <button
-                    onClick={() => setFullscreenFoto(getStorageUrl(activeFoto?.url_foto))}
-                    className="absolute bottom-2 right-2 p-1.5 bg-black/50 hover:bg-black/75 rounded-lg text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                    title="Perbesar Foto"
-                  >
-                    <Maximize2 className="h-3.5 w-3.5" />
-                  </button>
-                )}
-                {fotos.length > 1 && (
-                  <>
-                    <button
-                      onClick={() => { setActiveIdx(i => (i - 1 + fotos.length) % fotos.length); setImgError(false); }}
-                      className="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 bg-black/40 hover:bg-black/70 rounded-full text-white transition-colors"
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => { setActiveIdx(i => (i + 1) % fotos.length); setImgError(false); }}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-black/40 hover:bg-black/70 rounded-full text-white transition-colors"
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </button>
-                    <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1">
-                      {fotos.map((_, i) => (
-                        <button
-                          key={i}
-                          onClick={() => { setActiveIdx(i); setImgError(false); }}
-                          className={`h-1.5 rounded-full transition-all ${i === activeIdx ? 'bg-white w-4' : 'bg-white/50 w-1.5'}`}
-                        />
-                      ))}
+            ) : (() => {
+              const currentFotoUrl = activeFoto?.url_foto ? getStorageUrl(activeFoto.url_foto) : '';
+              const isCurrentBroken = currentFotoUrl ? brokenUrls.has(currentFotoUrl) : true;
+
+              return (
+                <div className="relative h-48 bg-slate-900 group">
+                  {!isCurrentBroken && currentFotoUrl ? (
+                    <img
+                      src={currentFotoUrl}
+                      alt={activeFoto?.keterangan || item.nama_barang}
+                      className="w-full h-full object-cover cursor-zoom-in transition-transform duration-300 group-hover:scale-[1.02]"
+                      onClick={() => setFullscreenFoto(currentFotoUrl)}
+                      onError={() => {
+                        setBrokenUrls(prev => new Set(prev).add(currentFotoUrl));
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center p-4 text-center bg-slate-800 text-slate-300">
+                      <ImageOff className="h-8 w-8 text-slate-400 mb-2" />
+                      <p className="text-xs font-medium text-slate-300 mb-1">
+                        {isCurrentBroken ? 'Foto tidak dapat dimuat' : 'Foto belum tersedia'}
+                      </p>
+                      <button
+                        onClick={() => onOpenFoto(item)}
+                        className="mt-1 px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[10px] font-bold transition-colors"
+                      >
+                        Unggah / Ganti Foto
+                      </button>
                     </div>
-                  </>
-                )}
-                <div className="absolute top-2 right-2 bg-black/50 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-                  {activeIdx + 1}/{fotos.length}
+                  )}
+
+                  {activeFoto?.is_thumbnail && !isCurrentBroken && (
+                    <div className="absolute top-2 left-2 flex items-center gap-1 bg-amber-400 text-white px-2 py-0.5 rounded-md text-[9px] font-bold shadow">
+                      <Star className="h-2.5 w-2.5 fill-current" /> Utama
+                    </div>
+                  )}
+
+                  {!isCurrentBroken && currentFotoUrl && (
+                    <button
+                      onClick={() => setFullscreenFoto(currentFotoUrl)}
+                      className="absolute bottom-2 right-2 p-1.5 bg-black/50 hover:bg-black/75 rounded-lg text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Perbesar Foto"
+                    >
+                      <Maximize2 className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+
+                  {fotos.length > 1 && (
+                    <>
+                      <button
+                        onClick={() => setActiveIdx(i => (i - 1 + fotos.length) % fotos.length)}
+                        className="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 bg-black/40 hover:bg-black/70 rounded-full text-white transition-colors"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => setActiveIdx(i => (i + 1) % fotos.length)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-black/40 hover:bg-black/70 rounded-full text-white transition-colors"
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </button>
+                      <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1">
+                        {fotos.map((_, i) => (
+                          <button
+                            key={i}
+                            onClick={() => setActiveIdx(i)}
+                            className={`h-1.5 rounded-full transition-all ${i === activeIdx ? 'bg-white w-4' : 'bg-white/50 w-1.5'}`}
+                          />
+                        ))}
+                      </div>
+                    </>
+                  )}
+                  <div className="absolute top-2 right-2 bg-black/50 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                    {activeIdx + 1}/{fotos.length}
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
           </div>
 
           {/* Thumbnail strip */}
@@ -319,7 +349,7 @@ export default function SaranaPrasaranaPreviewCard({
               {fotos.map((f, i) => (
                 <button
                   key={f.id}
-                  onClick={() => { setActiveIdx(i); setImgError(false); }}
+                  onClick={() => setActiveIdx(i)}
                   className={`flex-shrink-0 w-10 h-10 rounded-lg overflow-hidden border-2 transition-all ${
                     i === activeIdx ? 'border-indigo-500 scale-105 shadow-sm' : 'border-slate-200 opacity-60 hover:opacity-100'
                   }`}
