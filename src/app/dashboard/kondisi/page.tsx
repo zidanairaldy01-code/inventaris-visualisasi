@@ -8,7 +8,7 @@ import {
   CheckCircle2, AlertTriangle, ShieldCheck, X, Save,
   RefreshCw, Info, Sparkles, Building2, Warehouse,
   Package, Wrench, ArrowUpRight, Filter, AlertOctagon,
-  Flame, ExternalLink, HelpCircle, Printer, FileText
+  Flame, ExternalLink, HelpCircle, Printer, FileText, Clock
 } from 'lucide-react';
 import Toast from '@/components/Toast';
 
@@ -40,6 +40,8 @@ interface AsetRusakItem {
   foto_thumbnail: string | null;
   deskripsi: string | null;
   link_url: string;
+  status_servis?: string | null;
+  sedang_diservis?: boolean;
 }
 
 interface SummaryRusak {
@@ -890,7 +892,7 @@ export default function MasterKondisiPage() {
                       <th className="px-5 py-3.5">Asal Barang (Lokasi)</th>
                       <th className="px-5 py-3.5 text-center">Jumlah</th>
                       <th className="px-5 py-3.5">Deskripsi / Keterangan</th>
-                      <th className="px-5 py-3.5 text-center w-28">Aksi</th>
+                      <th className="px-5 py-3.5 text-center w-36">Status Monitoring</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -990,17 +992,37 @@ export default function MasterKondisiPage() {
                           )}
                         </td>
 
-                        {/* Aksi: Teruskan ke Servis */}
+                        {/* Status Monitoring Penanganan */}
                         <td className="px-5 py-3.5 text-center whitespace-nowrap">
-                          <button
-                            type="button"
-                            onClick={() => openServisModal(item)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 hover:text-amber-800 border border-amber-300 rounded-xl transition-all shadow-sm hover:shadow active:scale-95"
-                            title="Teruskan aset rusak ini ke bagian servis untuk perbaikan & buat SPK"
-                          >
-                            <Wrench className="h-3.5 w-3.5 text-amber-600" />
-                            <span>Teruskan ke Servis</span>
-                          </button>
+                          {item.sedang_diservis || item.status_servis ? (
+                            <span
+                              className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl border shadow-sm ${
+                                item.status_servis === 'Selesai'
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                  : 'bg-blue-50 text-blue-700 border-blue-200'
+                              }`}
+                            >
+                              {item.status_servis === 'Selesai' ? (
+                                <>
+                                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                                  <span>Selesai Servis</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Wrench className="h-3.5 w-3.5 text-blue-600" />
+                                  <span>Sedang Diproses</span>
+                                </>
+                              )}
+                            </span>
+                          ) : (
+                            <span
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-xl bg-slate-50 text-slate-500 border border-slate-200"
+                              title="Menunggu peninjauan & penerusan servis oleh Wakasek"
+                            >
+                              <Clock className="h-3.5 w-3.5 text-slate-400" />
+                              <span>Menunggu Wakasek</span>
+                            </span>
+                          )}
                         </td>
                       </tr>
                     ))}

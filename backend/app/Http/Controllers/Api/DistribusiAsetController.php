@@ -701,6 +701,19 @@ class DistribusiAsetController extends Controller
         ->where('ruangan_tujuan_id', $user->ruangan_id)
         ->where('status', 'diterima'); // Hanya yang sudah diterima via BAST
 
+        // Sembunyikan aset yang sedang aktif dalam proses servis (Menunggu Persetujuan atau Proses).
+        // Barang yang sedang diservis otomatis pindah ke modul Servis & Perbaikan Wakapro.
+        if (!$request->boolean('include_servis')) {
+            $inServisIds = \App\Models\Servis::whereIn('status', ['Menunggu Persetujuan', 'Proses'])
+                ->whereNotNull('sarana_prasarana_id')
+                ->pluck('sarana_prasarana_id')
+                ->toArray();
+
+            if (!empty($inServisIds)) {
+                $query->whereNotIn('sarana_prasarana_id', $inServisIds);
+            }
+        }
+
         // Filter kondisi
         if ($request->filled('kondisi')) {
             $query->whereHas('saranaPrasarana', function ($q) use ($request) {
@@ -894,11 +907,27 @@ class DistribusiAsetController extends Controller
 
         $ruangan = Ruangan::with('gedung')->find($user->ruangan_id);
 
-        // 1. Sarana Prasarana yang telah diterima via BAST di workshop wakapro ini
-        $distribusiItems = DistribusiAset::with(['saranaPrasarana'])
+        // Ambil ID sarana prasarana & aset yang sedang aktif dalam proses servis
+        $inServisSaranaIds = \App\Models\Servis::whereIn('status', ['Menunggu Persetujuan', 'Proses'])
+            ->whereNotNull('sarana_prasarana_id')
+            ->pluck('sarana_prasarana_id')
+            ->toArray();
+
+        $inServisAsetIds = \App\Models\Servis::whereIn('status', ['Menunggu Persetujuan', 'Proses'])
+            ->whereNotNull('id_aset')
+            ->pluck('id_aset')
+            ->toArray();
+
+        // 1. Sarana Prasarana yang telah diterima via BAST di workshop wakapro ini (yang belum dalam servis)
+        $distQuery = DistribusiAset::with(['saranaPrasarana'])
             ->where('ruangan_tujuan_id', $user->ruangan_id)
-            ->where('status', 'diterima')
-            ->get();
+            ->where('status', 'diterima');
+
+        if (!empty($inServisSaranaIds)) {
+            $distQuery->whereNotIn('sarana_prasarana_id', $inServisSaranaIds);
+        }
+
+        $distribusiItems = $distQuery->get();
 
         $saranas = $distribusiItems
             ->pluck('saranaPrasarana')
@@ -921,10 +950,15 @@ class DistribusiAsetController extends Controller
                 ];
             });
 
-        // 2. Aset fisik di tabel asets jika ada yang ditempatkan di ruangan workshop ini
-        $asets = \App\Models\Aset::with('kondisi')
-            ->where('id_ruangan', $user->ruangan_id)
-            ->get()
+        // 2. Aset fisik di tabel asets jika ada yang ditempatkan di ruangan workshop ini (yang belum dalam servis)
+        $asetQuery = \App\Models\Aset::with('kondisi')
+            ->where('id_ruangan', $user->ruangan_id);
+
+        if (!empty($inServisAsetIds)) {
+            $asetQuery->whereNotIn('id', $inServisAsetIds);
+        }
+
+        $asets = $asetQuery->get()
             ->map(function ($a) {
                 return [
                     'id'                  => $a->id,

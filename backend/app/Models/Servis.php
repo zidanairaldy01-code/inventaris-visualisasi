@@ -11,6 +11,8 @@ class Servis extends Model
     protected $fillable = [
         'id_aset',
         'sarana_prasarana_id',
+        'pelapor_user_id',
+        'ruangan_id',
         'jenis_perbaikan',
         'tanggal_servis',
         'biaya_servis',
@@ -18,6 +20,18 @@ class Servis extends Model
         'deskripsi_kerusakan',
         'foto_kerusakan',
         'status',
+        'approved_by_wakasek_id',
+        'tanggal_acc_wakasek',
+        'verified_by_admin_id',
+        'tanggal_selesai_admin',
+        'catatan_wakasek',
+        'catatan_admin',
+    ];
+
+    protected $casts = [
+        'tanggal_acc_wakasek'   => 'datetime',
+        'tanggal_selesai_admin' => 'datetime',
+        'biaya_servis'          => 'float',
     ];
 
     protected $appends = ['foto_kerusakan_url'];
@@ -38,5 +52,25 @@ class Servis extends Model
     public function saranaPrasarana()
     {
         return $this->belongsTo(SaranaPrasarana::class, 'sarana_prasarana_id');
+    }
+
+    public function pelapor()
+    {
+        return $this->belongsTo(User::class, 'pelapor_user_id');
+    }
+
+    public function ruangan()
+    {
+        return $this->belongsTo(Ruangan::class, 'ruangan_id');
+    }
+
+    public function approvedByWakasek()
+    {
+        return $this->belongsTo(User::class, 'approved_by_wakasek_id');
+    }
+
+    public function verifiedByAdmin()
+    {
+        return $this->belongsTo(User::class, 'verified_by_admin_id');
     }
 }

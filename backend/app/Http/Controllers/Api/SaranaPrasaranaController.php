@@ -17,6 +17,19 @@ class SaranaPrasaranaController extends Controller
     {
         $query = SaranaPrasarana::with(['user']);
 
+        // Sembunyikan aset yang sedang aktif dalam proses servis (Menunggu Persetujuan atau Proses).
+        // Barang yang sedang diservis otomatis pindah ke modul Servis & Perbaikan.
+        if (!$request->boolean('include_servis')) {
+            $inServisIds = \App\Models\Servis::whereIn('status', ['Menunggu Persetujuan', 'Proses'])
+                ->whereNotNull('sarana_prasarana_id')
+                ->pluck('sarana_prasarana_id')
+                ->toArray();
+
+            if (!empty($inServisIds)) {
+                $query->whereNotIn('id', $inServisIds);
+            }
+        }
+
         $items = $query->orderBy('tanggal_pengambilan', 'desc')
             ->orderBy('created_at', 'desc')
             ->get();

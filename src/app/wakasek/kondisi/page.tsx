@@ -40,6 +40,8 @@ interface AsetRusakItem {
   foto_thumbnail: string | null;
   deskripsi: string | null;
   link_url: string;
+  status_servis?: string | null;
+  sedang_diservis?: boolean;
 }
 
 interface SummaryRusak {
@@ -222,6 +224,17 @@ export default function MasterKondisiPage() {
       setServisModalOpen(false);
       setShowSuratModal(true);
       showToast('Berhasil diteruskan ke servis! Surat SPK siap dicetak.', 'success');
+
+      // Optimistic update status item target menjadi sedang_diservis
+      if (servisTarget) {
+        setRusakItems(prev => prev.map(item => {
+          const isTarget = item.id === servisTarget.id && (item.tipe_item || item.tipe_sumber) === (servisTarget.tipe_item || servisTarget.tipe_sumber);
+          if (isTarget) {
+            return { ...item, sedang_diservis: true, status_servis: 'Proses' };
+          }
+          return item;
+        }));
+      }
 
       // Refresh data
       fetchAsetRusak();
@@ -992,15 +1005,38 @@ export default function MasterKondisiPage() {
 
                         {/* Aksi: Teruskan ke Servis */}
                         <td className="px-5 py-3.5 text-center whitespace-nowrap">
-                          <button
-                            type="button"
-                            onClick={() => openServisModal(item)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 hover:text-amber-800 border border-amber-300 rounded-xl transition-all shadow-sm hover:shadow active:scale-95"
-                            title="Teruskan aset rusak ini ke bagian servis untuk perbaikan & buat SPK"
-                          >
-                            <Wrench className="h-3.5 w-3.5 text-amber-600" />
-                            <span>Teruskan ke Servis</span>
-                          </button>
+                          {item.sedang_diservis || item.status_servis ? (
+                            <span
+                              className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl border select-none cursor-not-allowed shadow-sm ${
+                                item.status_servis === 'Selesai'
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                  : 'bg-blue-50 text-blue-700 border-blue-200'
+                              }`}
+                              title={item.status_servis === 'Selesai' ? 'Servis telah selesai' : 'Aset sedang dalam proses servis'}
+                            >
+                              {item.status_servis === 'Selesai' ? (
+                                <>
+                                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                                  <span>Selesai</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Wrench className="h-3.5 w-3.5 text-blue-600" />
+                                  <span>Sedang Diproses</span>
+                                </>
+                              )}
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => openServisModal(item)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 hover:text-amber-800 border border-amber-300 rounded-xl transition-all shadow-sm hover:shadow active:scale-95"
+                              title="Teruskan aset rusak ini ke bagian servis untuk perbaikan & buat SPK"
+                            >
+                              <Wrench className="h-3.5 w-3.5 text-amber-600" />
+                              <span>Teruskan ke Servis</span>
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))}

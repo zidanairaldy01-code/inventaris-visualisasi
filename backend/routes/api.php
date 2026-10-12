@@ -82,6 +82,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/fotos/{foto}', [FotoAsetController::class, 'destroy']);
 
     Route::apiResource('histories', HistoryController::class)->only(['index', 'show']);
+    Route::post('servises/{id}/acc', [ServisController::class, 'accWakasek']);
+    Route::post('servises/{id}/tolak', [ServisController::class, 'tolakWakasek']);
+    Route::post('servises/{id}/selesai', [ServisController::class, 'selesaiAdmin']);
     Route::post('servises/{servis}', [ServisController::class, 'update']); // Support PUT via POST + _method for file uploads
     Route::apiResource('servises', ServisController::class);
     Route::get('peminjamans', [PeminjamanController::class, 'index']); // Dipindahkan ke auth untuk mendukung filter per wakapro

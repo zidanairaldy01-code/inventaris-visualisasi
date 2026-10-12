@@ -104,32 +104,44 @@ class KondisiController extends Controller
             });
         }
 
-        $asets = $asetQuery->get()->map(function ($a) {
+        // Cek status servis aktif (Menunggu Persetujuan / Proses)
+        $activeServisAset = \App\Models\Servis::whereIn('status', ['Menunggu Persetujuan', 'Proses'])
+            ->whereNotNull('id_aset')
+            ->pluck('status', 'id_aset');
+
+        $activeServisSarana = \App\Models\Servis::whereIn('status', ['Menunggu Persetujuan', 'Proses'])
+            ->whereNotNull('sarana_prasarana_id')
+            ->pluck('status', 'sarana_prasarana_id');
+
+        $asets = $asetQuery->get()->map(function ($a) use ($activeServisAset) {
             $isWorkshop   = $a->ruangan && $a->ruangan->jenis === 'workshop';
             $gedungNama   = $a->ruangan?->gedung?->nama_gedung;
             $ruanganNama  = $a->ruangan?->nama_ruangan;
             $lantai       = $a->ruangan?->lantai ? 'Lantai ' . $a->ruangan->lantai : null;
+            $statusServis = $activeServisAset[$a->id] ?? null;
 
             return [
-                'id'             => $a->id,
-                'tipe_sumber'    => $isWorkshop ? 'workshop' : 'gedung',
-                'tipe_item'      => 'aset',
-                'sumber_label'   => $isWorkshop ? 'Workshop' : 'Gedung & Ruangan',
-                'kode'           => $a->kode_aset,
-                'nama_barang'    => $a->nama_aset,
-                'merek'          => $a->merek,
-                'tipe'           => $a->tipe,
-                'jumlah'         => $a->jumlah,
-                'satuan'         => $a->satuan,
-                'kondisi'        => $a->kondisi?->nama_kondisi ?? 'Rusak',
-                'gedung'         => $gedungNama ?? ($isWorkshop ? 'Workshop Mandiri' : 'Tanpa Gedung'),
-                'ruangan'        => $ruanganNama ?? 'Belum Ditentukan',
-                'lantai'         => $lantai,
-                'lokasi_detail'  => ($gedungNama ? $gedungNama . ' · ' : '') . ($ruanganNama ?? '-') . ($lantai ? ' (' . $lantai . ')' : ''),
-                'kategori'       => $a->kategori?->nama_kategori ?? '-',
-                'foto_thumbnail' => $a->foto_thumbnail,
-                'deskripsi'      => $a->deskripsi,
-                'link_url'       => $isWorkshop ? '/dashboard/ruangan' : '/dashboard/gedung',
+                'id'              => $a->id,
+                'tipe_sumber'     => $isWorkshop ? 'workshop' : 'gedung',
+                'tipe_item'       => 'aset',
+                'sumber_label'    => $isWorkshop ? 'Workshop' : 'Gedung & Ruangan',
+                'kode'            => $a->kode_aset,
+                'nama_barang'     => $a->nama_aset,
+                'merek'           => $a->merek,
+                'tipe'            => $a->tipe,
+                'jumlah'          => $a->jumlah,
+                'satuan'          => $a->satuan,
+                'kondisi'         => $a->kondisi?->nama_kondisi ?? 'Rusak',
+                'gedung'          => $gedungNama ?? ($isWorkshop ? 'Workshop Mandiri' : 'Tanpa Gedung'),
+                'ruangan'         => $ruanganNama ?? 'Belum Ditentukan',
+                'lantai'          => $lantai,
+                'lokasi_detail'   => ($gedungNama ? $gedungNama . ' · ' : '') . ($ruanganNama ?? '-') . ($lantai ? ' (' . $lantai . ')' : ''),
+                'kategori'        => $a->kategori?->nama_kategori ?? '-',
+                'foto_thumbnail'  => $a->foto_thumbnail,
+                'deskripsi'       => $a->deskripsi,
+                'link_url'        => $isWorkshop ? '/dashboard/ruangan' : '/dashboard/gedung',
+                'status_servis'   => $statusServis,
+                'sedang_diservis' => !empty($statusServis),
             ];
         });
 
@@ -150,31 +162,34 @@ class KondisiController extends Controller
                 });
             }
 
-            $distribusiItems = $distQuery->get()->map(function ($d) {
+            $distribusiItems = $distQuery->get()->map(function ($d) use ($activeServisSarana) {
                 $s = $d->saranaPrasarana;
                 $ruanganNama = $d->ruanganTujuan?->nama_ruangan;
                 $gedungNama  = $d->ruanganTujuan?->gedung?->nama_gedung;
+                $statusServis = $s ? ($activeServisSarana[$s->id] ?? null) : null;
                 return [
-                    'id'             => $s?->id ?? $d->id,
-                    'distribusi_id'  => $d->id,
-                    'tipe_sumber'    => 'workshop',
-                    'tipe_item'      => 'sarana_prasarana',
-                    'sumber_label'   => 'Workshop',
-                    'kode'           => $s?->kode,
-                    'nama_barang'    => $s?->nama_barang ?? 'Aset Workshop',
-                    'merek'          => null,
-                    'tipe'           => null,
-                    'jumlah'         => $d->jumlah,
-                    'satuan'         => $s?->satuan ?? 'Unit',
-                    'kondisi'        => $s?->kondisi ?? 'Rusak',
-                    'gedung'         => $gedungNama ?? 'Workshop',
-                    'ruangan'        => $ruanganNama ?? 'Workshop',
-                    'lantai'         => null,
-                    'lokasi_detail'  => ($gedungNama ? $gedungNama . ' · ' : '') . ($ruanganNama ?? 'Workshop'),
-                    'kategori'       => 'Sarana & Prasarana Workshop',
-                    'foto_thumbnail' => null,
-                    'deskripsi'      => $s?->keterangan,
-                    'link_url'       => '/wakapro/inventaris',
+                    'id'              => $s?->id ?? $d->id,
+                    'distribusi_id'   => $d->id,
+                    'tipe_sumber'     => 'workshop',
+                    'tipe_item'       => 'sarana_prasarana',
+                    'sumber_label'    => 'Workshop',
+                    'kode'            => $s?->kode,
+                    'nama_barang'     => $s?->nama_barang ?? 'Aset Workshop',
+                    'merek'           => null,
+                    'tipe'            => null,
+                    'jumlah'          => $d->jumlah,
+                    'satuan'          => $s?->satuan ?? 'Unit',
+                    'kondisi'         => $s?->kondisi ?? 'Rusak',
+                    'gedung'          => $gedungNama ?? 'Workshop',
+                    'ruangan'         => $ruanganNama ?? 'Workshop',
+                    'lantai'          => null,
+                    'lokasi_detail'   => ($gedungNama ? $gedungNama . ' · ' : '') . ($ruanganNama ?? 'Workshop'),
+                    'kategori'        => 'Sarana & Prasarana Workshop',
+                    'foto_thumbnail'  => null,
+                    'deskripsi'       => $s?->keterangan,
+                    'link_url'        => '/wakapro/inventaris',
+                    'status_servis'   => $statusServis,
+                    'sedang_diservis' => !empty($statusServis),
                 ];
             });
         }
@@ -192,28 +207,31 @@ class KondisiController extends Controller
                 $spQuery->where('kondisi', $kondisiFilter);
             }
 
-            $spItems = $spQuery->get()->map(function ($s) {
+            $spItems = $spQuery->get()->map(function ($s) use ($activeServisSarana) {
                 $folderNama = $s->folder?->nama_folder;
+                $statusServis = $activeServisSarana[$s->id] ?? null;
                 return [
-                    'id'             => $s->id,
-                    'tipe_sumber'    => 'sarana_prasarana',
-                    'tipe_item'      => 'sarana_prasarana',
-                    'sumber_label'   => 'Sarana & Prasarana',
-                    'kode'           => $s->kode,
-                    'nama_barang'    => $s->nama_barang,
-                    'merek'          => null,
-                    'tipe'           => null,
-                    'jumlah'         => $s->stok_akhir,
-                    'satuan'         => $s->satuan,
-                    'kondisi'        => $s->kondisi ?? 'Rusak',
-                    'gedung'         => 'Sarana Prasarana Sekolah',
-                    'ruangan'        => $folderNama ? 'Folder: ' . $folderNama : 'Penyimpanan Umum',
-                    'lantai'         => null,
-                    'lokasi_detail'  => 'Sarana & Prasarana' . ($folderNama ? ' · Folder: ' . $folderNama : ' · Umum'),
-                    'kategori'       => 'Sarana & Prasarana',
-                    'foto_thumbnail' => null,
-                    'deskripsi'      => $s->keterangan,
-                    'link_url'       => '/dashboard/sarana-prasarana',
+                    'id'              => $s->id,
+                    'tipe_sumber'     => 'sarana_prasarana',
+                    'tipe_item'       => 'sarana_prasarana',
+                    'sumber_label'    => 'Sarana & Prasarana',
+                    'kode'            => $s->kode,
+                    'nama_barang'     => $s->nama_barang,
+                    'merek'           => null,
+                    'tipe'            => null,
+                    'jumlah'          => $s->stok_akhir,
+                    'satuan'          => $s->satuan,
+                    'kondisi'         => $s->kondisi ?? 'Rusak',
+                    'gedung'          => 'Sarana Prasarana Sekolah',
+                    'ruangan'         => $folderNama ? 'Folder: ' . $folderNama : 'Penyimpanan Umum',
+                    'lantai'          => null,
+                    'lokasi_detail'   => 'Sarana & Prasarana' . ($folderNama ? ' · Folder: ' . $folderNama : ' · Umum'),
+                    'kategori'        => 'Sarana & Prasarana',
+                    'foto_thumbnail'  => null,
+                    'deskripsi'       => $s->keterangan,
+                    'link_url'        => '/dashboard/sarana-prasarana',
+                    'status_servis'   => $statusServis,
+                    'sedang_diservis' => !empty($statusServis),
                 ];
             });
         }
