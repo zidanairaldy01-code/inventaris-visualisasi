@@ -7,8 +7,10 @@ use App\Models\Aset;
 use App\Models\History;
 use App\Models\Ruangan;
 use App\Models\Kondisi;
+use App\Services\SupabaseStorageService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class AsetController extends Controller
 {
@@ -171,8 +173,7 @@ class AsetController extends Controller
 
         // Handle foto upload
         if ($request->hasFile('foto_thumbnail')) {
-            $path = $request->file('foto_thumbnail')->store('aset', 'public');
-            $validated['foto_thumbnail'] = '/storage/' . $path;
+            $validated['foto_thumbnail'] = $this->uploadFotoThumbnail($request->file('foto_thumbnail'));
         }
 
         $validated['id_user'] = $request->user()?->id ?? \App\Models\User::first()?->id ?? 1;
@@ -261,14 +262,11 @@ class AsetController extends Controller
 
         // Handle foto upload
         if ($request->hasFile('foto_thumbnail')) {
-            // Delete old foto if exists
+            // Hapus foto lama sebelum upload baru
             if ($aset->foto_thumbnail) {
-                $oldPath = str_replace('/storage/', '', $aset->foto_thumbnail);
-                \Storage::disk('public')->delete($oldPath);
+                $this->deleteFotoThumbnail($aset->foto_thumbnail);
             }
-            
-            $path = $request->file('foto_thumbnail')->store('aset', 'public');
-            $validated['foto_thumbnail'] = '/storage/' . $path;
+            $validated['foto_thumbnail'] = $this->uploadFotoThumbnail($request->file('foto_thumbnail'));
         } else {
             unset($validated['foto_thumbnail']);
         }
@@ -691,6 +689,67 @@ class AsetController extends Controller
                 'message' => 'Gagal membaca file Excel.',
                 'error'   => $e->getMessage()
             ], 500);
+        }
+    }
+    /**
+     * Upload foto thumbnail aset ke Supabase Storage.
+     * Jika Supabase tidak dikonfigurasi atau gagal, fallback ke local storage.
+     *
+     * @param  \Illuminate\Http\UploadedFile  $file
+     * @return string  URL (Supabase) atau path /storage/... (local)
+     */
+    private function uploadFotoThumbnail($file): string
+    {
+        $hasSupabase = !empty(config('services.supabase.url'))
+            && !empty(config('services.supabase.service_key'));
+
+        if ($hasSupabase) {
+            try {
+                $supabase = app(SupabaseStorageService::class);
+                $result   = $supabase->uploadWithHash($file, 'aset');
+                if (!empty($result['url'])) {
+                    return $result['url'];
+                }
+            } catch (\Throwable $e) {
+                \Log::warning('Supabase upload gagal untuk foto_thumbnail aset, fallback ke local: ' . $e->getMessage());
+            }
+        }
+
+        // Fallback: simpan ke local public storage
+        $path = $file->store('aset', 'public');
+        return '/storage/' . $path;
+    }
+
+    /**
+     * Hapus foto thumbnail dari Supabase atau local storage.
+     * Deteksi otomatis berdasarkan apakah path berupa URL Supabase atau path lokal.
+     *
+     * @param  string|null  $path
+     */
+    private function deleteFotoThumbnail(?string $path): void
+    {
+        if (empty($path)) return;
+
+        // Jika berupa URL Supabase
+        if (str_contains($path, 'supabase')) {
+            try {
+                $supabase = app(SupabaseStorageService::class);
+                $urlParts = parse_url($path);
+                if (isset($urlParts['path'])) {
+                    $segments = explode('/', trim($urlParts['path'], '/'));
+                    $filePath = implode('/', array_slice($segments, 5));
+                    $supabase->delete($filePath);
+                }
+            } catch (\Throwable $e) {
+                \Log::warning('Supabase delete gagal untuk foto_thumbnail: ' . $e->getMessage());
+            }
+            return;
+        }
+
+        // Fallback: hapus dari local storage
+        $localPath = str_replace('/storage/', '', $path);
+        if (Storage::disk('public')->exists($localPath)) {
+            Storage::disk('public')->delete($localPath);
         }
     }
 }

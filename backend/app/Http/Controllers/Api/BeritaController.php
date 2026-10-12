@@ -222,7 +222,8 @@ class BeritaController extends Controller
     }
 
     /**
-     * Helper upload image (Supabase fallback ke local public disk).
+     * Helper upload image ke Supabase Storage.
+     * Jika Supabase tidak dikonfigurasi atau gagal, fallback ke local public disk.
      */
     private function uploadImage($file): string
     {
@@ -236,26 +237,44 @@ class BeritaController extends Controller
                     return $res['url'];
                 }
             } catch (\Throwable $e) {
-                \Log::warning('Supabase upload failed for berita, falling back to local storage: ' . $e->getMessage());
+                \Log::warning('Supabase upload gagal untuk foto berita, fallback ke local: ' . $e->getMessage());
             }
         }
 
-        // Fallback local storage
+        // Fallback: simpan ke local public storage
         $path = $file->store('berita', 'public');
-        return $path;
+        return '/storage/' . $path;
     }
 
     /**
-     * Helper hapus file gambar lokal.
+     * Helper hapus file gambar dari Supabase atau local storage.
+     * Deteksi otomatis berdasarkan apakah path berupa URL Supabase atau path lokal.
      */
     private function deleteOldImage(?string $path): void
     {
         if (empty($path)) return;
 
-        if (!str_starts_with($path, 'http://') && !str_starts_with($path, 'https://')) {
-            if (Storage::disk('public')->exists($path)) {
-                Storage::disk('public')->delete($path);
+        // Jika berupa URL Supabase
+        if (str_contains($path, 'supabase')) {
+            try {
+                $supabase = app(SupabaseStorageService::class);
+                $urlParts = parse_url($path);
+                if (isset($urlParts['path'])) {
+                    $segments = explode('/', trim($urlParts['path'], '/'));
+                    $filePath = implode('/', array_slice($segments, 5));
+                    $supabase->delete($filePath);
+                }
+            } catch (\Throwable $e) {
+                \Log::warning('Supabase delete gagal untuk foto berita: ' . $e->getMessage());
             }
+            return;
+        }
+
+        // Fallback: hapus dari local storage
+        // Handle path dengan prefix /storage/ maupun tanpa prefix
+        $localPath = str_replace('/storage/', '', $path);
+        if (Storage::disk('public')->exists($localPath)) {
+            Storage::disk('public')->delete($localPath);
         }
     }
 }

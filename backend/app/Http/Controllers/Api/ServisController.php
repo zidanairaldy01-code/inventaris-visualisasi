@@ -11,6 +11,7 @@ use App\Models\Aset;
 use App\Models\Kondisi;
 use App\Models\DistribusiAset;
 use App\Models\Ruangan;
+use App\Services\SupabaseStorageService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -150,8 +151,7 @@ class ServisController extends Controller
         $validated['tanggal_servis'] = $validated['tanggal_servis'] ?? now()->toDateString();
 
         if ($request->hasFile('foto_kerusakan')) {
-            $path = $request->file('foto_kerusakan')->store('servis/kerusakan', 'public');
-            $validated['foto_kerusakan'] = $path;
+            $validated['foto_kerusakan'] = $this->uploadFoto($request->file('foto_kerusakan'));
         }
 
         $servis = Servis::create($validated);
@@ -541,14 +541,14 @@ class ServisController extends Controller
         ]);
 
         if ($request->hasFile('foto_kerusakan')) {
+            // Hapus foto lama sebelum upload baru
             if ($servis->foto_kerusakan) {
-                Storage::disk('public')->delete($servis->foto_kerusakan);
+                $this->deleteFoto($servis->foto_kerusakan);
             }
-            $path = $request->file('foto_kerusakan')->store('servis/kerusakan', 'public');
-            $validated['foto_kerusakan'] = $path;
+            $validated['foto_kerusakan'] = $this->uploadFoto($request->file('foto_kerusakan'));
         } elseif ($request->input('hapus_foto') == '1') {
             if ($servis->foto_kerusakan) {
-                Storage::disk('public')->delete($servis->foto_kerusakan);
+                $this->deleteFoto($servis->foto_kerusakan);
             }
             $validated['foto_kerusakan'] = null;
         } else {
@@ -596,10 +596,70 @@ class ServisController extends Controller
     {
         $servis = Servis::findOrFail($id);
         if ($servis->foto_kerusakan) {
-            Storage::disk('public')->delete($servis->foto_kerusakan);
+            $this->deleteFoto($servis->foto_kerusakan);
         }
         $servis->delete();
 
         return response()->json(['message' => 'Data servis berhasil dihapus']);
+    }
+
+    /**
+     * Upload foto ke Supabase Storage.
+     * Jika Supabase tidak dikonfigurasi atau gagal, fallback ke local storage.
+     *
+     * @param  \Illuminate\Http\UploadedFile  $file
+     * @return string  URL (Supabase) atau relative path (local)
+     */
+    private function uploadFoto($file): string
+    {
+        $hasSupabase = !empty(config('services.supabase.url'))
+            && !empty(config('services.supabase.service_key'));
+
+        if ($hasSupabase) {
+            try {
+                $supabase = app(SupabaseStorageService::class);
+                $result   = $supabase->uploadWithHash($file, 'servis/kerusakan');
+                if (!empty($result['url'])) {
+                    return $result['url'];
+                }
+            } catch (\Throwable $e) {
+                \Log::warning('Supabase upload gagal untuk foto_kerusakan, fallback ke local: ' . $e->getMessage());
+            }
+        }
+
+        // Fallback: simpan ke local public storage
+        return $file->store('servis/kerusakan', 'public');
+    }
+
+    /**
+     * Hapus foto dari Supabase atau local storage.
+     * Deteksi otomatis berdasarkan apakah path berupa URL Supabase atau path lokal.
+     *
+     * @param  string|null  $path
+     */
+    private function deleteFoto(?string $path): void
+    {
+        if (empty($path)) return;
+
+        // Jika berupa URL Supabase
+        if (str_contains($path, 'supabase')) {
+            try {
+                $supabase    = app(SupabaseStorageService::class);
+                $urlParts    = parse_url($path);
+                if (isset($urlParts['path'])) {
+                    $segments = explode('/', trim($urlParts['path'], '/'));
+                    $filePath = implode('/', array_slice($segments, 5));
+                    $supabase->delete($filePath);
+                }
+            } catch (\Throwable $e) {
+                \Log::warning('Supabase delete gagal: ' . $e->getMessage());
+            }
+            return;
+        }
+
+        // Fallback: hapus dari local storage
+        if (Storage::disk('public')->exists($path)) {
+            Storage::disk('public')->delete($path);
+        }
     }
 }
