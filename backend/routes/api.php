@@ -25,6 +25,7 @@ use App\Http\Controllers\Api\DistribusiAsetController;
 use App\Http\Controllers\Api\NotifikasiController;
 use App\Http\Controllers\Api\FotoSaranaPrasaranaController;
 use App\Http\Controllers\Api\WorkshopController;
+use App\Http\Controllers\Api\BeritaController;
 use Illuminate\Support\Facades\Route;
 
 
@@ -39,6 +40,9 @@ Route::get('stats', [AsetController::class, 'publicStats']);
 Route::get('daftar-belanja/summary', [DaftarBelanjaController::class, 'summary']);
 Route::get('gedungs', [GedungController::class, 'index']);
 Route::get('sumber-danas', [SumberDanaController::class, 'index']);
+
+// Public Berita untuk Landing Page
+Route::get('beritas', [BeritaController::class, 'publicIndex']);
 
 // DEBUG ENDPOINT - HAPUS SETELAH DEBUGGING SELESAI!
 Route::get('debug/supabase-config', [FotoSaranaPrasaranaController::class, 'debugConfig']);
@@ -137,6 +141,12 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Manajemen Pengguna (Khusus Super Admin)
     Route::middleware('role:super_admin')->apiResource('users', UserController::class);
+
+    // Manajemen Berita & Pengumuman Publik (Khusus Super Admin)
+    Route::get('admin/beritas', [BeritaController::class, 'index']);
+    Route::post('beritas/{id}', [BeritaController::class, 'update']);
+    Route::patch('beritas/{id}/toggle-status', [BeritaController::class, 'toggleStatus']);
+    Route::apiResource('beritas', BeritaController::class)->except(['index']);
 
     // Distribusi Aset, Surat Jalan & BAST
     Route::get('stats/petugas', [DistribusiAsetController::class, 'statsPetugas']);

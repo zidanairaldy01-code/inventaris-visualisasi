@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { BookOpen, Package, Building2, Users } from 'lucide-react';
+import { BookOpen, Package, Building2, Users, DollarSign } from 'lucide-react';
 
 interface Stats {
   total_item: number;
@@ -15,11 +15,15 @@ interface HeroSectionProps {
 }
 
 export default function HeroSection({ stats }: HeroSectionProps) {
-  const formatRupiah = (n: number) => {
-    if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1)}M`;
-    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}Jt`;
-    return `${(n / 1_000).toFixed(0)}Rb`;
+  const formatRupiahShort = (n: number) => {
+    if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1)} M`;
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)} Jt`;
+    if (n >= 1_000) return `${(n / 1_000).toFixed(0)} Rb`;
+    return n.toLocaleString('id-ID');
   };
+
+  const formatRupiahFull = (n: number) =>
+    new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n || 0);
 
   return (
     <section id="beranda" className="relative bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 text-white overflow-hidden">
@@ -71,36 +75,45 @@ export default function HeroSection({ stats }: HeroSectionProps) {
         {/* Quick Stats */}
         {stats && (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 max-w-5xl mx-auto">
-            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-6 text-center">
+            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-5 text-center transition-all hover:bg-white/15">
               <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center mx-auto mb-3">
                 <Package className="w-6 h-6 text-white" />
               </div>
-              <p className="text-3xl font-bold mb-1">{stats.total_item}</p>
+              <p className="text-2xl sm:text-3xl font-bold mb-1">{(stats.total_item || 0).toLocaleString('id-ID')}</p>
               <p className="text-sm text-blue-200">Jenis Aset</p>
+              <p className="text-[11px] text-blue-200/70 mt-1 font-medium">Sarana Prasarana</p>
             </div>
 
-            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-6 text-center">
+            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-5 text-center transition-all hover:bg-white/15">
               <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center mx-auto mb-3">
                 <Building2 className="w-6 h-6 text-white" />
               </div>
-              <p className="text-3xl font-bold mb-1">{stats.total_unit.toLocaleString('id-ID')}</p>
+              <p className="text-2xl sm:text-3xl font-bold mb-1">{(stats.total_unit || 0).toLocaleString('id-ID')}</p>
               <p className="text-sm text-blue-200">Total Unit</p>
+              <p className="text-[11px] text-blue-200/70 mt-1 font-medium">Barang Fisik</p>
             </div>
 
-            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-6 text-center">
+            <div
+              className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-5 text-center transition-all hover:bg-white/15 cursor-default group"
+              title={formatRupiahFull(stats.total_nilai)}
+            >
               <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center mx-auto mb-3">
-                <Users className="w-6 h-6 text-white" />
+                <DollarSign className="w-6 h-6 text-white" />
               </div>
-              <p className="text-3xl font-bold mb-1">Rp {formatRupiah(stats.total_nilai)}</p>
+              <p className="text-2xl sm:text-3xl font-bold mb-1">Rp {formatRupiahShort(stats.total_nilai || 0)}</p>
               <p className="text-sm text-blue-200">Nilai Aset</p>
+              <p className="text-[11px] text-blue-200/90 mt-1 font-medium tracking-tight truncate" title={formatRupiahFull(stats.total_nilai)}>
+                {formatRupiahFull(stats.total_nilai)}
+              </p>
             </div>
 
-            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-6 text-center">
+            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-5 text-center transition-all hover:bg-white/15">
               <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center mx-auto mb-3">
                 <BookOpen className="w-6 h-6 text-white" />
               </div>
-              <p className="text-3xl font-bold mb-1">{stats.total_ruangan || 0}</p>
+              <p className="text-2xl sm:text-3xl font-bold mb-1">{stats.total_ruangan || 0}</p>
               <p className="text-sm text-blue-200">Ruangan</p>
+              <p className="text-[11px] text-blue-200/70 mt-1 font-medium">Fasilitas Sekolah</p>
             </div>
           </div>
         )}

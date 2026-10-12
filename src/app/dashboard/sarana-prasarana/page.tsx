@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import axios from '@/lib/axios';
 import {
@@ -70,6 +70,7 @@ interface FormData {
   nilai_harga_sekarang: string;
   kondisi: string;
   keterangan: string;
+  id_folder: string;
 }
 
 interface PreviewRow {
@@ -129,6 +130,7 @@ const emptyForm = (): FormData => ({
   nilai_harga_sekarang: '0',
   kondisi: 'Baik',
   keterangan: '',
+  id_folder: '',
 });
 
 const parseAngka = (val: unknown): number => {
@@ -442,9 +444,20 @@ export default function SaranaPrasaranaPage() {
     // Tidak digunakan — data kategori/ruangan/kondisi tidak relevan untuk sarana & prasarana
   };
 
-  // Filter items by search and kondisi
+  // Filter items by search, kondisi, and folder
   useEffect(() => {
     let result = asets;
+
+    // Filter berdasarkan folder jika sedang membuka folder tertentu
+    if (viewMode === 'folders' && activeFolderId !== null) {
+      if (activeFolderId === -1) {
+        // Folder Keseluruhan -> tampilkan SEMUA aset (termasuk aset baru dari folder manapun)
+        result = asets;
+      } else {
+        // Folder spesifik -> hanya tampilkan aset dalam folder ini
+        result = result.filter(a => Number(a.id_folder) === activeFolderId);
+      }
+    }
 
     if (filterKondisi !== 'all') {
       result = result.filter(a => (a.kondisi || 'Baik') === filterKondisi);
@@ -463,7 +476,7 @@ export default function SaranaPrasaranaPage() {
     setFiltered(result);
     setPage(1);
     setSelectedItemIds(new Set()); // Reset selections on filter change
-  }, [search, filterKondisi, asets]);
+  }, [search, filterKondisi, asets, activeFolderId, viewMode]);
 
   /* ── Folder Handlers ── */
   const openAddFolder = () => {
@@ -585,7 +598,11 @@ export default function SaranaPrasaranaPage() {
   /* ── Item Single CRUD ── */
   const openAddModal = () => {
     setEditingAset(null);
-    setFormData(emptyForm());
+    const initial = emptyForm();
+    if (typeof activeFolderId === 'number' && activeFolderId > 0) {
+      initial.id_folder = String(activeFolderId);
+    }
+    setFormData(initial);
     setFormErrors({});
     setShowFormModal(true);
   };
@@ -605,6 +622,7 @@ export default function SaranaPrasaranaPage() {
       nilai_harga_sekarang:   String(item.nilai_harga_sekarang ?? 0),
       kondisi:                normalizeKondisi(item.kondisi),
       keterangan:             item.keterangan || '',
+      id_folder:              item.id_folder ? String(item.id_folder) : '',
     });
     setFormErrors({});
     setShowFormModal(true);
@@ -636,6 +654,7 @@ export default function SaranaPrasaranaPage() {
         nilai_harga_sekarang:   Number(formData.nilai_harga_sekarang) || 0,
         kondisi:                formData.kondisi || 'Baik',
         keterangan:             formData.keterangan || null,
+        id_folder:              formData.id_folder ? Number(formData.id_folder) : null,
       };
 
       if (editingAset) {
@@ -879,8 +898,16 @@ export default function SaranaPrasaranaPage() {
   const activeFolderTitle = activeFolderId === null
     ? 'Semua Folder'
     : activeFolderId === -1
-      ? 'Aset Tanpa Folder'
+      ? 'Folder Keseluruhan'
       : activeFolderObj?.nama_folder || 'Folder';
+
+  const folderMap = useMemo(() => {
+    const map: Record<number, string> = {};
+    folderList.forEach(f => {
+      map[f.id] = f.nama_folder;
+    });
+    return map;
+  }, [folderList]);
 
   if (!mounted) return null;
 
@@ -1116,21 +1143,24 @@ export default function SaranaPrasaranaPage() {
               );
             })}
 
-            {/* Default Loose Items Card */}
+            {/* Folder Keseluruhan Aset Card */}
             <div
               onClick={() => setActiveFolderId(-1)}
-              className="bg-slate-50 rounded-2xl p-5 border border-dashed border-slate-300 hover:border-indigo-400 transition-all cursor-pointer group flex flex-col justify-between h-40">
+              className="bg-gradient-to-br from-indigo-50/70 via-white to-blue-50/50 rounded-2xl p-5 border-2 border-indigo-200/80 shadow-sm hover:shadow-md hover:border-indigo-400 transition-all cursor-pointer group relative flex flex-col justify-between h-40">
               <div className="flex items-start justify-between">
-                <div className="p-3 rounded-2xl bg-slate-200 text-slate-600 group-hover:scale-110 transition-transform">
+                <div className="p-3 rounded-2xl bg-gradient-to-tr from-indigo-600 to-blue-600 text-white shadow-md shadow-indigo-200 group-hover:scale-110 transition-transform">
                   <Layers className="h-7 w-7" />
                 </div>
+                <span className="px-2 py-0.5 text-[10px] font-bold bg-indigo-100 text-indigo-700 rounded-full border border-indigo-200">
+                  Semua Data
+                </span>
               </div>
               <div>
-                <h3 className="font-bold text-slate-800 group-hover:text-indigo-600 transition-colors">Aset Tanpa Folder</h3>
-                <p className="text-xs text-slate-400 mt-0.5">Item di luar folder</p>
-                <div className="mt-3 flex items-center justify-between text-xs text-slate-500 border-t border-slate-200 pt-2">
-                  <span className="font-semibold">{asets.filter(a => !a.id_folder).length} items</span>
-                  <span className="text-[10px] text-slate-400">Buka →</span>
+                <h3 className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">Folder Keseluruhan</h3>
+                <p className="text-xs text-slate-500 mt-0.5">Semua data sarana &amp; prasarana</p>
+                <div className="mt-3 flex items-center justify-between text-xs text-slate-500 border-t border-indigo-100/80 pt-2">
+                  <span className="font-bold text-indigo-600">{asets.length} items</span>
+                  <span className="text-[10px] font-semibold text-indigo-600 group-hover:translate-x-0.5 transition-transform">Buka Folder →</span>
                 </div>
               </div>
             </div>
@@ -1199,7 +1229,15 @@ export default function SaranaPrasaranaPage() {
                         <td className="px-4 py-3 text-slate-400 text-xs">{(page - 1) * PER_PAGE + i + 1}</td>
                         <td className="px-4 py-3">
                           <div className="font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">{aset.nama_barang}</div>
-                          {aset.kode && <div className="text-xs font-mono text-slate-400 mt-0.5">{aset.kode}</div>}
+                          <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                            {aset.kode && <span className="text-xs font-mono text-slate-400">{aset.kode}</span>}
+                            {aset.id_folder && folderMap[aset.id_folder] && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-indigo-600 bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 rounded-md">
+                                <Folder className="h-2.5 w-2.5" />
+                                {folderMap[aset.id_folder]}
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="px-4 py-3 text-center">
                           <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold ${kondisiStyle(aset.kondisi || undefined)}`}>
@@ -1924,6 +1962,24 @@ export default function SaranaPrasaranaPage() {
                   />
                   {formErrors.tanggal_pengambilan && <p className="text-xs text-red-500 mt-1">{formErrors.tanggal_pengambilan}</p>}
                 </FormField>
+
+                <div className="sm:col-span-2">
+                  <FormField label="Pilih Folder">
+                    <select
+                      value={formData.id_folder}
+                      onChange={e => set('id_folder', e.target.value)}
+                      className={inputCls + ' bg-white cursor-pointer'}
+                    >
+                      <option value="">Tanpa Folder Khusus (Masuk Folder Keseluruhan)</option>
+                      {folderList.map(f => (
+                        <option key={f.id} value={f.id}>{f.nama_folder}</option>
+                      ))}
+                    </select>
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      Catatan: Semua aset otomatis masuk ke Folder Keseluruhan terlepas dari folder yang dipilih.
+                    </p>
+                  </FormField>
+                </div>
 
                 <div className="sm:col-span-2">
                   <FormField label="Jenis Kekayaan" required>

@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Building2, Warehouse,
   LogOut, Package, ChevronRight, Wrench, Handshake,
   BarChart3, ChevronDown, ClipboardList, X, Wallet,
-  SlidersHorizontal, History, User, Users, Truck, Inbox, Bell
+  SlidersHorizontal, History, User, Users, Truck, Inbox, Bell, Newspaper
 } from 'lucide-react';
 import Cookies from 'js-cookie';
 import axios from '@/lib/axios';
@@ -60,6 +60,7 @@ const navigation: NavItem[] = [
   { name: 'Riwayat Aktivitas',  href: '/dashboard/history',          icon: History,            group: 'laporan',    roles: ['super_admin', 'petugas', 'wakasek'], dynamicHref: true },
   { name: 'Laporan',            href: '/dashboard/laporan',          icon: BarChart3,          group: 'laporan', dynamicHref: true },
   { name: 'Kelola Pengguna',    href: '/dashboard/users',            icon: Users,              group: 'laporan',    roles: ['super_admin'] },
+  { name: 'Kelola Berita',      href: '/dashboard/berita',           icon: Newspaper,          group: 'laporan',    roles: ['super_admin'] },
 ];
 
 interface SidebarProps {

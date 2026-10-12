@@ -50,24 +50,15 @@ class AsetController extends Controller
     {
         $asets = Aset::whereNull('deleted_at')->get();
 
-        $saranaUnit = (int) \App\Models\SaranaPrasarana::sum('stok_akhir');
-        $saranaItems = \App\Models\SaranaPrasarana::count();
-        $saranaNilai = (float) \App\Models\SaranaPrasarana::sum('nilai_harga_pembelian');
+        $totalNilaiPembelianSarana = (float) \App\Models\SaranaPrasarana::sum('nilai_harga_pembelian');
+        $totalNilaiSekarangSarana  = (float) \App\Models\SaranaPrasarana::sum('nilai_harga_sekarang');
+        $totalItemSarana           = \App\Models\SaranaPrasarana::count();
+        $totalUnitSarana           = (int) \App\Models\SaranaPrasarana::sum('stok_akhir');
 
-        $totalUnit = $asets->sum(fn($a) => (int) ($a->jumlah ?? 1));
-        if ($totalUnit === 0 && $saranaUnit > 0) {
-            $totalUnit = $saranaUnit;
-        }
-
-        $totalItem = $asets->count();
-        if ($totalItem === 0 && $saranaItems > 0) {
-            $totalItem = $saranaItems;
-        }
-
-        $totalNilai = $asets->sum(fn($a) => (float) (($a->jumlah ?? 1) * ($a->harga_perolehan ?? 0)));
-        if ($totalNilai == 0 && $saranaNilai > 0) {
-            $totalNilai = $saranaNilai;
-        }
+        // Total nilai aset keseluruhan, disinkronkan dengan total nilai pada dashboard admin
+        $totalNilai = $totalNilaiPembelianSarana > 0 ? $totalNilaiPembelianSarana : $asets->sum(fn($a) => (float) (($a->jumlah ?? 1) * ($a->harga_perolehan ?? 0)));
+        $totalItem  = $totalItemSarana > 0 ? $totalItemSarana : $asets->count();
+        $totalUnit  = $totalUnitSarana > 0 ? $totalUnitSarana : $asets->sum(fn($a) => (int) ($a->jumlah ?? 1));
 
         $perKondisi = $asets->groupBy(fn($a) => $a->id_kondisi)
             ->map(fn($group) => $group->count());

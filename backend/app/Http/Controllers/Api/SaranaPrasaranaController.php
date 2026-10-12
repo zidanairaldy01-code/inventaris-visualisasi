@@ -45,6 +45,7 @@ class SaranaPrasaranaController extends Controller
             'nilai_harga_sekarang'  => 'nullable|integer|min:0',
             'kondisi'               => 'nullable|string|max:50',
             'keterangan'            => 'nullable|string',
+            'id_folder'             => 'nullable|integer',
         ]);
 
         if (array_key_exists('tanggal_pengambilan', $validated) && empty($validated['tanggal_pengambilan'])) {
@@ -73,6 +74,7 @@ class SaranaPrasaranaController extends Controller
         $validated['nilai_harga_pembelian'] = $validated['nilai_harga_pembelian'] ?? 0;
         $validated['nilai_harga_sekarang']  = $validated['nilai_harga_sekarang']  ?? 0;
         $validated['id_user']     = $request->user()?->id;
+        $validated['id_folder']   = !empty($validated['id_folder']) && $validated['id_folder'] > 0 ? (int) $validated['id_folder'] : null;
 
         $item = SaranaPrasarana::create($validated);
 
@@ -115,6 +117,7 @@ class SaranaPrasaranaController extends Controller
             'nilai_harga_sekarang'  => 'nullable|integer|min:0',
             'kondisi'               => 'nullable|string|max:50',
             'keterangan'            => 'nullable|string',
+            'id_folder'             => 'nullable|integer',
         ]);
 
         // Normalize nullable fields
@@ -141,6 +144,9 @@ class SaranaPrasaranaController extends Controller
         $validated['stok_keluar'] = $validated['stok_keluar'] ?? $item->stok_keluar ?? 0;
         $validated['nilai_harga_pembelian'] = $validated['nilai_harga_pembelian'] ?? $item->nilai_harga_pembelian ?? 0;
         $validated['nilai_harga_sekarang']  = $validated['nilai_harga_sekarang']  ?? $item->nilai_harga_sekarang  ?? 0;
+        if (array_key_exists('id_folder', $validated)) {
+            $validated['id_folder'] = !empty($validated['id_folder']) && $validated['id_folder'] > 0 ? (int) $validated['id_folder'] : null;
+        }
 
         $item->update($validated);
 
