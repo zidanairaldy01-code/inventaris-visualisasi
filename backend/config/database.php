@@ -51,7 +51,7 @@ return [
             'port' => env('DB_PORT', env('MYSQLPORT', env('MYSQL_PORT', '3306'))),
             'database' => env('DB_DATABASE', env('MYSQLDATABASE', env('MYSQL_DATABASE', 'railway'))),
             'username' => env('DB_USERNAME', env('MYSQLUSER', env('MYSQL_USER', 'root'))),
-            'password' => env('DB_PASSWORD', env('MYSQLPASSWORD', env('MYSQL_PASSWORD', 'WQQMsRwVAucoOGaXGokOljtjVQYqjBmV'))),
+            'password' => env('DB_PASSWORD', env('MYSQLPASSWORD', env('MYSQL_PASSWORD'))),
             'unix_socket' => env('DB_SOCKET', ''),
             'charset' => env('DB_CHARSET', 'utf8mb4'),
             'collation' => env('DB_COLLATION', 'utf8mb4_unicode_ci'),
