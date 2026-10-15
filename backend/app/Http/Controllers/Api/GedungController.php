@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Gedung;
+use App\Services\SupabaseStorageService;
 use Illuminate\Http\Request;
 
 class GedungController extends Controller
@@ -31,8 +32,7 @@ class GedungController extends Controller
         ]);
 
         if ($request->hasFile('foto_gedung')) {
-            $path = $request->file('foto_gedung')->store('gedung', 'public');
-            $validated['foto_gedung'] = '/storage/' . $path;
+            $validated['foto_gedung'] = $this->uploadFotoGedung($request->file('foto_gedung'));
         }
 
         $gedung = Gedung::create($validated);
@@ -58,13 +58,11 @@ class GedungController extends Controller
         ]);
 
         if ($request->hasFile('foto_gedung')) {
-            // Delete old foto if exists
+            // Hapus foto lama jika ada
             if ($gedung->foto_gedung) {
-                $oldPath = str_replace('/storage/', '', $gedung->foto_gedung);
-                \Storage::disk('public')->delete($oldPath);
+                $this->deleteFotoGedung($gedung->foto_gedung);
             }
-            $path = $request->file('foto_gedung')->store('gedung', 'public');
-            $validated['foto_gedung'] = '/storage/' . $path;
+            $validated['foto_gedung'] = $this->uploadFotoGedung($request->file('foto_gedung'));
         }
 
         $gedung->update($validated);
@@ -73,7 +71,63 @@ class GedungController extends Controller
 
     public function destroy(string $id)
     {
-        Gedung::findOrFail($id)->delete();
+        $gedung = Gedung::findOrFail($id);
+        if ($gedung->foto_gedung) {
+            $this->deleteFotoGedung($gedung->foto_gedung);
+        }
+        $gedung->delete();
         return response()->json(['message' => 'Gedung berhasil dihapus']);
+    }
+
+    /**
+     * Upload foto gedung ke Supabase Storage (fallback ke local).
+     */
+    private function uploadFotoGedung($file): string
+    {
+        $hasSupabase = !empty(config('services.supabase.url'))
+            && !empty(config('services.supabase.service_key'));
+
+        if ($hasSupabase) {
+            try {
+                $supabase = app(SupabaseStorageService::class);
+                $result   = $supabase->uploadWithHash($file, 'gedung');
+                if (!empty($result['url'])) {
+                    return $result['url'];
+                }
+            } catch (\Throwable $e) {
+                \Log::warning('Supabase upload gagal untuk foto_gedung, fallback ke local: ' . $e->getMessage());
+            }
+        }
+
+        // Fallback: simpan ke local public storage
+        $path = $file->store('gedung', 'public');
+        return '/storage/' . $path;
+    }
+
+    /**
+     * Hapus foto gedung dari Supabase atau local storage.
+     */
+    private function deleteFotoGedung(?string $path): void
+    {
+        if (empty($path)) return;
+
+        if (str_contains($path, 'supabase')) {
+            try {
+                $supabase = app(SupabaseStorageService::class);
+                $urlParts = parse_url($path);
+                if (isset($urlParts['path'])) {
+                    $segments = explode('/', trim($urlParts['path'], '/'));
+                    $filePath = implode('/', array_slice($segments, 5));
+                    $supabase->delete($filePath);
+                }
+            } catch (\Throwable $e) {
+                \Log::warning('Supabase delete gagal untuk foto_gedung: ' . $e->getMessage());
+            }
+            return;
+        }
+
+        // Fallback: hapus dari local storage
+        $localPath = str_replace('/storage/', '', $path);
+        \Storage::disk('public')->delete($localPath);
     }
 }

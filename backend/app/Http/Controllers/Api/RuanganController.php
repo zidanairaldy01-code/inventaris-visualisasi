@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Ruangan;
+use App\Services\SupabaseStorageService;
 use Illuminate\Http\Request;
 
 class RuanganController extends Controller
@@ -43,8 +44,7 @@ class RuanganController extends Controller
         }
 
         if ($request->hasFile('foto_ruangan')) {
-            $path = $request->file('foto_ruangan')->store('ruangan', 'public');
-            $validated['foto_ruangan'] = '/storage/' . $path;
+            $validated['foto_ruangan'] = $this->uploadFotoRuangan($request->file('foto_ruangan'));
         }
 
         $ruangan = Ruangan::create($validated);
@@ -76,13 +76,11 @@ class RuanganController extends Controller
         ]);
 
         if ($request->hasFile('foto_ruangan')) {
-            // Delete old foto if exists
+            // Hapus foto lama jika ada
             if ($ruangan->foto_ruangan) {
-                $oldPath = str_replace('/storage/', '', $ruangan->foto_ruangan);
-                \Storage::disk('public')->delete($oldPath);
+                $this->deleteFotoRuangan($ruangan->foto_ruangan);
             }
-            $path = $request->file('foto_ruangan')->store('ruangan', 'public');
-            $validated['foto_ruangan'] = '/storage/' . $path;
+            $validated['foto_ruangan'] = $this->uploadFotoRuangan($request->file('foto_ruangan'));
         }
 
         $ruangan->update($validated);
@@ -91,7 +89,63 @@ class RuanganController extends Controller
 
     public function destroy(string $id)
     {
-        Ruangan::findOrFail($id)->delete();
+        $ruangan = Ruangan::findOrFail($id);
+        if ($ruangan->foto_ruangan) {
+            $this->deleteFotoRuangan($ruangan->foto_ruangan);
+        }
+        $ruangan->delete();
         return response()->json(['message' => 'Ruangan berhasil dihapus']);
+    }
+
+    /**
+     * Upload foto ruangan ke Supabase Storage (fallback ke local).
+     */
+    private function uploadFotoRuangan($file): string
+    {
+        $hasSupabase = !empty(config('services.supabase.url'))
+            && !empty(config('services.supabase.service_key'));
+
+        if ($hasSupabase) {
+            try {
+                $supabase = app(SupabaseStorageService::class);
+                $result   = $supabase->uploadWithHash($file, 'ruangan');
+                if (!empty($result['url'])) {
+                    return $result['url'];
+                }
+            } catch (\Throwable $e) {
+                \Log::warning('Supabase upload gagal untuk foto_ruangan, fallback ke local: ' . $e->getMessage());
+            }
+        }
+
+        // Fallback: simpan ke local public storage
+        $path = $file->store('ruangan', 'public');
+        return '/storage/' . $path;
+    }
+
+    /**
+     * Hapus foto ruangan dari Supabase atau local storage.
+     */
+    private function deleteFotoRuangan(?string $path): void
+    {
+        if (empty($path)) return;
+
+        if (str_contains($path, 'supabase')) {
+            try {
+                $supabase = app(SupabaseStorageService::class);
+                $urlParts = parse_url($path);
+                if (isset($urlParts['path'])) {
+                    $segments = explode('/', trim($urlParts['path'], '/'));
+                    $filePath = implode('/', array_slice($segments, 5));
+                    $supabase->delete($filePath);
+                }
+            } catch (\Throwable $e) {
+                \Log::warning('Supabase delete gagal untuk foto_ruangan: ' . $e->getMessage());
+            }
+            return;
+        }
+
+        // Fallback: hapus dari local storage
+        $localPath = str_replace('/storage/', '', $path);
+        \Storage::disk('public')->delete($localPath);
     }
 }
