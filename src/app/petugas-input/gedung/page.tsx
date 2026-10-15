@@ -1859,6 +1859,7 @@ export default function GedungDrivePage() {
                           <th className="px-3 py-2.5 text-left font-semibold text-slate-600 min-w-[100px]">Tipe</th>
                           <th className="px-3 py-2.5 text-left font-semibold text-slate-600 w-[70px]">Jumlah</th>
                           <th className="px-3 py-2.5 text-left font-semibold text-slate-600 w-[80px]">Satuan</th>
+                          <th className="px-3 py-2.5 text-left font-semibold text-slate-600 min-w-[120px]">Harga Satuan (Rp)</th>
                           <th className="px-3 py-2.5 text-left font-semibold text-slate-600 min-w-[110px]">Kondisi</th>
                           <th className="px-3 py-2.5 text-center font-semibold text-slate-600 w-8"></th>
                         </tr>
@@ -1918,6 +1919,16 @@ export default function GedungDrivePage() {
                                 value={row.satuan}
                                 onChange={e => setBulkRows(rows => rows.map(r => r.id === row.id ? { ...r, satuan: e.target.value } : r))}
                                 placeholder="Unit"
+                                className="w-full border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
+                              />
+                            </td>
+                            <td className="px-2 py-1.5">
+                              <input
+                                type="number"
+                                value={row.harga_perolehan}
+                                onChange={e => setBulkRows(rows => rows.map(r => r.id === row.id ? { ...r, harga_perolehan: e.target.value } : r))}
+                                placeholder="0"
+                                min="0"
                                 className="w-full border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
                               />
                             </td>
