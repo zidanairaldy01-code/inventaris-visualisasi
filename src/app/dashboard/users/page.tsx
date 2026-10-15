@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import axios from '@/lib/axios';
+import { showErrorAlert } from '@/utils/errorHandler';
 import {
   Users, Plus, Search, Filter, Edit, Trash2, ShieldCheck,
   Building2, UserCheck, Key, AlertCircle, X, ChevronRight,
@@ -169,7 +170,7 @@ export default function UsersPage() {
       setSuccessMessage('Pengguna berhasil dihapus.');
       setTimeout(() => setSuccessMessage(''), 4000);
     } catch (err: any) {
-      alert(err?.response?.data?.message || 'Gagal menghapus pengguna.');
+      showErrorAlert(err, 'Gagal Menghapus Pengguna');
     }
   };
 

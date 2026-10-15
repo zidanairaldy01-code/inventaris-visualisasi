@@ -11,6 +11,7 @@ import {
   Flame, ExternalLink, HelpCircle, Printer, FileText
 } from 'lucide-react';
 import Toast from '@/components/Toast';
+import { showErrorAlert } from '@/utils/errorHandler';
 
 interface Kondisi {
   id: number;
@@ -240,8 +241,7 @@ export default function MasterKondisiPage() {
       fetchAsetRusak();
     } catch (err: any) {
       console.error('Error forwarding to servis:', err);
-      const msg = err.response?.data?.message || 'Gagal meneruskan ke servis';
-      showToast(msg, 'error');
+      showErrorAlert(err, 'Gagal Meneruskan ke Servis');
     } finally {
       setSubmittingServis(false);
     }
@@ -615,8 +615,7 @@ export default function MasterKondisiPage() {
       setShowModal(false);
       fetchKondisis();
     } catch (err: unknown) {
-      const e = err as { response?: { data?: { message?: string } } };
-      showToast(e?.response?.data?.message || 'Gagal menyimpan data kondisi', 'error');
+      showErrorAlert(err, 'Gagal Menyimpan Data Kondisi');
     } finally {
       setSubmitting(false);
     }
@@ -636,8 +635,8 @@ export default function MasterKondisiPage() {
       showToast(`Kondisi "${deleteTarget.nama_kondisi}" berhasil dihapus`, 'success');
       setDeleteTarget(null);
       fetchKondisis();
-    } catch {
-      showToast('Gagal menghapus kondisi', 'error');
+    } catch (err: unknown) {
+      showErrorAlert(err, 'Gagal Menghapus Kondisi');
     } finally {
       setDeleting(false);
     }

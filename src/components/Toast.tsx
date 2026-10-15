@@ -2,16 +2,18 @@
 
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { CheckCircle, XCircle, AlertTriangle, Info, X } from 'lucide-react';
+import { CheckCircle, XCircle, AlertTriangle, Info, X, ExternalLink } from 'lucide-react';
+import { showErrorAlert } from '@/utils/errorHandler';
 
 interface ToastProps {
   message: string;
   type: 'success' | 'error' | 'warning' | 'info';
+  details?: string[];
   onClose: () => void;
   duration?: number;
 }
 
-export default function Toast({ message, type, onClose, duration = 4000 }: ToastProps) {
+export default function Toast({ message, type, details, onClose, duration = 4000 }: ToastProps) {
   useEffect(() => {
     const timer = setTimeout(() => {
       onClose();
@@ -64,7 +66,25 @@ export default function Toast({ message, type, onClose, duration = 4000 }: Toast
           {style.icon}
         </div>
         <div className={`flex-1 text-sm font-medium ${style.textColor} leading-relaxed`}>
-          {message}
+          <div>{message}</div>
+          {type === 'error' && (
+            <button
+              type="button"
+              onClick={() => {
+                showErrorAlert(
+                  details && details.length > 0
+                    ? { response: { data: { message, errors: details } } }
+                    : message,
+                  'Keterangan Detail Error'
+                );
+                onClose();
+              }}
+              className="mt-1.5 inline-flex items-center gap-1 text-xs font-bold text-red-700 hover:text-red-950 underline cursor-pointer bg-red-100/70 hover:bg-red-200/80 px-2 py-0.5 rounded-md transition-colors"
+            >
+              <span>Buka Pop-up Keterangan Error</span>
+              <ExternalLink className="w-3 h-3" />
+            </button>
+          )}
         </div>
         <button
           onClick={onClose}

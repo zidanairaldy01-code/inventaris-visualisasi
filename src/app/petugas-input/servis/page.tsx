@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import axios from '@/lib/axios';
+import { showErrorAlert } from '@/utils/errorHandler';
 import {
   Wrench, Plus, Search, RefreshCw, DollarSign, CheckCircle2,
   Clock, X, Trash2, Edit2, Loader2, Camera, ImageOff, ZoomIn,
@@ -172,7 +173,7 @@ export default function ServisPage() {
       fetchData(true);
     } catch (err) {
       console.error(err);
-      alert('Gagal menyimpan data servis. Periksa kembali form Anda.');
+      showErrorAlert(err, 'Gagal Menyimpan Data Servis');
     } finally {
       setSubmitting(false);
     }
@@ -185,7 +186,7 @@ export default function ServisPage() {
       fetchData(true);
     } catch (err) {
       console.error(err);
-      alert('Gagal menghapus data.');
+      showErrorAlert(err, 'Gagal Menghapus Data Servis');
     }
   };
 

@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import axios from '@/lib/axios';
+import { showErrorAlert } from '@/utils/errorHandler';
 import { X, Upload, Trash2, Star, ImageOff, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 
 interface Foto {
@@ -48,6 +49,7 @@ export default function AsetFotoModal({ aset, onClose, onUpdate }: Props) {
     setUploading(true);
     setMessage(null);
     let successCount = 0;
+    let lastError: any = null;
 
     for (const file of Array.from(files)) {
       const formData = new FormData();
@@ -57,6 +59,7 @@ export default function AsetFotoModal({ aset, onClose, onUpdate }: Props) {
         await axios.post(`/api/asets/${aset.id}/fotos`, formData);
         successCount++;
       } catch (err) {
+        lastError = err;
         console.error(err);
       }
     }
@@ -64,7 +67,11 @@ export default function AsetFotoModal({ aset, onClose, onUpdate }: Props) {
     await refreshFotos();
     onUpdate();
     setUploading(false);
-    setMessage({ type: 'success', text: `${successCount} foto berhasil diunggah.` });
+    if (successCount > 0) {
+      setMessage({ type: 'success', text: `${successCount} foto berhasil diunggah.` });
+    } else if (lastError) {
+      showErrorAlert(lastError, 'Gagal Mengunggah Foto');
+    }
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -75,7 +82,7 @@ export default function AsetFotoModal({ aset, onClose, onUpdate }: Props) {
       await refreshFotos();
       onUpdate();
     } catch (err) {
-      setMessage({ type: 'error', text: 'Gagal menghapus foto.' });
+      showErrorAlert(err, 'Gagal Menghapus Foto');
     } finally {
       setDeleting(null);
     }

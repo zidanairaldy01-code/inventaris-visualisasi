@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import axios from '@/lib/axios';
+import { showErrorAlert } from '@/utils/errorHandler';
 import {
   Wrench, Plus, Search, RefreshCw, DollarSign, CheckCircle2,
   Clock, X, Trash2, Edit2, Loader2, Camera, ImageOff, ZoomIn,
@@ -191,7 +192,7 @@ export default function ServisPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingItem && !formData.sarana_prasarana_id && !formData.id_aset) {
-      alert('Silakan pilih barang/aset di workshop terlebih dahulu.');
+      showErrorAlert('Silakan pilih barang/aset di workshop terlebih dahulu.', 'Validasi Form Servis');
       return;
     }
     setSubmitting(true);
@@ -220,8 +221,7 @@ export default function ServisPage() {
       setIsModalOpen(false);
       fetchData(true);
     } catch (err: any) {
-      const msg = err.response?.data?.message || 'Gagal menyimpan laporan. Periksa kembali form Anda.';
-      alert(msg);
+      showErrorAlert(err, 'Gagal Menyimpan Laporan Servis');
     } finally {
       setSubmitting(false);
     }
@@ -232,8 +232,8 @@ export default function ServisPage() {
     try {
       await axios.delete(`/api/servises/${id}`);
       fetchData(true);
-    } catch {
-      alert('Gagal menghapus data.');
+    } catch (err) {
+      showErrorAlert(err, 'Gagal Menghapus Data Servis');
     }
   };
 

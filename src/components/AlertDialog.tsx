@@ -6,6 +6,7 @@ import { AlertTriangle, CheckCircle, Info, XCircle, X } from 'lucide-react';
 interface AlertDialogProps {
   title: string;
   message: string;
+  details?: string[] | string;
   type?: 'success' | 'error' | 'warning' | 'info';
   buttonText?: string;
   onClose: () => void;
@@ -14,6 +15,7 @@ interface AlertDialogProps {
 export default function AlertDialog({
   title,
   message,
+  details,
   type = 'info',
   buttonText = 'Mengerti',
   onClose,
@@ -66,6 +68,22 @@ export default function AlertDialog({
               <p className="text-sm text-slate-600 leading-relaxed">
                 {message}
               </p>
+              {details && (
+                <div className="mt-3 bg-red-50/80 border border-red-200 rounded-xl p-3 text-xs text-red-800">
+                  <div className="font-bold text-red-900 uppercase tracking-wider text-[10px] mb-1">
+                    Keterangan Error:
+                  </div>
+                  {Array.isArray(details) ? (
+                    <ul className="list-disc pl-4 space-y-1 max-h-36 overflow-y-auto">
+                      {details.map((d, i) => (
+                        <li key={i}>{d}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <div>{details}</div>
+                  )}
+                </div>
+              )}
             </div>
             <button
               onClick={onClose}

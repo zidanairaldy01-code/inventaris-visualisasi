@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import axios from '@/lib/axios';
+import { showErrorAlert } from '@/utils/errorHandler';
 import {
   Wrench, Search, RefreshCw, DollarSign, CheckCircle2,
   Clock, X, Loader2, Camera, ImageOff, ZoomIn,
@@ -79,7 +80,10 @@ export default function WakasekServisPage() {
   const handleAcc = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!accModal) return;
-    if (!accForm.biaya_servis) { alert('Masukkan estimasi biaya servis.'); return; }
+    if (!accForm.biaya_servis) {
+      showErrorAlert('Masukkan estimasi biaya servis.', 'Validasi Persetujuan Servis');
+      return;
+    }
     setSubmitting(true);
     try {
       await axios.post(`/api/servises/${accModal.item.id}/acc`, {
@@ -91,7 +95,7 @@ export default function WakasekServisPage() {
       setAccForm({ biaya_servis: '', teknisi_bengkel: '', catatan_wakasek: '' });
       fetchData(true);
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Gagal menyetujui servis.');
+      showErrorAlert(err, 'Gagal Menyetujui Servis');
     } finally {
       setSubmitting(false);
     }
@@ -100,7 +104,10 @@ export default function WakasekServisPage() {
   const handleTolak = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!tolakModal) return;
-    if (!tolakForm.catatan_wakasek) { alert('Alasan penolakan wajib diisi.'); return; }
+    if (!tolakForm.catatan_wakasek) {
+      showErrorAlert('Alasan penolakan wajib diisi.', 'Validasi Penolakan Servis');
+      return;
+    }
     setSubmitting(true);
     try {
       await axios.post(`/api/servises/${tolakModal.item.id}/tolak`, {
@@ -110,7 +117,7 @@ export default function WakasekServisPage() {
       setTolakForm({ catatan_wakasek: '' });
       fetchData(true);
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Gagal menolak pengajuan.');
+      showErrorAlert(err, 'Gagal Menolak Pengajuan Servis');
     } finally {
       setSubmitting(false);
     }

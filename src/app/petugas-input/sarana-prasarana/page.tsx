@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import axios from '@/lib/axios';
+import { showErrorAlert } from '@/utils/errorHandler';
 import {
   Package, AlertTriangle, CheckCircle2, Search, RefreshCw,
   FileSpreadsheet, Plus, Upload, DollarSign, Layers, TrendingUp,
@@ -481,8 +482,8 @@ export default function SaranaPrasaranaPage() {
       }
       setShowFolderModal(false);
       fetchFolders();
-    } catch {
-      showToast('Gagal menyimpan folder', 'error');
+    } catch (err) {
+      showErrorAlert(err, 'Gagal Menyimpan Folder');
     } finally { setSavingFolder(false); }
   };
 
@@ -496,8 +497,8 @@ export default function SaranaPrasaranaPage() {
       if (activeFolderId === deleteFolderTarget.id) setActiveFolderId(null);
       fetchFolders();
       fetchAsets(true);
-    } catch {
-      showToast('Gagal menghapus folder', 'error');
+    } catch (err) {
+      showErrorAlert(err, 'Gagal Menghapus Folder');
     } finally { setDeletingFolder(false); }
   };
 
@@ -533,8 +534,8 @@ export default function SaranaPrasaranaPage() {
       setIsSelectMode(false);
       setShowBatchDeleteConfirm(false);
       fetchAsets(true);
-    } catch {
-      showToast('Gagal menghapus data terpilih', 'error');
+    } catch (err) {
+      showErrorAlert(err, 'Gagal Menghapus Data Terpilih');
     } finally { setDeletingBatch(false); }
   };
 
@@ -616,8 +617,9 @@ export default function SaranaPrasaranaPage() {
         const errs: Record<string, string> = {};
         Object.entries(e.response.data.errors).forEach(([k, v]) => { errs[k] = v[0]; });
         setFormErrors(errs);
+        showErrorAlert(err, 'Validasi Gagal Menyimpan Data');
       } else {
-        showToast(e?.response?.data?.message || 'Gagal menyimpan data.', 'error');
+        showErrorAlert(err, 'Gagal Menyimpan Data');
         setShowFormModal(false);
       }
     } finally {
@@ -634,8 +636,8 @@ export default function SaranaPrasaranaPage() {
       setDeleteTarget(null);
       fetchAsets(true);
       fetchFolders();
-    } catch {
-      showToast('Gagal menghapus data.', 'error');
+    } catch (err) {
+      showErrorAlert(err, 'Gagal Menghapus Data');
     } finally { setDeleting(false); }
   };
 
@@ -662,7 +664,7 @@ export default function SaranaPrasaranaPage() {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Gagal membaca file Excel';
       setParseError(msg);
-      showToast(msg, 'error');
+      showErrorAlert(err, 'Gagal Membaca File Excel');
     }
   };
 
@@ -758,9 +760,7 @@ export default function SaranaPrasaranaPage() {
     } catch (err: unknown) {
       setImporting(false);
       setImportState('idle');
-      const e = err as { response?: { data?: { message?: string } } };
-      const msg = e?.response?.data?.message || 'Gagal meng-import data ke database.';
-      showToast(msg, 'error');
+      showErrorAlert(err, 'Gagal Meng-Import File Excel');
     }
   };
 

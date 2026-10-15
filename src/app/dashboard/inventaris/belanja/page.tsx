@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import Toast from '@/components/Toast';
+import { showErrorAlert } from '@/utils/errorHandler';
 
 /* ─────────────────────── Types ─────────────────────── */
 interface CustomFolder {
@@ -501,8 +502,8 @@ export default function CustomInventarisDrivePage() {
       }
       setShowFolderModal(false);
       fetchFolders();
-    } catch {
-      showToast('Gagal menyimpan folder', 'error');
+    } catch (err) {
+      showErrorAlert(err, 'Gagal Menyimpan Folder Belanja');
     } finally { setSavingFolder(false); }
   };
 
@@ -514,8 +515,9 @@ export default function CustomInventarisDrivePage() {
       setDeleteFolderTarget(null);
       if (activeFolderId === folder.id) setActiveFolderId(null);
       fetchFolders(); fetchData(); fetchTrashFolders();
-    } catch { showToast('Gagal memindahkan folder ke tempat sampah', 'error'); }
-    finally { setDeletingFolder(false); }
+    } catch (err) {
+      showErrorAlert(err, 'Gagal Memindahkan Folder ke Tempat Sampah');
+    } finally { setDeletingFolder(false); }
   };
 
   const handleForceDeleteFolder = async (folder: CustomFolder) => {
@@ -527,8 +529,9 @@ export default function CustomInventarisDrivePage() {
       if (viewingTrashFolder?.id === folder.id) setViewingTrashFolder(null);
       if (activeFolderId === folder.id) setActiveFolderId(null);
       fetchFolders(); fetchData(); fetchTrashFolders();
-    } catch { showToast('Gagal menghapus folder permanen', 'error'); }
-    finally { setDeletingFolder(false); }
+    } catch (err) {
+      showErrorAlert(err, 'Gagal Menghapus Folder Permanen');
+    } finally { setDeletingFolder(false); }
   };
 
   const handleRestoreFolder = async (folderId: number) => {
@@ -538,8 +541,9 @@ export default function CustomInventarisDrivePage() {
       showToast(res.data?.message || 'Folder berhasil dipulihkan', 'success');
       if (viewingTrashFolder?.id === folderId) setViewingTrashFolder(null);
       fetchFolders(); fetchData(); fetchTrashFolders();
-    } catch { showToast('Gagal memulihkan folder', 'error'); }
-    finally { setActionTrashLoading(null); }
+    } catch (err) {
+      showErrorAlert(err, 'Gagal Memulihkan Folder');
+    } finally { setActionTrashLoading(null); }
   };
 
   const handleEmptyTrash = async () => {
@@ -549,8 +553,9 @@ export default function CustomInventarisDrivePage() {
       showToast(res.data?.message || 'Tempat sampah dikosongkan', 'success');
       setShowEmptyTrashConfirm(false); setViewingTrashFolder(null);
       fetchFolders(); fetchData(); fetchTrashFolders();
-    } catch { showToast('Gagal mengosongkan tempat sampah', 'error'); }
-    finally { setActionTrashLoading(null); }
+    } catch (err) {
+      showErrorAlert(err, 'Gagal Mengosongkan Tempat Sampah');
+    } finally { setActionTrashLoading(null); }
   };
 
   // Filter uraian suggestions dari data yang sudah ada
@@ -647,8 +652,7 @@ export default function CustomInventarisDrivePage() {
       setShowFormModal(false);
       fetchData(); fetchFolders();
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Gagal menyimpan data inventaris';
-      showToast(msg, 'error');
+      showErrorAlert(err, 'Gagal Menyimpan Data Belanja');
     } finally { setSaving(false); }
   };
 
@@ -660,8 +664,8 @@ export default function CustomInventarisDrivePage() {
       showToast('Data belanja berhasil dihapus', 'success');
       setDeleteTarget(null);
       fetchData(); fetchFolders();
-    } catch {
-      showToast('Gagal menghapus data inventaris', 'error');
+    } catch (err) {
+      showErrorAlert(err, 'Gagal Menghapus Data Belanja');
     } finally { setDeleting(false); }
   };
 
@@ -679,7 +683,7 @@ export default function CustomInventarisDrivePage() {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Gagal membaca file Excel';
       setParseError(msg);
-      showToast(msg, 'error');
+      showErrorAlert(err, 'Gagal Membaca File Excel');
     }
   };
 
@@ -749,8 +753,7 @@ export default function CustomInventarisDrivePage() {
         showToast(res.data.message || 'Gagal import data belanja', 'error');
       }
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Gagal meng-import file Excel';
-      showToast(msg, 'error');
+      showErrorAlert(err, 'Gagal Meng-Import File Excel');
     } finally {
       setImporting(false);
       setImportState('idle');

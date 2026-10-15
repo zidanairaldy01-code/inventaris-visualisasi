@@ -19,6 +19,7 @@ interface AlertState {
   show: boolean;
   title: string;
   message: string;
+  details?: string[] | string;
   type: AlertType;
   buttonText?: string;
 }
@@ -86,11 +87,73 @@ export function useNotification() {
       title: string,
       message: string,
       type: AlertType = 'info',
+      details?: string[] | string,
       buttonText: string = 'Mengerti'
     ) => {
-      setAlertState({ show: true, title, message, type, buttonText });
+      setAlertState({ show: true, title, message, details, type, buttonText });
     },
     []
+  );
+
+  const showErrorAlert = useCallback(
+    (err: unknown, fallbackTitle: string = 'Terjadi Kesalahan', fallbackMessage?: string) => {
+      // Import dynamic or use direct extraction
+      const anyErr = err as any;
+      const response = anyErr?.response;
+      const status = response?.status;
+      const data = response?.data;
+
+      let title = fallbackTitle;
+      let message = fallbackMessage || 'Permintaan tidak dapat diselesaikan oleh sistem.';
+      const details: string[] = [];
+
+      if (typeof err === 'string') {
+        showAlert(fallbackTitle, err, 'error');
+        return;
+      }
+
+      if (status === 403) {
+        title = 'Akses Ditolak (403)';
+        message = 'Anda tidak memiliki hak akses untuk tindakan ini.';
+      } else if (status === 404) {
+        title = 'Data Tidak Ditemukan (404)';
+        message = 'Data yang diminta tidak ditemukan.';
+      } else if (status === 422) {
+        title = fallbackTitle !== 'Terjadi Kesalahan' ? fallbackTitle : 'Validasi Gagal (422)';
+        message = 'Beberapa data yang dimasukkan tidak memenuhi ketentuan.';
+      } else if (status >= 500) {
+        title = 'Kesalahan Server (500)';
+        message = 'Terjadi gangguan pada server database.';
+      }
+
+      if (data?.message && data.message !== 'The given data was invalid.') {
+        message = data.message;
+      }
+
+      if (data?.errors && typeof data.errors === 'object') {
+        Object.entries(data.errors).forEach(([field, msgs]) => {
+          const fieldFormatted = field.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+          if (Array.isArray(msgs)) {
+            msgs.forEach((m) => {
+              if (typeof m === 'string') details.push(`${fieldFormatted}: ${m}`);
+            });
+          } else if (typeof msgs === 'string') {
+            details.push(`${fieldFormatted}: ${msgs}`);
+          }
+        });
+      }
+
+      if (data?.error && typeof data.error === 'string' && data.error !== data.message) {
+        details.push(`Keterangan Teknis: ${data.error}`);
+      }
+
+      if (!response && anyErr?.message) {
+        message = anyErr.message;
+      }
+
+      showAlert(title, message, 'error', details.length > 0 ? details : undefined);
+    },
+    [showAlert]
   );
 
   const closeAlert = useCallback(() => {
@@ -138,6 +201,7 @@ export function useNotification() {
         <AlertDialog
           title={alertState.title}
           message={alertState.message}
+          details={alertState.details}
           type={alertState.type}
           buttonText={alertState.buttonText}
           onClose={closeAlert}
@@ -167,6 +231,7 @@ export function useNotification() {
     
     // Alert method
     showAlert,
+    showErrorAlert,
     
     // Confirm method
     showConfirm,

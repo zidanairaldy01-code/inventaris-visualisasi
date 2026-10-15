@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import axios from '@/lib/axios'
+import { showErrorAlert } from '@/utils/errorHandler'
 
 interface Distribusi {
   id: number
@@ -83,18 +84,17 @@ export default function PenerimaanPage() {
         }
       )
 
-      alert(
-        aksi === 'terima'
-          ? '✅ Barang berhasil diterima dan BAST telah diterbitkan!'
-          : '❌ Pengiriman barang telah ditolak.'
-      )
+      const successMsg = aksi === 'terima'
+        ? '✅ Barang berhasil diterima dan BAST telah diterbitkan!'
+        : '❌ Pengiriman barang telah ditolak.'
+      window.dispatchEvent(new CustomEvent('app:show-success-toast', { detail: successMsg }));
 
       setShowModal(false)
       setSelectedItem(null)
       fetchDistribusi() // Refresh list
     } catch (error: any) {
       console.error('Error konfirmasi:', error)
-      alert(error.response?.data?.message || 'Gagal melakukan konfirmasi')
+      showErrorAlert(error, 'Gagal Melakukan Konfirmasi')
     } finally {
       setProcessing(false)
     }

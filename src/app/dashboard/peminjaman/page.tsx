@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import axios from '@/lib/axios';
+import { showErrorAlert } from '@/utils/errorHandler';
 import { Handshake, Plus, Search, RefreshCw, CheckCircle2, Clock, X, Trash2, Edit2, Loader2, RotateCcw, User, Package } from 'lucide-react';
 
 interface SaranaPrasarana {
@@ -123,7 +124,7 @@ export default function PeminjamanPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.sarana_prasarana_id) {
-      alert('Pilih sarana prasarana yang dipinjam.');
+      showErrorAlert('Pilih sarana prasarana yang dipinjam.', 'Validasi Peminjaman');
       return;
     }
 
@@ -149,7 +150,7 @@ export default function PeminjamanPage() {
       fetchData(true);
     } catch (err: any) {
       console.error(err);
-      alert(err.response?.data?.message || 'Gagal menyimpan data peminjaman.');
+      showErrorAlert(err, 'Gagal Menyimpan Data Peminjaman');
     } finally {
       setSubmitting(false);
     }
@@ -166,7 +167,7 @@ export default function PeminjamanPage() {
       fetchData(true);
     } catch (err) {
       console.error(err);
-      alert('Gagal memperbarui status peminjaman.');
+      showErrorAlert(err, 'Gagal Memperbarui Status Peminjaman');
     } finally {
       setReturningId(null);
     }
@@ -179,7 +180,7 @@ export default function PeminjamanPage() {
       fetchData(true);
     } catch (err) {
       console.error(err);
-      alert('Gagal menghapus data.');
+      showErrorAlert(err, 'Gagal Menghapus Data Peminjaman');
     }
   };
 

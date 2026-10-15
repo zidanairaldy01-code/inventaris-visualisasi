@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import axios from '@/lib/axios';
+import { showErrorAlert } from '@/utils/errorHandler';
 import {
   Wrench, Plus, Search, RefreshCw, DollarSign, CheckCircle2,
   Clock, X, Trash2, Edit2, Loader2, Camera, ImageOff, ZoomIn,
@@ -189,8 +190,8 @@ export default function AdminServisPage() {
       }
       setIsModalOpen(false);
       fetchData(true);
-    } catch {
-      alert('Gagal menyimpan data servis.');
+    } catch (err) {
+      showErrorAlert(err, 'Gagal Menyimpan Data Servis');
     } finally {
       setSubmitting(false);
     }
@@ -226,7 +227,7 @@ export default function AdminServisPage() {
   const handleLaporSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!laporFormData.sarana_prasarana_id) {
-      alert('Pilih sarana prasarana yang diajukan perbaikan.');
+      showErrorAlert('Pilih sarana prasarana yang diajukan perbaikan.', 'Validasi Form Servis');
       return;
     }
     setLaporSubmitting(true);
@@ -247,7 +248,7 @@ export default function AdminServisPage() {
       setIsLaporModalOpen(false);
       fetchData(true);
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Gagal mengajukan perbaikan ke Wakasek.');
+      showErrorAlert(err, 'Gagal Mengajukan Perbaikan');
     } finally {
       setLaporSubmitting(false);
     }
@@ -258,8 +259,8 @@ export default function AdminServisPage() {
     try {
       await axios.delete(`/api/servises/${id}`);
       fetchData(true);
-    } catch {
-      alert('Gagal menghapus data.');
+    } catch (err) {
+      showErrorAlert(err, 'Gagal Menghapus Data Servis');
     }
   };
 
@@ -276,7 +277,7 @@ export default function AdminServisPage() {
       setSelesaiForm({ catatan_admin: '', biaya_realisasi: '' });
       fetchData(true);
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Gagal memverifikasi servis.');
+      showErrorAlert(err, 'Gagal Memverifikasi Servis');
     } finally {
       setSelesaiSubmitting(false);
     }

@@ -17,6 +17,7 @@ export const metadata: Metadata = {
 
 import AuthTimeoutWatcher from "@/components/AuthTimeoutWatcher";
 import NumberInputDotBlocker from "@/components/NumberInputDotBlocker";
+import GlobalErrorModal from "@/components/GlobalErrorModal";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -33,6 +34,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-full flex flex-col touch-manipulation">
         <AuthTimeoutWatcher />
         <NumberInputDotBlocker />
+        <GlobalErrorModal />
         {children}
       </body>
     </html>

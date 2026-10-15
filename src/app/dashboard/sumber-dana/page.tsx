@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import axios from '@/lib/axios';
+import { showErrorAlert } from '@/utils/errorHandler';
 import {
   Briefcase, Search, Plus, Edit2, Trash2, RefreshCw,
   X, Save, AlertTriangle, ChevronLeft, ChevronRight,
@@ -438,10 +439,7 @@ export default function SumberDanaPage() {
         fetchSubData(activeSumberDanaId);
       }
     } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-        'Gagal menyimpan sumber dana';
-      showToast(msg, 'error');
+      showErrorAlert(err, 'Gagal Menyimpan Sumber Dana');
     } finally {
       setSaving(false);
     }
@@ -461,10 +459,7 @@ export default function SumberDanaPage() {
       fetchData();
       fetchAvailableFolders();
     } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-        'Gagal menghapus sumber dana';
-      showToast(msg, 'error');
+      showErrorAlert(err, 'Gagal Menghapus Sumber Dana');
     } finally {
       setDeleting(false);
     }

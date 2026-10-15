@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import axios from '@/lib/axios'
+import { showErrorAlert } from '@/utils/errorHandler'
 import {
   generateSuratJalan,
   generateBast,
@@ -193,7 +194,7 @@ export default function DistribusiPage() {
       generateSuratJalan(data)
     } catch (err) {
       console.error('Gagal cetak surat jalan:', err)
-      alert('Gagal mengambil data surat jalan.')
+      showErrorAlert(err, 'Gagal Mengambil Data Surat Jalan')
     } finally {
       setPrintingId(null)
     }
@@ -206,7 +207,7 @@ export default function DistribusiPage() {
       generateBast(data)
     } catch (err) {
       console.error('Gagal cetak BAST:', err)
-      alert('Gagal mengambil data BAST.')
+      showErrorAlert(err, 'Gagal Mengambil Data BAST')
     } finally {
       setPrintingBastId(null)
     }
@@ -221,7 +222,7 @@ export default function DistribusiPage() {
       generateSuratJalanBulk(data as SuratJalanBulkApiResponse)
     } catch (err) {
       console.error('Gagal cetak surat jalan bulk:', err)
-      alert('Gagal mengambil data surat jalan bulk.')
+      showErrorAlert(err, 'Gagal Mengambil Data Surat Jalan Massal')
     } finally {
       setPrintingBulk(null)
     }

@@ -10,6 +10,7 @@ import {
   FileText, ShieldCheck
 } from 'lucide-react';
 import Toast from '@/components/Toast';
+import { showErrorAlert } from '@/utils/errorHandler';
 
 interface AsetRusakItem {
   id: number;
@@ -199,8 +200,7 @@ export default function WakaproKondisiPage() {
       fetchAsetRusak();
       fetchWorkshopBarang();
     } catch (err: unknown) {
-      const e = err as { response?: { data?: { message?: string } } };
-      showToast(e?.response?.data?.message || 'Gagal menyimpan laporan kondisi aset', 'error');
+      showErrorAlert(err, 'Gagal Menyimpan Laporan Kondisi Aset');
     } finally {
       setSubmitting(false);
     }
