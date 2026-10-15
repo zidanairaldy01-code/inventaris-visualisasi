@@ -165,7 +165,7 @@ export default function NewsCarousel() {
                         (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1516321497487-e288fb19713f?w=800';
                       }}
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent md:hidden" />
+                    <div className="absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-transparent md:hidden" />
                   </div>
 
                   {/* Content Side */}

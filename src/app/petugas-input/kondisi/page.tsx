@@ -648,7 +648,7 @@ export default function MasterKondisiPage() {
       )}
 
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-700 rounded-3xl p-6 sm:p-8 text-white shadow-xl shadow-indigo-500/10 flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden">
+      <div className="bg-linear-to-r from-blue-600 via-indigo-600 to-violet-700 rounded-3xl p-6 sm:p-8 text-white shadow-xl shadow-indigo-500/10 flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden">
         <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-white/10 rounded-full blur-2xl pointer-events-none" />
         <div className="relative z-10 space-y-2">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md text-xs font-semibold text-indigo-100 mb-1 border border-white/20">
@@ -678,7 +678,7 @@ export default function MasterKondisiPage() {
               onClick={openCreateModal}
               className="px-5 py-3 bg-white text-indigo-600 font-bold rounded-2xl shadow-lg hover:bg-indigo-50 transition-all flex items-center gap-2 text-sm"
             >
-              <Plus className="h-4 w-4 stroke-[3]" /> Tambah Kondisi
+              <Plus className="h-4 w-4 stroke-3" /> Tambah Kondisi
             </button>
           )}
         </div>
@@ -907,10 +907,10 @@ export default function MasterKondisiPage() {
                               <img
                                 src={getImageUrl(item.foto_thumbnail)!}
                                 alt={item.nama_barang}
-                                className="w-10 h-10 rounded-lg object-cover border border-slate-200 flex-shrink-0"
+                                className="w-10 h-10 rounded-lg object-cover border border-slate-200 shrink-0"
                               />
                             ) : (
-                              <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 flex-shrink-0 border border-slate-200">
+                              <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 shrink-0 border border-slate-200">
                                 <Package className="h-5 w-5" />
                               </div>
                             )}
@@ -1039,7 +1039,7 @@ export default function MasterKondisiPage() {
         <div className="space-y-6">
           {/* Info Banner: Kondisi Bawaan Sistem */}
           <div className="bg-blue-50/80 border border-blue-200/80 rounded-2xl p-4.5 sm:p-5 shadow-sm flex items-start gap-4">
-            <div className="p-2.5 bg-blue-100 rounded-xl flex-shrink-0 text-blue-600">
+            <div className="p-2.5 bg-blue-100 rounded-xl shrink-0 text-blue-600">
               <ShieldCheck className="h-6 w-6" />
             </div>
             <div className="space-y-1">
@@ -1169,7 +1169,7 @@ export default function MasterKondisiPage() {
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-scaleUp">
-            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-slate-50 to-indigo-50/30">
+            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-linear-to-r from-slate-50 to-indigo-50/30">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 bg-indigo-100 rounded-xl text-indigo-600">
                   <SlidersHorizontal className="h-5 w-5" />
@@ -1216,7 +1216,7 @@ export default function MasterKondisiPage() {
 
               {editingKondisi && isDefaultKondisi(editingKondisi.nama_kondisi) && (
                 <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-2 text-xs text-amber-800">
-                  <Info className="h-4 w-4 flex-shrink-0 text-amber-600 mt-0.5" />
+                  <Info className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
                   <span>Ini adalah kondisi standar bawaan sistem. Anda dapat memperbarui keterangannya bila diperlukan.</span>
                 </div>
               )}
@@ -1281,7 +1281,7 @@ export default function MasterKondisiPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden animate-scaleIn max-h-[90vh] flex flex-col">
             {/* Header */}
-            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-amber-50 to-orange-50">
+            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-linear-to-r from-amber-50 to-orange-50">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 bg-amber-500 text-white rounded-2xl shadow-md shadow-amber-500/20">
                   <Wrench className="h-5 w-5" />
@@ -1447,7 +1447,7 @@ export default function MasterKondisiPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[92vh] animate-scaleIn">
             {/* Header */}
-            <div className="px-6 py-4.5 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-indigo-50 to-blue-50">
+            <div className="px-6 py-4.5 border-b border-slate-100 flex items-center justify-between bg-linear-to-r from-indigo-50 to-blue-50">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 bg-indigo-600 text-white rounded-2xl shadow-md shadow-indigo-600/20">
                   <FileText className="h-5 w-5" />

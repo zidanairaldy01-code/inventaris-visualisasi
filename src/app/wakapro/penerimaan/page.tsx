@@ -261,7 +261,7 @@ export default function PenerimaanPage() {
       {/* Lightbox Foto */}
       {lightboxUrl && (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+          className="fixed inset-0 z-100 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
           onClick={() => setLightboxUrl(null)}
         >
           <button
@@ -284,7 +284,7 @@ export default function PenerimaanPage() {
         <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-sm shadow-indigo-500/20">
+              <div className="w-9 h-9 rounded-xl bg-linear-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-sm shadow-indigo-500/20">
                 <Truck className="h-5 w-5" />
               </div>
               Penerimaan &amp; Riwayat BAST Workshop

@@ -259,9 +259,9 @@ function SidebarContent({
       <div className="absolute bottom-28 right-2 w-28 h-28 bg-emerald-600/10 rounded-full blur-3xl pointer-events-none" />
 
       {/* ── Brand Logo Header ── */}
-      <div className="h-16 px-4 border-b border-white/10 flex items-center justify-between flex-shrink-0 relative z-10 bg-slate-950/20">
+      <div className="h-16 px-4 border-b border-white/10 flex items-center justify-between shrink-0 relative z-10 bg-slate-950/20">
         <Link href={currentBasePath} onClick={onLinkClick} className="flex items-center gap-3 group">
-          <div className="relative flex-shrink-0">
+          <div className="relative shrink-0">
             <img
               src="/smk-pgri-telagasari.png"
               alt="Logo SMK PGRI Telagasari"
@@ -330,20 +330,20 @@ function SidebarContent({
                             onClick={() => setIsInventarisOpen(!isInventarisOpen)}
                             className={`group flex items-center justify-between w-full px-3 py-2 text-[13px] rounded-xl transition-all duration-150 select-none cursor-pointer ${
                               isInvActive
-                                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold shadow-md shadow-blue-900/40 ring-1 ring-white/15'
+                                ? 'bg-linear-to-r from-blue-600 to-indigo-600 text-white font-semibold shadow-md shadow-blue-900/40 ring-1 ring-white/15'
                                 : 'text-slate-300/85 hover:text-white hover:bg-white/[0.08] font-medium'
                             }`}
                           >
                             <div className="flex items-center min-w-0">
                               <ClipboardList
-                                className={`flex-shrink-0 mr-2.5 h-4 w-4 transition-colors ${
+                                className={`shrink-0 mr-2.5 h-4 w-4 transition-colors ${
                                   isInvActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-200'
                                 }`}
                               />
                               <span className="truncate">Inventaris</span>
                             </div>
                             <ChevronDown
-                              className={`h-3.5 w-3.5 ml-1.5 flex-shrink-0 transition-transform duration-200 ${
+                              className={`h-3.5 w-3.5 ml-1.5 shrink-0 transition-transform duration-200 ${
                                 isInventarisOpen ? 'rotate-180' : ''
                               } ${isInvActive ? 'text-white/80' : 'text-slate-400'}`}
                             />
@@ -368,7 +368,7 @@ function SidebarContent({
                                     }`}
                                   >
                                     <span className="truncate flex items-center gap-2">
-                                      <span className={`w-1.5 h-1.5 rounded-full ${sub.dot} inline-block flex-shrink-0`} />
+                                      <span className={`w-1.5 h-1.5 rounded-full ${sub.dot} inline-block shrink-0`} />
                                       {sub.label}
                                     </span>
                                   </Link>
@@ -396,20 +396,20 @@ function SidebarContent({
                         onClick={onLinkClick}
                         className={`group flex items-center justify-between px-3 py-2 text-[13px] rounded-xl transition-all duration-150 select-none ${
                           isActive
-                            ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold shadow-md shadow-blue-900/40 ring-1 ring-white/15'
+                            ? 'bg-linear-to-r from-blue-600 to-indigo-600 text-white font-semibold shadow-md shadow-blue-900/40 ring-1 ring-white/15'
                             : 'text-slate-300/85 hover:text-white hover:bg-white/[0.08] font-medium'
                         }`}
                       >
                         <div className="flex items-center min-w-0">
                           <Icon
-                            className={`flex-shrink-0 mr-2.5 h-4 w-4 transition-colors ${
+                            className={`shrink-0 mr-2.5 h-4 w-4 transition-colors ${
                               isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-200'
                             }`}
                           />
                           <span className="truncate">{item.name}</span>
                         </div>
                         {isActive && (
-                          <ChevronRight className="h-3.5 w-3.5 text-white/70 ml-1.5 flex-shrink-0" />
+                          <ChevronRight className="h-3.5 w-3.5 text-white/70 ml-1.5 shrink-0" />
                         )}
                       </Link>
                     );
@@ -422,7 +422,7 @@ function SidebarContent({
       </div>
 
       {/* ── Footer: Profile & Logout ── */}
-      <div className="p-3 border-t border-white/10 flex-shrink-0 space-y-2 bg-slate-950/50 relative z-10">
+      <div className="p-3 border-t border-white/10 shrink-0 space-y-2 bg-slate-950/50 relative z-10">
         {/* Helper: Get profil URL based on current role */}
         {(() => {
           const getProfilUrl = (role: string): string => {
@@ -439,7 +439,7 @@ function SidebarContent({
               onClick={onLinkClick}
               className="flex items-center gap-2.5 p-2 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/5 hover:border-white/10 transition-all group"
             >
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center text-white text-xs font-bold shadow-md flex-shrink-0 ring-1 ring-white/20">
+              <div className="w-8 h-8 rounded-lg bg-linear-to-br from-indigo-500 to-blue-600 flex items-center justify-center text-white text-xs font-bold shadow-md shrink-0 ring-1 ring-white/20">
                 {user?.nama_lengkap ? user.nama_lengkap.charAt(0).toUpperCase() : (user?.name ? user.name.charAt(0).toUpperCase() : <User className="h-4 w-4" />)}
               </div>
               <div className="truncate flex-1">
@@ -457,7 +457,7 @@ function SidebarContent({
                   )}
                 </div>
               </div>
-              <ChevronRight className="h-3 w-3 text-slate-500 group-hover:text-slate-300 flex-shrink-0" />
+              <ChevronRight className="h-3 w-3 text-slate-500 group-hover:text-slate-300 shrink-0" />
             </Link>
           );
         })()}
@@ -467,7 +467,7 @@ function SidebarContent({
           onClick={handleLogout}
           className="flex items-center justify-center gap-2 w-full py-2 text-xs font-semibold text-slate-400 rounded-xl hover:bg-rose-500/15 hover:text-rose-300 transition-all duration-200 group cursor-pointer border border-transparent hover:border-rose-500/20"
         >
-          <LogOut className="flex-shrink-0 h-3.5 w-3.5 group-hover:text-rose-400 transition-colors" />
+          <LogOut className="shrink-0 h-3.5 w-3.5 group-hover:text-rose-400 transition-colors" />
           <span>Keluar Sistem</span>
         </button>
       </div>

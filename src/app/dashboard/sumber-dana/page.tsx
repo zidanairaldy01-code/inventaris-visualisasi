@@ -519,7 +519,7 @@ export default function SumberDanaPage() {
       )}
 
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 rounded-2xl p-6 shadow-xl relative overflow-hidden">
+      <div className="bg-linear-to-r from-emerald-600 via-teal-600 to-cyan-600 rounded-2xl p-6 shadow-xl relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl pointer-events-none -translate-y-12 translate-x-12" />
         <div className="flex items-center justify-between relative z-10 flex-wrap gap-4">
           <div className="flex items-center gap-4">
@@ -659,7 +659,7 @@ export default function SumberDanaPage() {
         ].map(({ label, value, icon: Icon, from, to, bg, border, text }) => (
           <div key={label} className={`${bg} border ${border} rounded-xl p-4 shadow-sm`}>
             <div className="flex items-center gap-2 mb-1.5">
-              <div className={`p-2 bg-gradient-to-br ${from} ${to} rounded-lg`}>
+              <div className={`p-2 bg-linear-to-br ${from} ${to} rounded-lg`}>
                 <Icon className="h-4 w-4 text-white" />
               </div>
               <p className={`text-[11px] font-semibold ${text} uppercase tracking-wide`}>{label}</p>
@@ -1410,7 +1410,7 @@ export default function SumberDanaPage() {
                             onClick={() => { setActiveSumberDanaId(item.id); setViewMode('drive'); }}
                             className="flex items-center gap-2.5 cursor-pointer hover:underline text-emerald-800"
                           >
-                            <div className="p-1.5 bg-emerald-100 rounded-lg flex-shrink-0">
+                            <div className="p-1.5 bg-emerald-100 rounded-lg shrink-0">
                               <Wallet className="h-3.5 w-3.5 text-emerald-600" />
                             </div>
                             <span className="font-semibold text-slate-800">{item.nama_sumber}</span>
@@ -1655,7 +1655,7 @@ export default function SumberDanaPage() {
                                   setFormData(f => ({ ...f, folder_ids: f.folder_ids.filter(id => id !== folder.id) }));
                                 }
                               }}
-                              className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500 cursor-pointer flex-shrink-0"
+                              className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500 cursor-pointer shrink-0"
                             />
                             <div className="overflow-hidden">
                               <span className="truncate block font-medium">📁 {folder.nama_folder}</span>
@@ -1664,7 +1664,7 @@ export default function SumberDanaPage() {
                               </span>
                             </div>
                           </div>
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-bold border border-slate-200 flex-shrink-0">
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-bold border border-slate-200 shrink-0">
                             {folder.items_count ?? 0} item
                           </span>
                         </label>

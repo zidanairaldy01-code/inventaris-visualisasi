@@ -59,7 +59,7 @@ export default function AboutSection() {
             {/* Vision & Mission Cards */}
             <div className="grid gap-4">
               <div className="flex gap-4 bg-blue-50 border border-blue-100 rounded-xl p-4">
-                <div className="flex-shrink-0">
+                <div className="shrink-0">
                   <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
                     <Eye className="w-5 h-5 text-white" />
                   </div>
@@ -73,7 +73,7 @@ export default function AboutSection() {
               </div>
 
               <div className="flex gap-4 bg-green-50 border border-green-100 rounded-xl p-4">
-                <div className="flex-shrink-0">
+                <div className="shrink-0">
                   <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center">
                     <Target className="w-5 h-5 text-white" />
                   </div>
@@ -120,13 +120,13 @@ export default function AboutSection() {
         </div>
 
         {/* Contact Info */}
-        <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl p-8 md:p-12 text-white">
+        <div className="bg-linear-to-br from-blue-600 to-blue-700 rounded-2xl p-8 md:p-12 text-white">
           <div className="grid md:grid-cols-2 gap-8">
             <div>
               <h3 className="text-2xl font-bold mb-6">Hubungi Kami</h3>
               <div className="space-y-4">
                 <div className="flex items-start gap-3">
-                  <MapPin className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                  <MapPin className="w-5 h-5 shrink-0 mt-0.5" />
                   <div>
                     <p className="font-semibold mb-1">Alamat</p>
                     <p className="text-blue-100 text-sm">
@@ -137,7 +137,7 @@ export default function AboutSection() {
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <Phone className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                  <Phone className="w-5 h-5 shrink-0 mt-0.5" />
                   <div>
                     <p className="font-semibold mb-1">Telepon</p>
                     <p className="text-blue-100 text-sm">(0267) 123-4567</p>
@@ -145,7 +145,7 @@ export default function AboutSection() {
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <Mail className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                  <Mail className="w-5 h-5 shrink-0 mt-0.5" />
                   <div>
                     <p className="font-semibold mb-1">Email</p>
                     <p className="text-blue-100 text-sm">info@smkpgritelagasari.sch.id</p>

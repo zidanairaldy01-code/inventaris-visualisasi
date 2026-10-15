@@ -68,7 +68,7 @@ export default function LoginPage() {
       {/* =========================================
           LEFT BRANDING PANEL (Desktop & Tablet Lg)
           ========================================= */}
-      <div className="hidden lg:flex lg:w-[420px] xl:w-[480px] bg-gradient-to-br from-[#0d1e3a] via-[#1a3a6b] to-[#122b54] text-white p-8 xl:p-12 flex-col justify-between relative overflow-hidden shrink-0">
+      <div className="hidden lg:flex lg:w-[420px] xl:w-[480px] bg-linear-to-br from-[#0d1e3a] via-[#1a3a6b] to-[#122b54] text-white p-8 xl:p-12 flex-col justify-between relative overflow-hidden shrink-0">
         {/* Decorative ambient background lights */}
         <div className="absolute -top-24 -left-24 w-80 h-80 bg-blue-500/15 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -bottom-24 -right-24 w-80 h-80 bg-indigo-500/15 rounded-full blur-3xl pointer-events-none" />
@@ -288,7 +288,7 @@ export default function LoginPage() {
               className={`w-full h-11 sm:h-12 mt-2 rounded-xl font-semibold text-sm text-white transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer ${
                 isLoading
                   ? 'bg-slate-400 shadow-none cursor-not-allowed'
-                  : 'bg-gradient-to-r from-[#1a3a6b] to-[#245296] hover:from-[#152e55] hover:to-[#1b3e73] shadow-blue-900/15 hover:shadow-lg hover:shadow-blue-900/25 active:scale-[0.99]'
+                  : 'bg-linear-to-r from-[#1a3a6b] to-[#245296] hover:from-[#152e55] hover:to-[#1b3e73] shadow-blue-900/15 hover:shadow-lg hover:shadow-blue-900/25 active:scale-[0.99]'
               }`}
             >
               {isLoading ? (

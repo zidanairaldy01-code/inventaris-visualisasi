@@ -211,7 +211,7 @@ export default function ServisPage() {
       {/* Lightbox */}
       {lightboxUrl && (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm"
+          className="fixed inset-0 z-100 flex items-center justify-center bg-black/80 backdrop-blur-sm"
           onClick={() => setLightboxUrl(null)}
         >
           <button
@@ -232,7 +232,7 @@ export default function ServisPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center mr-3 shadow-sm shadow-amber-500/20 flex-shrink-0">
+            <div className="w-8 h-8 rounded-xl bg-linear-to-br from-amber-500 to-orange-600 flex items-center justify-center mr-3 shadow-sm shadow-amber-500/20 shrink-0">
               <Wrench className="h-4 w-4 text-white" />
             </div>
             Servis &amp; Perbaikan Aset
@@ -245,7 +245,7 @@ export default function ServisPage() {
           <button onClick={() => fetchData(true)} className="p-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-500 transition-colors">
             <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
           </button>
-          <button onClick={openAddModal} className="flex items-center px-4 py-2.5 bg-gradient-to-r from-amber-600 to-orange-600 text-white hover:from-amber-700 hover:to-orange-700 rounded-xl font-semibold text-sm transition-all shadow-sm shadow-amber-500/20">
+          <button onClick={openAddModal} className="flex items-center px-4 py-2.5 bg-linear-to-r from-amber-600 to-orange-600 text-white hover:from-amber-700 hover:to-orange-700 rounded-xl font-semibold text-sm transition-all shadow-sm shadow-amber-500/20">
             <Plus className="h-4 w-4 mr-1.5" />
             Catat Servis Baru
           </button>
@@ -254,7 +254,7 @@ export default function ServisPage() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl p-5 text-white shadow-sm shadow-amber-500/20">
+        <div className="bg-linear-to-br from-amber-500 to-orange-600 rounded-2xl p-5 text-white shadow-sm shadow-amber-500/20">
           <div className="flex items-center space-x-2 mb-2">
             <DollarSign className="h-4 w-4 text-amber-100" />
             <p className="text-xs font-semibold text-amber-100 uppercase tracking-wider">Total Biaya Perbaikan</p>
@@ -539,7 +539,7 @@ export default function ServisPage() {
                       alt="Preview foto kerusakan"
                       className="w-full h-48 object-cover opacity-95 group-hover:opacity-80 transition-opacity duration-200"
                     />
-                    <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/70 to-transparent pointer-events-none" />
+                    <div className="absolute inset-x-0 bottom-0 h-16 bg-linear-to-t from-black/70 to-transparent pointer-events-none" />
                     <div className="absolute bottom-2.5 left-3 flex items-center gap-1.5 pointer-events-none">
                       <Camera className="h-3.5 w-3.5 text-white/80" />
                       <span className="text-[11px] text-white/90 font-medium">

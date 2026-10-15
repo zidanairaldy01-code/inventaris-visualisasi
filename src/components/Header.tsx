@@ -260,7 +260,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
   const today = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
   return (
-    <header className="flex-shrink-0 h-16 bg-white/80 backdrop-blur-xl border-b border-slate-200/60 flex items-center justify-between px-4 sm:px-6 z-30 shadow-sm">
+    <header className="shrink-0 h-16 bg-white/80 backdrop-blur-xl border-b border-slate-200/60 flex items-center justify-between px-4 sm:px-6 z-30 shadow-sm">
       {/* Left: Hamburger Menu (Mobile) + Date & Greeting */}
       <div className="flex items-center space-x-3 sm:space-x-4">
         {/* Hamburger menu - only visible on mobile */}
@@ -463,7 +463,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
           {notifOpen && (
             <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white rounded-2xl border border-slate-200/90 shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
               {/* Header */}
-              <div className="p-3.5 bg-gradient-to-r from-slate-900 to-indigo-950 text-white flex items-center justify-between">
+              <div className="p-3.5 bg-linear-to-r from-slate-900 to-indigo-950 text-white flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className={`p-1.5 rounded-lg border ${
                     user?.role === 'wakapro'
@@ -537,7 +537,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
                         }`}
                       >
                         {/* Icon */}
-                        <div className={`p-2 rounded-xl flex-shrink-0 mt-0.5 ${
+                        <div className={`p-2 rounded-xl shrink-0 mt-0.5 ${
                           isDamageNotif
                             ? isSevere ? 'bg-rose-100 text-rose-600' : 'bg-amber-100 text-amber-700'
                             : 'bg-blue-100 text-blue-600'
@@ -613,7 +613,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
               userMenuOpen ? 'bg-slate-100 ring-2 ring-blue-500/20 border-blue-300' : ''
             }`}
           >
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-sm flex-shrink-0">
+            <div className="w-7 h-7 rounded-lg bg-linear-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-sm shrink-0">
               <span className="text-xs font-bold text-white">
                 {user?.nama_lengkap?.[0]?.toUpperCase() || 'A'}
               </span>
@@ -624,7 +624,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
                 {user?.role === 'super_admin' ? 'Super Admin' : user?.role === 'petugas' ? 'Petugas Input' : user?.role === 'wakapro' ? 'Waka Program' : user?.role === 'wakasek' ? 'Waka Sarpras' : (user?.role || 'Admin')}
               </div>
             </div>
-            <ChevronDown className={`h-3 w-3 text-slate-400 flex-shrink-0 hidden sm:block transition-transform duration-200 ${userMenuOpen ? 'rotate-180 text-blue-600' : ''}`} />
+            <ChevronDown className={`h-3 w-3 text-slate-400 shrink-0 hidden sm:block transition-transform duration-200 ${userMenuOpen ? 'rotate-180 text-blue-600' : ''}`} />
           </div>
 
           {/* Profile Dropdown Menu */}
@@ -633,7 +633,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
               {/* User Summary Header */}
               <div className="p-4 bg-slate-50/90 border-b border-slate-100">
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold text-base shadow-md">
+                  <div className="w-10 h-10 rounded-xl bg-linear-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold text-base shadow-md">
                     {user?.nama_lengkap?.[0]?.toUpperCase() || 'A'}
                   </div>
                   <div className="flex-1 min-w-0">

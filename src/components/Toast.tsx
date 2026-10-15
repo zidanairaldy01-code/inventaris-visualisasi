@@ -60,7 +60,7 @@ export default function Toast({ message, type, onClose, duration = 4000 }: Toast
   return createPortal(
     <div className="fixed top-20 right-4 z-[9999] animate-in slide-in-from-right-5 duration-300">
       <div className={`flex items-start gap-3 ${style.bgColor} ${style.borderColor} border rounded-xl shadow-lg p-4 min-w-[320px] max-w-md backdrop-blur-sm`}>
-        <div className={`flex-shrink-0 ${style.iconColor}`}>
+        <div className={`shrink-0 ${style.iconColor}`}>
           {style.icon}
         </div>
         <div className={`flex-1 text-sm font-medium ${style.textColor} leading-relaxed`}>
@@ -68,7 +68,7 @@ export default function Toast({ message, type, onClose, duration = 4000 }: Toast
         </div>
         <button
           onClick={onClose}
-          className={`flex-shrink-0 ${style.textColor} hover:opacity-70 transition-opacity`}
+          className={`shrink-0 ${style.textColor} hover:opacity-70 transition-opacity`}
           aria-label="Close notification"
         >
           <X className="h-4 w-4" />

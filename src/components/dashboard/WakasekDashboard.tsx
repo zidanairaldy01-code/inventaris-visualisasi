@@ -38,7 +38,7 @@ export default function WakasekDashboard({ user, greeting, wakasekStats, loading
   return (
     <div className="space-y-6 sm:space-y-8 animate-fadeIn pb-12">
       {/* ── Banner Eksekutif Wakasek Sarpras ── */}
-      <div className="bg-gradient-to-r from-slate-900 via-teal-950 to-slate-900 rounded-3xl p-6 sm:p-8 shadow-xl text-white relative overflow-hidden border border-teal-900/40">
+      <div className="bg-linear-to-r from-slate-900 via-teal-950 to-slate-900 rounded-3xl p-6 sm:p-8 shadow-xl text-white relative overflow-hidden border border-teal-900/40">
         <div className="absolute top-0 right-0 w-80 h-80 bg-teal-600/15 rounded-full blur-3xl pointer-events-none -translate-y-16 translate-x-16" />
         <div className="absolute bottom-0 left-1/3 w-64 h-64 bg-emerald-600/10 rounded-full blur-3xl pointer-events-none translate-y-16" />
 
@@ -223,7 +223,7 @@ export default function WakasekDashboard({ user, greeting, wakasekStats, loading
                   </div>
                   <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-gradient-to-r from-teal-500 to-emerald-500 rounded-full"
+                      className="h-full bg-linear-to-r from-teal-500 to-emerald-500 rounded-full"
                       style={{ width: `${b.kesiapan_persen}%` }}
                     />
                   </div>

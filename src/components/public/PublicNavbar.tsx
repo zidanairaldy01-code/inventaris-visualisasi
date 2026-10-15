@@ -16,7 +16,7 @@ export default function PublicNavbar() {
             <img 
               src="/img/pgri-telagasari.jpg" 
               alt="Logo SMK PGRI Telagasari"
-              className="w-10 h-10 rounded-full object-cover shadow-sm ring-2 ring-gray-100 flex-shrink-0"
+              className="w-10 h-10 rounded-full object-cover shadow-sm ring-2 ring-gray-100 shrink-0"
             />
             <div>
               <p className="font-bold text-gray-800 text-sm leading-tight">SMK PGRI Telagasari</p>

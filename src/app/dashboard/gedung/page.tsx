@@ -608,7 +608,7 @@ export default function GedungDrivePage() {
       )}
 
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-2xl p-6 shadow-xl relative overflow-hidden">
+      <div className="bg-linear-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-2xl p-6 shadow-xl relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl pointer-events-none -translate-y-12 translate-x-12" />
         <div className="flex items-center justify-between relative z-10 flex-wrap gap-4">
           <div className="flex items-center gap-4">
@@ -719,7 +719,7 @@ export default function GedungDrivePage() {
           ].map(({ label, value, icon: Icon, from, to, bg, border, text }) => (
             <div key={label} className={`${bg} border ${border} rounded-xl p-4 shadow-sm`}>
               <div className="flex items-center gap-2 mb-1.5">
-                <div className={`p-2 bg-gradient-to-br ${from} ${to} rounded-lg`}>
+                <div className={`p-2 bg-linear-to-br ${from} ${to} rounded-lg`}>
                   <Icon className="h-4 w-4 text-white" />
                 </div>
                 <p className={`text-[11px] font-semibold ${text} uppercase tracking-wide`}>{label}</p>
@@ -728,9 +728,9 @@ export default function GedungDrivePage() {
             </div>
           ))}
           {/* Kartu Total Nilai Aset — full width on mobile, 1 col on md */}
-          <div className="col-span-2 md:col-span-1 bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-4 shadow-sm">
+          <div className="col-span-2 md:col-span-1 bg-linear-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-4 shadow-sm">
             <div className="flex items-center gap-2 mb-1.5">
-              <div className="p-2 bg-gradient-to-br from-amber-500 to-orange-500 rounded-lg">
+              <div className="p-2 bg-linear-to-br from-amber-500 to-orange-500 rounded-lg">
                 <Package className="h-4 w-4 text-white" />
               </div>
               <p className="text-[11px] font-semibold text-amber-900 uppercase tracking-wide">Total Nilai Aset</p>
@@ -804,7 +804,7 @@ export default function GedungDrivePage() {
                     className="relative bg-white overflow-hidden rounded-2xl border border-slate-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 p-5 cursor-pointer flex flex-col justify-between group"
                   >
                     {/* Gradient strip top — muncul saat hover, sama persis dengan dashboard */}
-                    <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${color.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
+                    <div className={`absolute top-0 left-0 right-0 h-1 bg-linear-to-r ${color.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
 
                     <div>
                       <div className="flex items-start justify-between mb-3">
@@ -957,7 +957,7 @@ export default function GedungDrivePage() {
                         className="relative bg-white overflow-hidden rounded-2xl border border-slate-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 p-5 cursor-pointer flex flex-col justify-between group"
                       >
                         {/* Gradient strip top */}
-                        <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${color.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
+                        <div className={`absolute top-0 left-0 right-0 h-1 bg-linear-to-r ${color.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
 
                         <div>
                           <div className="flex items-start justify-between mb-3">

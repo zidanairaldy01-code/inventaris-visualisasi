@@ -13,7 +13,7 @@ export default function DashboardLayout({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
-    <div className="h-screen flex overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50/20 to-indigo-50/20 font-sans">
+    <div className="h-screen flex overflow-hidden bg-linear-to-br from-slate-50 via-blue-50/20 to-indigo-50/20 font-sans">
       {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && (
         <div

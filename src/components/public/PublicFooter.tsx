@@ -50,15 +50,15 @@ export default function PublicFooter() {
             <h3 className="font-bold text-white mb-4">Hubungi Kami</h3>
             <ul className="space-y-3 text-sm">
               <li className="flex items-start gap-2">
-                <MapPin className="w-4 h-4 flex-shrink-0 mt-0.5 text-blue-400" />
+                <MapPin className="w-4 h-4 shrink-0 mt-0.5 text-blue-400" />
                 <span>Jl. Raya Telagasari No. 123<br />Telagasari, Karawang 41383</span>
               </li>
               <li className="flex items-center gap-2">
-                <Phone className="w-4 h-4 flex-shrink-0 text-blue-400" />
+                <Phone className="w-4 h-4 shrink-0 text-blue-400" />
                 <span>(0267) 123-4567</span>
               </li>
               <li className="flex items-center gap-2">
-                <Mail className="w-4 h-4 flex-shrink-0 text-blue-400" />
+                <Mail className="w-4 h-4 shrink-0 text-blue-400" />
                 <span>info@smkpgritelagasari.sch.id</span>
               </li>
             </ul>

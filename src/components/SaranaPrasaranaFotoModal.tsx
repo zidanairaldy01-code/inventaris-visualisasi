@@ -167,7 +167,7 @@ export default function SaranaPrasaranaFotoModal({ item, onClose, onUpdate }: Pr
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[92vh] flex flex-col overflow-hidden">
 
         {/* Header */}
-        <div className="flex items-start justify-between px-5 py-4 border-b border-slate-100 flex-shrink-0">
+        <div className="flex items-start justify-between px-5 py-4 border-b border-slate-100 shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-50 rounded-xl">
               <Images className="h-5 w-5 text-blue-600" />
@@ -184,7 +184,7 @@ export default function SaranaPrasaranaFotoModal({ item, onClose, onUpdate }: Pr
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-0 px-5 pt-3 flex-shrink-0 border-b border-slate-100">
+        <div className="flex gap-0 px-5 pt-3 shrink-0 border-b border-slate-100">
           <button
             onClick={() => setActiveTab('gallery')}
             className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold border-b-2 transition-all -mb-px ${
@@ -218,8 +218,8 @@ export default function SaranaPrasaranaFotoModal({ item, onClose, onUpdate }: Pr
                 : 'bg-red-50 text-red-700 border-red-200'
             }`}>
               {message.type === 'success'
-                ? <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
-                : <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                ? <CheckCircle2 className="h-4 w-4 shrink-0" />
+                : <AlertCircle className="h-4 w-4 shrink-0" />
               }
               {message.text}
             </div>
@@ -313,7 +313,7 @@ export default function SaranaPrasaranaFotoModal({ item, onClose, onUpdate }: Pr
           {activeTab === 'shared' && (
             <div className="space-y-4">
               <div className="bg-violet-50 border border-violet-200 rounded-xl p-3 flex items-start gap-2.5">
-                <Database className="h-4 w-4 text-violet-600 mt-0.5 flex-shrink-0" />
+                <Database className="h-4 w-4 text-violet-600 mt-0.5 shrink-0" />
                 <p className="text-xs text-violet-700 font-medium leading-relaxed">
                   Pilih foto dari database untuk digunakan pada <strong>&ldquo;{item.nama_barang}&rdquo;</strong> tanpa perlu mengunggah ulang.
                 </p>
@@ -355,7 +355,7 @@ export default function SaranaPrasaranaFotoModal({ item, onClose, onUpdate }: Pr
                           <img
                             src={selectedPhoto.url_foto}
                             alt={selectedPhoto.nama_barang_ref || 'Foto'}
-                            className="w-10 h-10 rounded-lg object-cover border border-slate-200 flex-shrink-0"
+                            className="w-10 h-10 rounded-lg object-cover border border-slate-200 shrink-0"
                           />
                           <div className="min-w-0">
                             <p className="text-sm font-bold text-slate-800 truncate">
@@ -370,7 +370,7 @@ export default function SaranaPrasaranaFotoModal({ item, onClose, onUpdate }: Pr
                         <span className="text-sm text-slate-400">Pilih foto dari database...</span>
                       )}
 
-                      <div className="flex items-center gap-1 text-violet-600 font-semibold text-xs ml-2 flex-shrink-0">
+                      <div className="flex items-center gap-1 text-violet-600 font-semibold text-xs ml-2 shrink-0">
                         <span>Pilih</span>
                         {dropdownOpen ? (
                           <ChevronUp className="h-4 w-4" />
@@ -401,7 +401,7 @@ export default function SaranaPrasaranaFotoModal({ item, onClose, onUpdate }: Pr
                               <img
                                 src={foto.url_foto}
                                 alt={namaBarang}
-                                className="w-10 h-10 rounded-lg object-cover border border-slate-200 flex-shrink-0"
+                                className="w-10 h-10 rounded-lg object-cover border border-slate-200 shrink-0"
                               />
                               <div className="flex-1 min-w-0">
                                 <p className={`text-xs font-bold truncate ${isSelected ? 'text-violet-700' : 'text-slate-800'}`}>
@@ -412,7 +412,7 @@ export default function SaranaPrasaranaFotoModal({ item, onClose, onUpdate }: Pr
                                 )}
                               </div>
                               {isSelected && (
-                                <Check className="h-4 w-4 text-violet-600 flex-shrink-0 ml-1" />
+                                <Check className="h-4 w-4 text-violet-600 shrink-0 ml-1" />
                               )}
                             </button>
                           );
@@ -424,7 +424,7 @@ export default function SaranaPrasaranaFotoModal({ item, onClose, onUpdate }: Pr
                   {/* Preview Foto yang Sedang Dipilih & Tombol Gunakan */}
                   {selectedPhoto && (
                     <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col sm:flex-row items-center gap-4">
-                      <div className="w-36 h-36 flex-shrink-0 rounded-xl overflow-hidden border-2 border-white shadow bg-white relative">
+                      <div className="w-36 h-36 shrink-0 rounded-xl overflow-hidden border-2 border-white shadow bg-white relative">
                         <img
                           src={selectedPhoto.url_foto}
                           alt={selectedPhoto.nama_barang_ref || 'Foto'}
@@ -495,7 +495,7 @@ export default function SaranaPrasaranaFotoModal({ item, onClose, onUpdate }: Pr
                               alt={namaBarang}
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                             />
-                            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-1.5">
+                            <div className="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/80 via-black/40 to-transparent p-1.5">
                               <p className="text-[9px] font-bold text-white leading-tight truncate">
                                 {namaBarang}
                               </p>
@@ -517,7 +517,7 @@ export default function SaranaPrasaranaFotoModal({ item, onClose, onUpdate }: Pr
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3 border-t border-slate-100 bg-slate-50 flex-shrink-0 flex items-center justify-between">
+        <div className="px-5 py-3 border-t border-slate-100 bg-slate-50 shrink-0 flex items-center justify-between">
           <p className="text-xs text-slate-400">
             {fotos.length > 0
               ? `${fotos.length} foto tersimpan untuk barang ini`
@@ -536,7 +536,7 @@ export default function SaranaPrasaranaFotoModal({ item, onClose, onUpdate }: Pr
       {/* Full preview */}
       {preview && (
         <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/85 backdrop-blur-sm"
+          className="fixed inset-0 z-60 flex items-center justify-center bg-black/85 backdrop-blur-sm"
           onClick={() => setPreview(null)}
         >
           <img src={preview} className="max-w-4xl max-h-[90vh] rounded-2xl object-contain shadow-2xl" alt="Preview" />

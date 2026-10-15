@@ -60,13 +60,13 @@ export function MobileCardHeader({ title, subtitle, badge, icon }: MobileCardHea
   return (
     <div className="flex items-start justify-between gap-3 mb-3 pb-3 border-b border-slate-100">
       <div className="flex items-start gap-2 flex-1 min-w-0">
-        {icon && <div className="flex-shrink-0 mt-0.5">{icon}</div>}
+        {icon && <div className="shrink-0 mt-0.5">{icon}</div>}
         <div className="flex-1 min-w-0">
           <h3 className="text-sm font-semibold text-slate-900 truncate">{title}</h3>
           {subtitle && <p className="text-xs text-slate-500 truncate mt-0.5">{subtitle}</p>}
         </div>
       </div>
-      {badge && <div className="flex-shrink-0">{badge}</div>}
+      {badge && <div className="shrink-0">{badge}</div>}
     </div>
   );
 }

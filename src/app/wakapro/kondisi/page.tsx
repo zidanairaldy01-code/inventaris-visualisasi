@@ -219,7 +219,7 @@ export default function WakaproKondisiPage() {
       )}
 
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-700 rounded-3xl p-6 sm:p-8 text-white shadow-xl shadow-indigo-500/10 flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden">
+      <div className="bg-linear-to-r from-blue-600 via-indigo-600 to-violet-700 rounded-3xl p-6 sm:p-8 text-white shadow-xl shadow-indigo-500/10 flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden">
         <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-white/10 rounded-full blur-2xl pointer-events-none" />
         
         <div className="relative z-10 space-y-2">
@@ -252,7 +252,7 @@ export default function WakaproKondisiPage() {
             onClick={() => openLaporModal()}
             className="px-5 py-3 bg-white hover:bg-indigo-50 text-indigo-700 font-bold rounded-2xl shadow-lg shadow-indigo-950/20 transition-all flex items-center gap-2 text-sm active:scale-95 cursor-pointer"
           >
-            <Plus className="h-4 w-4 stroke-[3]" />
+            <Plus className="h-4 w-4 stroke-3" />
             <span>Laporkan Kerusakan Aset</span>
           </button>
         </div>
@@ -451,10 +451,10 @@ export default function WakaproKondisiPage() {
                           <img
                             src={getImageUrl(item.foto_thumbnail)!}
                             alt={item.nama_barang}
-                            className="w-10 h-10 rounded-lg object-cover border border-slate-200 flex-shrink-0"
+                            className="w-10 h-10 rounded-lg object-cover border border-slate-200 shrink-0"
                           />
                         ) : (
-                          <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 flex-shrink-0 border border-slate-200">
+                          <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 shrink-0 border border-slate-200">
                             <Package className="h-5 w-5" />
                           </div>
                         )}
@@ -539,7 +539,7 @@ export default function WakaproKondisiPage() {
         <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
           <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-slate-100 overflow-hidden transform transition-all">
             {/* Modal Header */}
-            <div className="p-6 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex items-center justify-between">
+            <div className="p-6 bg-linear-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 bg-indigo-500/20 rounded-xl border border-indigo-400/30 text-indigo-300">
                   <Wrench className="h-5 w-5" />

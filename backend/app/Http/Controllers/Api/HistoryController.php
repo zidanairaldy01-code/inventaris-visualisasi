@@ -10,12 +10,16 @@ class HistoryController extends Controller
 {
     public function index()
     {
-        return response()->json(History::with(['aset', 'user'])->orderBy('tanggal', 'desc')->get());
+        return response()->json(
+            History::with(['aset.ruangan.gedung', 'aset.kategori', 'user'])
+                ->orderBy('tanggal', 'desc')
+                ->get()
+        );
     }
 
     public function show(string $id)
     {
-        $history = History::with(['aset', 'user'])->findOrFail($id);
+        $history = History::with(['aset.ruangan.gedung', 'aset.kategori', 'user'])->findOrFail($id);
         return response()->json($history);
     }
 }

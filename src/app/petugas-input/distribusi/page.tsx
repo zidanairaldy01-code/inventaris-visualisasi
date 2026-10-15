@@ -258,7 +258,7 @@ export default function PetugasDistribusiPage() {
       {/* Lightbox */}
       {lightboxUrl && (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+          className="fixed inset-0 z-100 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
           onClick={() => setLightboxUrl(null)}
         >
           <button
@@ -279,7 +279,7 @@ export default function PetugasDistribusiPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-sm shadow-blue-500/20">
+            <div className="w-9 h-9 rounded-xl bg-linear-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-sm shadow-blue-500/20">
               <Truck className="h-5 w-5" />
             </div>
             Pengiriman &amp; Riwayat BAST
@@ -310,13 +310,13 @@ export default function PetugasDistribusiPage() {
       {/* Feedback Messages */}
       {formSuccess && (
         <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs flex items-center gap-2">
-          <CheckCircle2 className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+          <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
           {formSuccess}
         </div>
       )}
       {formError && (
         <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs flex items-center gap-2">
-          <AlertCircle className="h-4 w-4 text-rose-600 flex-shrink-0" />
+          <AlertCircle className="h-4 w-4 text-rose-600 shrink-0" />
           {formError}
         </div>
       )}

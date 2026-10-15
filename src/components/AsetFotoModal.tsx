@@ -101,7 +101,7 @@ export default function AsetFotoModal({ aset, onClose, onUpdate }: Props) {
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
 
         {/* Header */}
-        <div className="flex items-start justify-between p-5 border-b border-gray-100 flex-shrink-0">
+        <div className="flex items-start justify-between p-5 border-b border-gray-100 shrink-0">
           <div>
             <p className="text-xs font-semibold text-blue-500 uppercase tracking-wider">Foto Aset</p>
             <h3 className="text-lg font-bold text-gray-900 mt-0.5">{aset.nama_aset}</h3>
@@ -116,7 +116,7 @@ export default function AsetFotoModal({ aset, onClose, onUpdate }: Props) {
         <div className="flex-1 overflow-y-auto p-5 space-y-5">
           {message && (
             <div className={`p-3 rounded-xl flex items-center text-sm border ${message.type === 'success' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
-              {message.type === 'success' ? <CheckCircle2 className="h-4 w-4 mr-2 flex-shrink-0" /> : <AlertCircle className="h-4 w-4 mr-2 flex-shrink-0" />}
+              {message.type === 'success' ? <CheckCircle2 className="h-4 w-4 mr-2 shrink-0" /> : <AlertCircle className="h-4 w-4 mr-2 shrink-0" />}
               {message.text}
             </div>
           )}
@@ -145,7 +145,7 @@ export default function AsetFotoModal({ aset, onClose, onUpdate }: Props) {
 
           {/* Preview saat hover */}
           {preview && (
-            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm" onClick={() => setPreview(null)}>
+            <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/80 backdrop-blur-sm" onClick={() => setPreview(null)}>
               <img src={preview} className="max-w-3xl max-h-[85vh] rounded-2xl object-contain shadow-2xl" alt="Preview" />
               <button className="absolute top-4 right-4 p-2 bg-white/20 rounded-full text-white"><X className="w-5 h-5" /></button>
             </div>
@@ -205,7 +205,7 @@ export default function AsetFotoModal({ aset, onClose, onUpdate }: Props) {
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-gray-100 bg-gray-50 flex-shrink-0 flex justify-end">
+        <div className="p-4 border-t border-gray-100 bg-gray-50 shrink-0 flex justify-end">
           <button onClick={onClose} className="px-5 py-2 text-sm font-semibold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
             Tutup
           </button>

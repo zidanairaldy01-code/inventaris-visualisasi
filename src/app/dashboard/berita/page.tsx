@@ -311,7 +311,7 @@ export default function KelolaBeritaPage() {
       )}
 
       {/* ════════ HEADER BANNER ════════ */}
-      <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 rounded-3xl p-6 md:p-8 shadow-xl relative overflow-hidden">
+      <div className="bg-linear-to-r from-blue-600 via-indigo-600 to-violet-600 rounded-3xl p-6 md:p-8 shadow-xl relative overflow-hidden">
         <div className="absolute top-0 right-0 w-80 h-80 bg-white/10 rounded-full blur-3xl pointer-events-none -translate-y-12 translate-x-12" />
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 relative z-10">
           <div className="flex items-center gap-4">
@@ -596,7 +596,7 @@ export default function KelolaBeritaPage() {
       {mounted && isModalOpen && createPortal(
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[9999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto animate-fadeIn">
           <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-hidden shadow-2xl flex flex-col my-auto animate-scaleUp">
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between flex-shrink-0 bg-slate-50/70">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between shrink-0 bg-slate-50/70">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl">
                   <Newspaper className="h-5 w-5" />
@@ -817,7 +817,7 @@ export default function KelolaBeritaPage() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-6 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 rounded-xl shadow-md shadow-indigo-500/20 transition-all flex items-center space-x-2 disabled:opacity-50"
+                  className="px-6 py-2.5 text-sm font-bold text-white bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 rounded-xl shadow-md shadow-indigo-500/20 transition-all flex items-center space-x-2 disabled:opacity-50"
                 >
                   {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
                   <span>{editingBerita ? 'Simpan Perubahan' : 'Terbitkan Berita'}</span>

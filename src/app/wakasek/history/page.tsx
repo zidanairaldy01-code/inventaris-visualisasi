@@ -9,7 +9,7 @@ interface Aset {
   kode_aset: string;
   nama_aset: string;
   kategori?: { nama_kategori: string };
-  ruangan?: { nama_ruangan: string };
+  ruangan?: { nama_ruangan: string; gedung?: { nama_gedung: string } };
 }
 
 interface User {
@@ -127,7 +127,7 @@ export default function HistoryPage() {
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="bg-gradient-to-r from-indigo-600 to-indigo-500 rounded-lg p-5 shadow-lg">
+      <div className="bg-linear-to-r from-indigo-600 to-indigo-500 rounded-lg p-5 shadow-lg">
         <div className="flex items-center gap-3">
           <div className="p-3 bg-white/20 rounded-lg">
             <HistoryIcon className="h-8 w-8 text-white" />
@@ -248,7 +248,7 @@ export default function HistoryPage() {
                   className="flex gap-4 p-4 bg-slate-50 rounded-lg border border-slate-200 hover:border-indigo-300 hover:shadow-md transition-all"
                 >
                   {/* Icon */}
-                  <div className="flex-shrink-0">
+                  <div className="shrink-0">
                     <div className="p-3 bg-white rounded-lg border border-slate-200 shadow-sm">
                       {getAksiIcon(history.aksi)}
                     </div>
@@ -269,6 +269,11 @@ export default function HistoryPage() {
                         <h3 className="text-base font-semibold text-slate-900 mb-1">
                           {history.aset?.nama_aset}
                         </h3>
+                        {history.aset?.kategori && (
+                          <span className="inline-block px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-xs font-mono mb-1">
+                            {history.aset.kategori.nama_kategori}
+                          </span>
+                        )}
                         <p className="text-sm text-slate-700 leading-relaxed">
                           {history.keterangan}
                         </p>
@@ -290,7 +295,12 @@ export default function HistoryPage() {
                       {history.aset?.ruangan && (
                         <div className="flex items-center gap-1">
                           <span>di</span>
-                          <span className="font-medium text-slate-700">{history.aset.ruangan.nama_ruangan}</span>
+                          <span className="font-medium text-slate-700">
+                            {history.aset.ruangan.gedung
+                              ? `${history.aset.ruangan.gedung.nama_gedung} — ${history.aset.ruangan.nama_ruangan}`
+                              : history.aset.ruangan.nama_ruangan
+                            }
+                          </span>
                         </div>
                       )}
                     </div>

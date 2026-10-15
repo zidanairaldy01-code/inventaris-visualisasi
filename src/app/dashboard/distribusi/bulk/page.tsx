@@ -236,7 +236,7 @@ export default function BulkDistribusiPage() {
   return (
     <div className="space-y-6 animate-fadeInUp">
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 rounded-2xl p-6 shadow-xl relative overflow-hidden">
+      <div className="bg-linear-to-r from-blue-600 via-indigo-600 to-violet-600 rounded-2xl p-6 shadow-xl relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl pointer-events-none -translate-y-12 translate-x-12" />
         <div className="relative z-10 flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-4">
@@ -262,7 +262,7 @@ export default function BulkDistribusiPage() {
         {/* Error message */}
         {errorMsg && (
           <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
-            <AlertTriangle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+            <AlertTriangle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
             <div>
               <p className="text-sm font-semibold text-red-700">Terjadi Kesalahan</p>
               <p className="text-xs text-red-600 mt-0.5">{errorMsg}</p>
@@ -310,7 +310,7 @@ export default function BulkDistribusiPage() {
                 const r = ruangans.find(ru => ru.id === selectedRuangan)
                 return r ? (
                   <div className="mt-3 p-3 bg-indigo-50 border border-indigo-200 rounded-xl flex items-center gap-2">
-                    <Building2 className="h-4 w-4 text-indigo-600 flex-shrink-0" />
+                    <Building2 className="h-4 w-4 text-indigo-600 shrink-0" />
                     <div>
                       <p className="text-xs font-bold text-indigo-800">{r.nama_ruangan}</p>
                       <p className="text-[11px] text-indigo-600">{r.gedung?.nama_gedung || '-'} · {r.kode_ruangan}</p>
@@ -338,7 +338,7 @@ export default function BulkDistribusiPage() {
             </div>
 
             {/* Summary */}
-            <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-5 text-white shadow-lg">
+            <div className="bg-linear-to-br from-slate-800 to-slate-900 rounded-2xl p-5 text-white shadow-lg">
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Ringkasan</p>
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
@@ -438,7 +438,7 @@ export default function BulkDistribusiPage() {
                                 onClick={() => addItemFromSearch(result)}
                                 className="w-full text-left px-4 py-3 hover:bg-blue-50 transition-colors flex items-start gap-3 group"
                               >
-                                <div className="p-1.5 bg-slate-100 group-hover:bg-blue-100 rounded-lg flex-shrink-0 mt-0.5 transition-colors">
+                                <div className="p-1.5 bg-slate-100 group-hover:bg-blue-100 rounded-lg shrink-0 mt-0.5 transition-colors">
                                   <Package className="h-3.5 w-3.5 text-slate-500 group-hover:text-blue-600" />
                                 </div>
                                 <div className="flex-1 min-w-0">
@@ -461,7 +461,7 @@ export default function BulkDistribusiPage() {
                                     <p className="text-[10px] text-blue-600 mt-0.5">📁 {result.folder_nama}</p>
                                   )}
                                 </div>
-                                <span className="text-[10px] text-indigo-600 font-semibold opacity-0 group-hover:opacity-100 flex-shrink-0 mt-1 transition-opacity">+ Tambah</span>
+                                <span className="text-[10px] text-indigo-600 font-semibold opacity-0 group-hover:opacity-100 shrink-0 mt-1 transition-opacity">+ Tambah</span>
                               </button>
                             </li>
                           ))}

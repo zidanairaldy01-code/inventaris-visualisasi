@@ -60,7 +60,7 @@ export default function ConfirmDialog({
         {/* Header */}
         <div className="p-6 pb-4">
           <div className="flex items-start gap-4">
-            <div className={`flex-shrink-0 ${style.iconBg} rounded-xl p-3 ${style.iconColor}`}>
+            <div className={`shrink-0 ${style.iconBg} rounded-xl p-3 ${style.iconColor}`}>
               {style.icon}
             </div>
             <div className="flex-1 min-w-0">
@@ -73,7 +73,7 @@ export default function ConfirmDialog({
             </div>
             <button
               onClick={onCancel}
-              className="flex-shrink-0 text-slate-400 hover:text-slate-600 transition-colors"
+              className="shrink-0 text-slate-400 hover:text-slate-600 transition-colors"
               aria-label="Close"
             >
               <X className="h-5 w-5" />

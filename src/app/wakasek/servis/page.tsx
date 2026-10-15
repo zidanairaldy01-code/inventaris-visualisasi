@@ -133,7 +133,7 @@ export default function WakasekServisPage() {
     <div className="space-y-6 animate-fadeInUp">
       {/* Lightbox */}
       {lightboxUrl && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm" onClick={() => setLightboxUrl(null)}>
+        <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/80 backdrop-blur-sm" onClick={() => setLightboxUrl(null)}>
           <button className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white" onClick={() => setLightboxUrl(null)}>
             <X className="h-6 w-6" />
           </button>
@@ -145,7 +145,7 @@ export default function WakasekServisPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center mr-3 shadow-sm shadow-violet-500/20 flex-shrink-0">
+            <div className="w-8 h-8 rounded-xl bg-linear-to-br from-violet-500 to-purple-600 flex items-center justify-center mr-3 shadow-sm shadow-violet-500/20 shrink-0">
               <ShieldCheck className="h-4 w-4 text-white" />
             </div>
             Persetujuan Servis Aset
@@ -161,15 +161,15 @@ export default function WakasekServisPage() {
 
       {/* Alert Menunggu */}
       {totalMenunggu > 0 && (
-        <div className="bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 rounded-2xl p-4 flex items-center gap-3">
-          <div className="p-2 bg-amber-500 text-white rounded-xl flex-shrink-0 animate-bounce">
+        <div className="bg-linear-to-r from-amber-50 to-orange-50 border-2 border-amber-300 rounded-2xl p-4 flex items-center gap-3">
+          <div className="p-2 bg-amber-500 text-white rounded-xl shrink-0 animate-bounce">
             <AlertTriangle className="h-5 w-5" />
           </div>
           <div>
             <p className="text-sm font-bold text-amber-800">{totalMenunggu} Pengajuan Servis Menunggu Persetujuan Anda</p>
             <p className="text-xs text-amber-600 mt-0.5">Wakapro menunggu ACC anggaran dari Anda agar proses servis dapat dimulai.</p>
           </div>
-          <button onClick={() => setStatusFilter('Menunggu Persetujuan')} className="ml-auto px-3 py-1.5 bg-amber-600 text-white text-xs font-bold rounded-xl hover:bg-amber-700 transition-colors flex-shrink-0">
+          <button onClick={() => setStatusFilter('Menunggu Persetujuan')} className="ml-auto px-3 py-1.5 bg-amber-600 text-white text-xs font-bold rounded-xl hover:bg-amber-700 transition-colors shrink-0">
             Tinjau Sekarang
           </button>
         </div>
@@ -192,7 +192,7 @@ export default function WakasekServisPage() {
           <p className="text-3xl font-extrabold text-emerald-800">{totalSelesai}</p>
           <p className="text-xs text-emerald-600 mt-1">Sudah diverifikasi Admin</p>
         </div>
-        <div className="bg-gradient-to-br from-violet-500 to-purple-600 rounded-2xl p-4 text-white shadow-sm shadow-violet-500/20">
+        <div className="bg-linear-to-br from-violet-500 to-purple-600 rounded-2xl p-4 text-white shadow-sm shadow-violet-500/20">
           <div className="flex items-center gap-2 mb-2"><DollarSign className="h-4 w-4 text-violet-100" /><p className="text-xs font-semibold text-violet-100 uppercase tracking-wider">Anggaran Proses</p></div>
           <p className="text-lg font-extrabold leading-tight">{formatRupiah(totalBiayaProses)}</p>
           <p className="text-[11px] text-violet-100 mt-1">Total anggaran yang disetujui</p>
@@ -372,7 +372,7 @@ export default function WakasekServisPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => !submitting && setAccModal(null)} />
           <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-            <div className="flex items-center justify-between p-5 border-b border-emerald-100 bg-gradient-to-r from-emerald-50 to-teal-50">
+            <div className="flex items-center justify-between p-5 border-b border-emerald-100 bg-linear-to-r from-emerald-50 to-teal-50">
               <div>
                 <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
                   <ThumbsUp className="h-4 w-4 text-emerald-600" />
@@ -442,7 +442,7 @@ export default function WakasekServisPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => !submitting && setTolakModal(null)} />
           <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-            <div className="flex items-center justify-between p-5 border-b border-red-100 bg-gradient-to-r from-red-50 to-rose-50">
+            <div className="flex items-center justify-between p-5 border-b border-red-100 bg-linear-to-r from-red-50 to-rose-50">
               <div>
                 <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
                   <ThumbsDown className="h-4 w-4 text-red-600" />

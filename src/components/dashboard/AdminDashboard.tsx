@@ -75,7 +75,7 @@ export default function AdminDashboard({
   return (
     <div className="space-y-6 sm:space-y-8 animate-fadeIn pb-12">
       {/* ── Banner Master Admin ── */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-6 sm:p-8 shadow-xl text-white relative overflow-hidden border border-indigo-900/40">
+      <div className="bg-linear-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-6 sm:p-8 shadow-xl text-white relative overflow-hidden border border-indigo-900/40">
         <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none -translate-y-16 translate-x-16" />
 
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
@@ -116,10 +116,10 @@ export default function AdminDashboard({
 
       {/* ── Alert Notifikasi Kerusakan Workshop (Jika ada laporan dari Wakapro) ── */}
       {unreadDamagedNotifs.length > 0 && (
-        <div className="bg-gradient-to-r from-amber-500/10 via-rose-500/10 to-amber-500/10 border-2 border-amber-300/80 rounded-2xl p-4 sm:p-5 shadow-sm animate-fadeIn">
+        <div className="bg-linear-to-r from-amber-500/10 via-rose-500/10 to-amber-500/10 border-2 border-amber-300/80 rounded-2xl p-4 sm:p-5 shadow-sm animate-fadeIn">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-start gap-3">
-              <div className="p-2.5 bg-amber-500 text-white rounded-xl shadow-md flex-shrink-0 animate-bounce">
+              <div className="p-2.5 bg-amber-500 text-white rounded-xl shadow-md shrink-0 animate-bounce">
                 <AlertTriangle className="h-5 w-5" />
               </div>
               <div>
@@ -136,7 +136,7 @@ export default function AdminDashboard({
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="flex items-center gap-2 shrink-0">
               <Link
                 href="/dashboard/kondisi"
                 className="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5"

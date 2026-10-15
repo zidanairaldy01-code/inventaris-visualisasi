@@ -257,7 +257,7 @@ export default function ServisPage() {
     <div className="space-y-6 animate-fadeInUp">
       {/* Lightbox */}
       {lightboxUrl && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm" onClick={() => setLightboxUrl(null)}>
+        <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/80 backdrop-blur-sm" onClick={() => setLightboxUrl(null)}>
           <button className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition" onClick={() => setLightboxUrl(null)}>
             <X className="h-6 w-6" />
           </button>
@@ -278,7 +278,7 @@ export default function ServisPage() {
             )}
           </div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center mr-3 shadow-sm shadow-amber-500/20 flex-shrink-0">
+            <div className="w-8 h-8 rounded-xl bg-linear-to-br from-amber-500 to-orange-600 flex items-center justify-center mr-3 shadow-sm shadow-amber-500/20 shrink-0">
               <Wrench className="h-4 w-4 text-white" />
             </div>
             Laporan Kerusakan & Pengajuan Servis
@@ -291,7 +291,7 @@ export default function ServisPage() {
           <button onClick={() => fetchData(true)} className="p-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-500 transition-colors" title="Muat Ulang">
             <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
           </button>
-          <button onClick={openLaporModal} className="flex items-center px-4 py-2.5 bg-gradient-to-r from-amber-600 to-orange-600 text-white hover:from-amber-700 hover:to-orange-700 rounded-xl font-semibold text-sm transition-all shadow-sm shadow-amber-500/20">
+          <button onClick={openLaporModal} className="flex items-center px-4 py-2.5 bg-linear-to-r from-amber-600 to-orange-600 text-white hover:from-amber-700 hover:to-orange-700 rounded-xl font-semibold text-sm transition-all shadow-sm shadow-amber-500/20">
             <SendHorizonal className="h-4 w-4 mr-1.5" />
             Lapor Kerusakan Baru
           </button>
@@ -301,15 +301,15 @@ export default function ServisPage() {
       {/* Warning */}
       {ruanganWarning && (
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-3 text-amber-800">
-          <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0" />
+          <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
           <p className="text-sm font-medium">{ruanganWarning}</p>
         </div>
       )}
 
       {/* Menunggu ACC Banner */}
       {totalMenunggu > 0 && (
-        <div className="bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 rounded-2xl p-4 flex items-center gap-3">
-          <div className="p-2 bg-amber-500 text-white rounded-xl flex-shrink-0 animate-pulse">
+        <div className="bg-linear-to-r from-amber-50 to-orange-50 border-2 border-amber-300 rounded-2xl p-4 flex items-center gap-3">
+          <div className="p-2 bg-amber-500 text-white rounded-xl shrink-0 animate-pulse">
             <Clock className="h-5 w-5" />
           </div>
           <div>
@@ -342,7 +342,7 @@ export default function ServisPage() {
           </div>
           <p className="text-2xl font-extrabold text-emerald-800">{totalSelesai} <span className="text-sm font-normal">kali</span></p>
         </div>
-        <div className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl p-4 text-white shadow-sm shadow-amber-500/20">
+        <div className="bg-linear-to-br from-amber-500 to-orange-600 rounded-2xl p-4 text-white shadow-sm shadow-amber-500/20">
           <div className="flex items-center gap-2 mb-2">
             <DollarSign className="h-4 w-4 text-amber-100" />
             <p className="text-xs font-semibold text-amber-100 uppercase tracking-wider">Total Biaya</p>
@@ -501,7 +501,7 @@ export default function ServisPage() {
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => !submitting && setIsModalOpen(false)} />
           <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
             {/* Header Modal */}
-            <div className="flex items-center justify-between p-5 border-b border-slate-100 bg-gradient-to-r from-amber-50 to-orange-50">
+            <div className="flex items-center justify-between p-5 border-b border-slate-100 bg-linear-to-r from-amber-50 to-orange-50">
               <div>
                 <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
                   <SendHorizonal className="h-4 w-4 text-amber-600" />
@@ -526,7 +526,7 @@ export default function ServisPage() {
             {!editingItem && (
               <div className="px-5 pt-4 pb-0">
                 <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 flex items-start gap-2">
-                  <ChevronRight className="h-4 w-4 text-blue-500 flex-shrink-0 mt-0.5" />
+                  <ChevronRight className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
                   <p className="text-xs text-blue-700">
                     Setelah Anda kirim, <strong>Wakasek</strong> akan meninjau laporan ini. Jika disetujui, Wakasek akan menentukan <strong>biaya dan teknisi</strong>. Servis baru berjalan setelah ACC.
                   </p>
@@ -564,7 +564,7 @@ export default function ServisPage() {
                     </select>
                     {barangList.length === 0 && (
                       <p className="text-xs text-rose-500 mt-1.5 flex items-center gap-1">
-                        <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0" />
+                        <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
                         Belum ada barang di workshop. Pastikan sudah diterima di menu Penerimaan.
                       </p>
                     )}
@@ -629,7 +629,7 @@ export default function ServisPage() {
                 {fotoPreview ? (
                   <div className="relative rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-black group">
                     <img src={fotoPreview} alt="Preview" className="w-full h-48 object-cover opacity-95 group-hover:opacity-80 transition-opacity duration-200" />
-                    <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/70 to-transparent pointer-events-none" />
+                    <div className="absolute inset-x-0 bottom-0 h-16 bg-linear-to-t from-black/70 to-transparent pointer-events-none" />
                     <div className="absolute bottom-2.5 left-3 flex items-center gap-1.5 pointer-events-none">
                       <Camera className="h-3.5 w-3.5 text-white/80" />
                       <span className="text-[11px] text-white/90 font-medium">{fotoFile ? fotoFile.name : 'Foto tersimpan'}</span>
@@ -654,7 +654,7 @@ export default function ServisPage() {
                 <button type="button" onClick={() => !submitting && setIsModalOpen(false)} className="px-4 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">
                   Batal
                 </button>
-                <button type="submit" disabled={submitting || barangList.length === 0} className="flex items-center px-5 py-2 text-xs font-semibold text-white bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 rounded-xl transition-colors disabled:opacity-50">
+                <button type="submit" disabled={submitting || barangList.length === 0} className="flex items-center px-5 py-2 text-xs font-semibold text-white bg-linear-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 rounded-xl transition-colors disabled:opacity-50">
                   {submitting && <Loader2 className="animate-spin h-3.5 w-3.5 mr-1.5" />}
                   <SendHorizonal className="h-3.5 w-3.5 mr-1.5" />
                   {editingItem ? 'Simpan Perubahan' : 'Kirim Laporan ke Wakasek'}

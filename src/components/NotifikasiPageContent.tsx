@@ -239,7 +239,7 @@ export default function NotifikasiPageContent() {
 
       {/* ── Filter Bar ── */}
       <div className="flex items-center gap-3 bg-white rounded-xl border border-slate-200 px-4 py-3 shadow-sm">
-        <Filter className="h-4 w-4 text-slate-400 flex-shrink-0" />
+        <Filter className="h-4 w-4 text-slate-400 shrink-0" />
         <span className="text-xs font-semibold text-slate-500 mr-1">Filter:</span>
         <div className="flex gap-2 flex-wrap">
           {(['all', 'unread', 'read'] as FilterType[]).map(f => (
@@ -304,7 +304,7 @@ export default function NotifikasiPageContent() {
                 }`}
               >
                 {/* Icon */}
-                <div className={`flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center ${iconColor}`}>
+                <div className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center ${iconColor}`}>
                   {getIconForTipe(notif.tipe, notif.data?.kondisi)}
                 </div>
 
@@ -314,7 +314,7 @@ export default function NotifikasiPageContent() {
                     <p className={`text-sm leading-snug ${notif.is_read ? 'font-medium text-slate-700' : 'font-bold text-slate-800'}`}>
                       {notif.judul}
                     </p>
-                    <span className="text-[10px] text-slate-400 flex-shrink-0 mt-0.5" title={formatFullDate(notif.created_at)}>
+                    <span className="text-[10px] text-slate-400 shrink-0 mt-0.5" title={formatFullDate(notif.created_at)}>
                       {formatRelativeTime(notif.created_at)}
                     </span>
                   </div>
@@ -354,7 +354,7 @@ export default function NotifikasiPageContent() {
                 </div>
 
                 {/* Actions (visible on hover) */}
-                <div className="flex flex-col items-center gap-2 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex flex-col items-center gap-2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                   {!notif.is_read && (
                     <button
                       onClick={() => handleMarkRead(notif.id)}

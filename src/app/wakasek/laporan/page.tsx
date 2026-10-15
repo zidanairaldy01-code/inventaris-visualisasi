@@ -282,7 +282,7 @@ export default function LaporanPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center">
-            <div className={`w-8 h-8 rounded-xl bg-gradient-to-br ${cfg.gradient} flex items-center justify-center mr-3 shadow-sm flex-shrink-0`}>
+            <div className={`w-8 h-8 rounded-xl bg-linear-to-br ${cfg.gradient} flex items-center justify-center mr-3 shadow-sm shrink-0`}>
               <FileText className="h-4 w-4 text-white" />
             </div>
             Laporan
@@ -318,11 +318,11 @@ export default function LaporanPage() {
                   onClick={() => { setTipe(key); setResult(null); setError(''); }}
                   className={`flex items-center gap-2.5 px-4 py-3 rounded-xl border text-sm font-semibold transition-all ${
                     active
-                      ? `bg-gradient-to-r ${c.gradient} text-white border-transparent shadow-sm`
+                      ? `bg-linear-to-r ${c.gradient} text-white border-transparent shadow-sm`
                       : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
                   }`}
                 >
-                  <Icon className={`h-4 w-4 flex-shrink-0 ${active ? 'text-white/80' : 'text-slate-400'}`} />
+                  <Icon className={`h-4 w-4 shrink-0 ${active ? 'text-white/80' : 'text-slate-400'}`} />
                   <span className="truncate">{c.label}</span>
                 </button>
               );
@@ -379,7 +379,7 @@ export default function LaporanPage() {
         <button
           onClick={handleGenerate}
           disabled={loading || !dari || !sampai}
-          className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all shadow-sm text-white bg-gradient-to-r ${cfg.gradient} hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed`}
+          className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all shadow-sm text-white bg-linear-to-r ${cfg.gradient} hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed`}
         >
           {loading ? (
             <><Loader2 className="h-4 w-4 animate-spin" /> Memuat Data...</>
@@ -392,7 +392,7 @@ export default function LaporanPage() {
       {/* Error */}
       {error && (
         <div className="p-4 bg-red-50 border border-red-200 rounded-2xl flex items-center gap-3 text-red-700 text-sm">
-          <AlertCircle className="h-4 w-4 flex-shrink-0" />
+          <AlertCircle className="h-4 w-4 shrink-0" />
           {error}
         </div>
       )}
@@ -404,7 +404,7 @@ export default function LaporanPage() {
           {/* Label Periode */}
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-2">
-              <div className={`w-2 h-2 rounded-full bg-gradient-to-r ${cfg.gradient}`} />
+              <div className={`w-2 h-2 rounded-full bg-linear-to-r ${cfg.gradient}`} />
               <span className="text-sm font-bold text-slate-700">
                 Laporan {cfg.label}
               </span>
@@ -488,8 +488,8 @@ export default function LaporanPage() {
       {/* Empty State (belum generate) */}
       {!result && !loading && !error && (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-16 text-center">
-          <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${cfg.gradient} opacity-10 flex items-center justify-center mx-auto mb-4`} />
-          <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${cfg.gradient} flex items-center justify-center mx-auto -mt-20 mb-4 shadow-sm`}>
+          <div className={`w-16 h-16 rounded-2xl bg-linear-to-br ${cfg.gradient} opacity-10 flex items-center justify-center mx-auto mb-4`} />
+          <div className={`w-16 h-16 rounded-2xl bg-linear-to-br ${cfg.gradient} flex items-center justify-center mx-auto -mt-20 mb-4 shadow-sm`}>
             <ChevronDown className="h-7 w-7 text-white" />
           </div>
           <p className="font-semibold text-slate-600 text-sm">Pilih jenis laporan dan tentukan periode</p>

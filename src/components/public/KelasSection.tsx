@@ -120,7 +120,7 @@ export default function KelasSection() {
                 className="group bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-xl hover:border-gray-300 transition-all duration-300"
               >
                 {/* Header with Gradient */}
-                <div className={`relative h-32 bg-gradient-to-br ${colors.bg} p-6 flex items-end`}>
+                <div className={`relative h-32 bg-linear-to-br ${colors.bg} p-6 flex items-end`}>
                   <div className="absolute top-4 right-4">
                     <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center">
                       <GraduationCap className="w-6 h-6 text-white" />

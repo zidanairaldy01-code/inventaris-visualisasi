@@ -151,13 +151,13 @@ function ProfileContent() {
       )}
 
       {/* Header Banner */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-900 text-white p-6 sm:p-8 shadow-xl">
+      <div className="relative overflow-hidden rounded-3xl bg-linear-to-r from-slate-900 via-indigo-950 to-blue-900 text-white p-6 sm:p-8 shadow-xl">
         <div className="absolute top-0 right-0 -mt-12 -mr-12 w-64 h-64 bg-blue-500/20 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-1/3 -mb-12 w-48 h-48 bg-purple-500/20 rounded-full blur-2xl pointer-events-none" />
 
         <div className="relative z-10 flex flex-col sm:flex-row items-center sm:items-start gap-5 text-center sm:text-left">
           <div className="relative group">
-            <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center text-white text-3xl sm:text-4xl font-extrabold shadow-2xl border-4 border-white/20 tracking-wider">
+            <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-linear-to-br from-blue-400 to-indigo-600 flex items-center justify-center text-white text-3xl sm:text-4xl font-extrabold shadow-2xl border-4 border-white/20 tracking-wider">
               {user?.nama_lengkap?.[0]?.toUpperCase() || 'W'}
             </div>
             <div className="absolute -bottom-1 -right-1 bg-emerald-500 text-white p-1.5 rounded-xl ring-4 ring-slate-950 shadow-md">
@@ -201,7 +201,7 @@ function ProfileContent() {
                 : 'bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200/80'
             }`}
           >
-            <User className="h-5 w-5 flex-shrink-0" />
+            <User className="h-5 w-5 shrink-0" />
             <span>Informasi Akun</span>
           </button>
 
@@ -213,12 +213,12 @@ function ProfileContent() {
                 : 'bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200/80'
             }`}
           >
-            <KeyRound className="h-5 w-5 flex-shrink-0" />
+            <KeyRound className="h-5 w-5 shrink-0" />
             <span>Ubah Password</span>
           </button>
 
           {/* Quick Info Card */}
-          <div className="bg-gradient-to-br from-slate-50 to-blue-50/50 rounded-2xl p-4 border border-blue-100 space-y-3 mt-6">
+          <div className="bg-linear-to-br from-slate-50 to-blue-50/50 rounded-2xl p-4 border border-blue-100 space-y-3 mt-6">
             <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Catatan Keamanan</h3>
             <p className="text-xs text-slate-500 leading-relaxed">
               Pastikan informasi profil Anda selalu diperbarui. Gunakan password kombinasi huruf, angka, dan karakter khusus demi menjaga keamanan akun SIM Aset.

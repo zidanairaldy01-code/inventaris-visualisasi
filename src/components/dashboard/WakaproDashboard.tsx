@@ -74,7 +74,7 @@ export default function WakaproDashboard({ user, wakaproStats, loading, onRefres
   return (
     <div className="space-y-6 sm:space-y-8 animate-fadeIn pb-12">
       {/* ── Banner Utama Wakapro (Kepala Bengkel Jurusan) ── */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-6 sm:p-8 shadow-xl text-white relative overflow-hidden border border-indigo-900/40">
+      <div className="bg-linear-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-6 sm:p-8 shadow-xl text-white relative overflow-hidden border border-indigo-900/40">
         <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none -translate-y-16 translate-x-16" />
         <div className="absolute bottom-0 left-1/3 w-64 h-64 bg-blue-600/10 rounded-full blur-3xl pointer-events-none translate-y-16" />
 
@@ -125,7 +125,7 @@ export default function WakaproDashboard({ user, wakaproStats, loading, onRefres
 
       {/* ── Warning Banner jika ada Kiriman Masuk yang Menunggu Konfirmasi BAST ── */}
       {wakaproStats.menunggu_konfirmasi > 0 && (
-        <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/30 rounded-2xl p-5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="bg-linear-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/30 rounded-2xl p-5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-start gap-3.5">
             <div className="p-2.5 bg-amber-500 text-slate-950 rounded-xl font-bold shrink-0 mt-0.5 animate-bounce">
               <ShieldAlert className="h-5 w-5" />
@@ -175,7 +175,7 @@ export default function WakaproDashboard({ user, wakaproStats, loading, onRefres
         </div>
 
         {/* Card 2: Total Nilai Aset / Valuasi Bengkel */}
-        <div className="bg-gradient-to-br from-emerald-500/10 via-white to-white border border-emerald-200/80 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+        <div className="bg-linear-to-br from-emerald-500/10 via-white to-white border border-emerald-200/80 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-3">
               <div className="p-2 bg-emerald-500 text-white rounded-xl shadow-sm">

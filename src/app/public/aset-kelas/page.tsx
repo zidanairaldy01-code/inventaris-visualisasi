@@ -104,7 +104,7 @@ export default function PublicAsetKelasPage() {
   const selectedKelasData = kelasList.find(k => k.id === selectedKelas);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+    <div className="min-h-screen bg-linear-to-br from-slate-900 via-slate-800 to-slate-900">
       {/* Header */}
       <div className="bg-slate-800/50 backdrop-blur-sm border-b border-slate-700/50 sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4">
@@ -234,7 +234,7 @@ export default function PublicAsetKelasPage() {
 
         {/* Info Card */}
         {selectedKelasData && (
-          <div className="bg-gradient-to-r from-blue-500/20 to-indigo-500/20 border border-blue-500/30 rounded-xl p-5">
+          <div className="bg-linear-to-r from-blue-500/20 to-indigo-500/20 border border-blue-500/30 rounded-xl p-5">
             <h3 className="text-lg font-semibold text-white mb-1">
               {selectedJurusanData?.nama_jurusan} - {selectedKelasData.nama_kelas}
             </h3>

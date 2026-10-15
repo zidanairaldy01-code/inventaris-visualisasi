@@ -259,7 +259,7 @@ export default function DistribusiPage() {
       {/* Lightbox */}
       {lightboxUrl && (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+          className="fixed inset-0 z-100 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
           onClick={() => setLightboxUrl(null)}
         >
           <button
@@ -281,7 +281,7 @@ export default function DistribusiPage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>
             <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-sm shadow-blue-500/20">
+              <div className="w-9 h-9 rounded-xl bg-linear-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-sm shadow-blue-500/20">
                 <Truck className="h-5 w-5" />
               </div>
               Distribusi Aset &amp; Riwayat BAST
@@ -423,11 +423,11 @@ export default function DistribusiPage() {
                     <div className="flex items-center gap-2.5 min-w-0 flex-wrap">
                       {/* Tipe badge */}
                       {isBulk ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-700 border border-indigo-200 flex-shrink-0">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-700 border border-indigo-200 shrink-0">
                           <Truck className="h-2.5 w-2.5" /> Bulk
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200 flex-shrink-0">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200 shrink-0">
                           <Package className="h-2.5 w-2.5" /> Single
                         </span>
                       )}
@@ -450,12 +450,12 @@ export default function DistribusiPage() {
                       </span>
 
                       {/* Status */}
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border flex-shrink-0 ${getStatusBadge(grup.status)}`}>
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border shrink-0 ${getStatusBadge(grup.status)}`}>
                         {getStatusIcon(grup.status)} {getStatusLabel(grup.status)}
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-2 flex-shrink-0">
+                    <div className="flex items-center gap-2 shrink-0">
                       {/* Tanggal + pengirim */}
                       <div className="hidden sm:flex flex-col items-end text-right">
                         <span className="text-xs text-slate-500">

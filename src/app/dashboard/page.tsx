@@ -126,7 +126,7 @@ export default function DashboardPage() {
   // Show loading state while checking
   if (isChecking) {
     return (
-      <div className="h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50/20 to-indigo-50/20">
+      <div className="h-screen flex items-center justify-center bg-linear-to-br from-slate-50 via-blue-50/20 to-indigo-50/20">
         <div className="text-center">
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 mb-4">
             <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-600 border-t-transparent" />

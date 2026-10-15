@@ -538,7 +538,7 @@ export default function RuanganWorkshopPage() {
       {!activeWorkshop && (
         <>
           {/* Header Banner */}
-          <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 rounded-2xl p-6 shadow-xl relative overflow-hidden">
+          <div className="bg-linear-to-r from-emerald-600 via-teal-600 to-cyan-600 rounded-2xl p-6 shadow-xl relative overflow-hidden">
             <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl pointer-events-none -translate-y-12 translate-x-12" />
             <div className="flex items-center justify-between relative z-10 flex-wrap gap-4">
               <div className="flex items-center gap-4">
@@ -577,7 +577,7 @@ export default function RuanganWorkshopPage() {
               <div key={label} className={`${bg} border ${border} rounded-xl p-4 shadow-sm relative overflow-hidden`}>
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <div className={`p-2 bg-gradient-to-br ${from} ${to} rounded-lg`}>
+                    <div className={`p-2 bg-linear-to-br ${from} ${to} rounded-lg`}>
                       <Icon className="h-4 w-4 text-white" />
                     </div>
                     <p className={`text-[11px] font-semibold ${text} uppercase tracking-wide`}>{label}</p>
@@ -591,7 +591,7 @@ export default function RuanganWorkshopPage() {
             <div className="bg-violet-50 border border-violet-200 rounded-xl p-4 shadow-sm relative overflow-hidden">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <div className="p-2 bg-gradient-to-br from-violet-500 to-violet-700 rounded-lg">
+                  <div className="p-2 bg-linear-to-br from-violet-500 to-violet-700 rounded-lg">
                     <DollarSign className="h-4 w-4 text-white" />
                   </div>
                   <p className="text-[11px] font-semibold text-violet-900 uppercase tracking-wide">Total Nilai Aset</p>
@@ -803,7 +803,7 @@ export default function RuanganWorkshopPage() {
       {activeWorkshop && (
         <div className="space-y-6 animate-fadeIn">
           {/* Workshop Header Banner */}
-          <div className="bg-gradient-to-r from-teal-700 via-emerald-700 to-cyan-700 rounded-2xl p-6 text-white shadow-xl relative overflow-hidden">
+          <div className="bg-linear-to-r from-teal-700 via-emerald-700 to-cyan-700 rounded-2xl p-6 text-white shadow-xl relative overflow-hidden">
             <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl pointer-events-none -translate-y-12 translate-x-12" />
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
               <div className="flex items-center gap-4">
@@ -1062,7 +1062,7 @@ export default function RuanganWorkshopPage() {
       {showRuanganModal && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-gradient-to-r from-emerald-600 to-teal-600 p-5 flex items-center justify-between z-10">
+            <div className="sticky top-0 bg-linear-to-r from-emerald-600 to-teal-600 p-5 flex items-center justify-between z-10">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-white/20 backdrop-blur-sm rounded-lg">
                   <Wrench className="h-5 w-5 text-white" />
@@ -1208,7 +1208,7 @@ export default function RuanganWorkshopPage() {
       {showAsetModal && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-gradient-to-r from-emerald-600 to-teal-600 p-5 flex items-center justify-between z-10">
+            <div className="sticky top-0 bg-linear-to-r from-emerald-600 to-teal-600 p-5 flex items-center justify-between z-10">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-white/20 backdrop-blur-sm rounded-lg">
                   <Package className="h-5 w-5 text-white" />
@@ -1489,7 +1489,7 @@ export default function RuanganWorkshopPage() {
       {detailRuanganTarget && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-gradient-to-r from-emerald-600 to-teal-600 p-5 flex items-center justify-between z-10">
+            <div className="sticky top-0 bg-linear-to-r from-emerald-600 to-teal-600 p-5 flex items-center justify-between z-10">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-white/20 backdrop-blur-sm rounded-lg">
                   <Wrench className="h-5 w-5 text-white" />
@@ -1575,7 +1575,7 @@ export default function RuanganWorkshopPage() {
       {detailAsetTarget && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-gradient-to-r from-emerald-600 to-teal-600 p-5 flex items-center justify-between z-10">
+            <div className="sticky top-0 bg-linear-to-r from-emerald-600 to-teal-600 p-5 flex items-center justify-between z-10">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-white/20 backdrop-blur-sm rounded-lg">
                   <Package className="h-5 w-5 text-white" />

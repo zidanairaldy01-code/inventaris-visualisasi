@@ -303,7 +303,7 @@ export default function AdminServisPage() {
     <div className="space-y-6 animate-fadeInUp">
       {/* Lightbox */}
       {lightboxUrl && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm" onClick={() => setLightboxUrl(null)}>
+        <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/80 backdrop-blur-sm" onClick={() => setLightboxUrl(null)}>
           <button className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition" onClick={() => setLightboxUrl(null)}>
             <X className="h-6 w-6" />
           </button>
@@ -315,7 +315,7 @@ export default function AdminServisPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center mr-3 shadow-sm shadow-amber-500/20 flex-shrink-0">
+            <div className="w-8 h-8 rounded-xl bg-linear-to-br from-amber-500 to-orange-600 flex items-center justify-center mr-3 shadow-sm shadow-amber-500/20 shrink-0">
               <Wrench className="h-4 w-4 text-white" />
             </div>
             Monitoring Servis & Perbaikan Aset
@@ -332,7 +332,7 @@ export default function AdminServisPage() {
             <Plus className="h-4 w-4 mr-1.5 text-slate-500" />
             Input Servis Langsung
           </button>
-          <button onClick={openLaporModal} className="flex items-center px-4 py-2.5 bg-gradient-to-r from-amber-600 to-orange-600 text-white hover:from-amber-700 hover:to-orange-700 rounded-xl font-semibold text-sm transition-all shadow-sm shadow-amber-500/20">
+          <button onClick={openLaporModal} className="flex items-center px-4 py-2.5 bg-linear-to-r from-amber-600 to-orange-600 text-white hover:from-amber-700 hover:to-orange-700 rounded-xl font-semibold text-sm transition-all shadow-sm shadow-amber-500/20">
             <SendHorizonal className="h-4 w-4 mr-1.5" />
             Lapor ke Wakasek
           </button>
@@ -341,15 +341,15 @@ export default function AdminServisPage() {
 
       {/* Alert: ada yang perlu diverifikasi */}
       {totalProses > 0 && (
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-2xl p-4 flex items-center gap-3">
-          <div className="p-2 bg-blue-500 text-white rounded-xl flex-shrink-0 animate-pulse">
+        <div className="bg-linear-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-2xl p-4 flex items-center gap-3">
+          <div className="p-2 bg-blue-500 text-white rounded-xl shrink-0 animate-pulse">
             <ShieldCheck className="h-5 w-5" />
           </div>
           <div>
             <p className="text-sm font-bold text-blue-800">{totalProses} Servis Menunggu Verifikasi Penyelesaian dari Anda (Admin)</p>
             <p className="text-xs text-blue-600 mt-0.5">Klik tombol &quot;Verifikasi Selesai&quot; setelah proses perbaikan nyata selesai dilakukan — kondisi barang akan otomatis pulih ke Baik.</p>
           </div>
-          <button onClick={() => setStatusFilter('Proses')} className="ml-auto px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-xl hover:bg-blue-700 transition-colors flex-shrink-0">
+          <button onClick={() => setStatusFilter('Proses')} className="ml-auto px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-xl hover:bg-blue-700 transition-colors shrink-0">
             Lihat Sekarang
           </button>
         </div>
@@ -369,7 +369,7 @@ export default function AdminServisPage() {
           <div className="flex items-center gap-2 mb-2"><CheckCircle2 className="h-4 w-4 text-emerald-600" /><p className="text-xs font-semibold text-emerald-700 uppercase tracking-wider">Selesai</p></div>
           <p className="text-3xl font-extrabold text-emerald-800">{totalSelesai}</p>
         </div>
-        <div className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl p-4 text-white shadow-sm shadow-amber-500/20">
+        <div className="bg-linear-to-br from-amber-500 to-orange-600 rounded-2xl p-4 text-white shadow-sm shadow-amber-500/20">
           <div className="flex items-center gap-2 mb-2"><DollarSign className="h-4 w-4 text-amber-100" /><p className="text-xs font-semibold text-amber-100 uppercase tracking-wider">Total Biaya</p></div>
           <p className="text-lg font-extrabold leading-tight">{formatRupiah(totalBiaya)}</p>
           <p className="text-[11px] text-amber-100 mt-1">Servis selesai saja</p>
@@ -550,7 +550,7 @@ export default function AdminServisPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => !selesaiSubmitting && setSelesaiModal(null)} />
           <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-            <div className="flex items-center justify-between p-5 border-b border-emerald-100 bg-gradient-to-r from-emerald-50 to-teal-50">
+            <div className="flex items-center justify-between p-5 border-b border-emerald-100 bg-linear-to-r from-emerald-50 to-teal-50">
               <div>
                 <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
                   <ShieldCheck className="h-4 w-4 text-emerald-600" />
@@ -600,7 +600,7 @@ export default function AdminServisPage() {
               </div>
 
               <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex items-start gap-2">
-                <AlertTriangle className="h-4 w-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+                <AlertTriangle className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
                 <p className="text-xs text-emerald-700">
                   Tindakan ini akan mengubah status servis menjadi <strong>Selesai</strong> dan kondisi aset secara otomatis kembali menjadi <strong>Baik</strong>. Notifikasi akan dikirim ke Wakapro dan Wakasek.
                 </p>
@@ -747,7 +747,7 @@ export default function AdminServisPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60" onClick={() => !laporSubmitting && setIsLaporModalOpen(false)} />
           <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="flex items-center justify-between p-5 border-b border-slate-100 bg-gradient-to-r from-amber-50 to-orange-50">
+            <div className="flex items-center justify-between p-5 border-b border-slate-100 bg-linear-to-r from-amber-50 to-orange-50">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-sm">
                   <SendHorizonal className="h-4 w-4" />
@@ -852,7 +852,7 @@ export default function AdminServisPage() {
 
               {/* Notice Box Alur Workflow */}
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-2.5">
-                <AlertTriangle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
                 <div className="text-xs text-amber-800 space-y-0.5">
                   <p className="font-semibold">Alur Persetujuan ke Wakasek:</p>
                   <p className="text-amber-700 leading-relaxed">
@@ -865,7 +865,7 @@ export default function AdminServisPage() {
                 <button type="button" onClick={() => !laporSubmitting && setIsLaporModalOpen(false)} className="px-4 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl">
                   Batal
                 </button>
-                <button type="submit" disabled={laporSubmitting} className="flex items-center px-5 py-2 text-xs font-semibold text-white bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 rounded-xl disabled:opacity-50 shadow-sm">
+                <button type="submit" disabled={laporSubmitting} className="flex items-center px-5 py-2 text-xs font-semibold text-white bg-linear-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 rounded-xl disabled:opacity-50 shadow-sm">
                   {laporSubmitting && <Loader2 className="animate-spin h-3.5 w-3.5 mr-1.5" />}
                   <SendHorizonal className="h-3.5 w-3.5 mr-1.5" />
                   Kirim Pengajuan ke Wakasek

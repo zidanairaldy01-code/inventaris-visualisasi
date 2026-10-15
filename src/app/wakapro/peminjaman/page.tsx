@@ -253,7 +253,7 @@ export default function WakaproPeminjamanPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center mr-3 shadow-sm shadow-indigo-500/20 flex-shrink-0">
+            <div className="w-8 h-8 rounded-xl bg-linear-to-br from-indigo-500 to-purple-600 flex items-center justify-center mr-3 shadow-sm shadow-indigo-500/20 shrink-0">
               <Handshake className="h-4 w-4 text-white" />
             </div>
             Peminjaman Barang Workshop
@@ -279,7 +279,7 @@ export default function WakaproPeminjamanPage() {
           </button>
           <button
             onClick={openAddModal}
-            className="flex items-center px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 rounded-xl font-semibold text-sm transition-all shadow-sm shadow-indigo-500/20"
+            className="flex items-center px-4 py-2.5 bg-linear-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 rounded-xl font-semibold text-sm transition-all shadow-sm shadow-indigo-500/20"
           >
             <Plus className="h-4 w-4 mr-1.5" />
             Catat Peminjaman
@@ -289,7 +289,7 @@ export default function WakaproPeminjamanPage() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl p-5 text-white shadow-sm shadow-indigo-500/20">
+        <div className="bg-linear-to-br from-indigo-600 to-purple-600 rounded-2xl p-5 text-white shadow-sm shadow-indigo-500/20">
           <div className="flex items-center space-x-2 mb-2">
             <Clock className="h-4 w-4 text-indigo-100" />
             <p className="text-xs font-semibold text-indigo-100 uppercase tracking-wider">Sedang Dipinjam</p>

@@ -560,7 +560,7 @@ export default function InventarisWorkshopPage() {
               {/* Banner Info Notifikasi Otomatis ke Admin jika Rusak */}
               {['Rusak Ringan', 'Rusak Berat', 'Tidak Layak Pakai'].includes(selectedKondisi) && (
                 <div className="p-3.5 bg-amber-50 border border-amber-200/80 rounded-xl flex items-start gap-2.5 text-xs text-amber-800 animate-fadeIn">
-                  <AlertTriangle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
                   <div>
                     <p className="font-bold text-amber-900">Notifikasi Otomatis ke Administrator</p>
                     <p className="text-[11px] text-amber-700 mt-0.5 leading-relaxed">

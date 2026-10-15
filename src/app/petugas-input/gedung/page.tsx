@@ -7,7 +7,7 @@ import {
   Building2, Search, Plus, Edit2, Trash2, RefreshCw,
   MapPin, Layers, X, Save, AlertTriangle, ChevronLeft,
   ChevronRight, ArrowLeft, Grid,
-  List as ListIcon, Package
+  List as ListIcon, Package, LayoutList, ClipboardList
 } from 'lucide-react';
 import Toast from '@/components/Toast';
 
@@ -167,6 +167,7 @@ export default function GedungDrivePage() {
 
   // Aset CRUD
   const [showAsetModal, setShowAsetModal] = useState(false);
+  const [asetInputMode, setAsetInputMode] = useState<'single' | 'bulk'>('single');
   const [editAsetTarget, setEditAsetTarget] = useState<Aset | null>(null);
   const [asetForm, setAsetForm] = useState({
     nama_aset: '',
@@ -185,6 +186,35 @@ export default function GedungDrivePage() {
   const [asetFotoPreview, setAsetFotoPreview] = useState<string | null>(null);
   const [deleteAsetTarget, setDeleteAsetTarget] = useState<Aset | null>(null);
   const [deletingAset, setDeletingAset] = useState(false);
+
+  // Bulk aset input
+  interface BulkAsetRow {
+    id: string;
+    nama_aset: string;
+    kode_aset: string;
+    merek: string;
+    tipe: string;
+    warna: string;
+    jumlah: string;
+    satuan: string;
+    harga_perolehan: string;
+    id_kondisi: string;
+  }
+  const emptyBulkRow = (): BulkAsetRow => ({
+    id: Math.random().toString(36).slice(2),
+    nama_aset: '',
+    kode_aset: '',
+    merek: '',
+    tipe: '',
+    warna: '',
+    jumlah: '1',
+    satuan: 'Unit',
+    harga_perolehan: '',
+    id_kondisi: '1',
+  });
+  const [bulkRows, setBulkRows] = useState<BulkAsetRow[]>([emptyBulkRow(), emptyBulkRow(), emptyBulkRow()]);
+  const [savingBulk, setSavingBulk] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number } | null>(null);
   
   // Master data
   const [kondisiList, setKondisiList] = useState<{ id: number; nama_kondisi: string }[]>(DEFAULT_KONDISIS);
@@ -479,6 +509,7 @@ export default function GedungDrivePage() {
       return;
     }
     setEditAsetTarget(null);
+    setAsetInputMode('single');
     setAsetForm({
       nama_aset: '',
       kode_aset: '',
@@ -491,6 +522,7 @@ export default function GedungDrivePage() {
       id_kondisi: String(kondisiList[0]?.id ?? 1),
       deskripsi: '',
     });
+    setBulkRows([emptyBulkRow(), emptyBulkRow(), emptyBulkRow()]);
     setAsetFoto(null);
     setAsetFotoPreview(null);
     setShowAsetModal(true);
@@ -576,6 +608,45 @@ export default function GedungDrivePage() {
     } finally { setDeletingAset(false); }
   };
 
+  /* ── BULK ASET HANDLER ── */
+  const handleSaveBulkAset = async () => {
+    const ruanganId = activeRuanganId;
+    if (!ruanganId) { showToast('Pilih ruangan terlebih dahulu', 'error'); return; }
+    const validRows = bulkRows.filter(r => r.nama_aset.trim() !== '');
+    if (validRows.length === 0) { showToast('Isi minimal satu nama aset', 'error'); return; }
+    try {
+      setSavingBulk(true);
+      setBulkProgress({ done: 0, total: validRows.length });
+      for (let i = 0; i < validRows.length; i++) {
+        const row = validRows[i];
+        const fd = new FormData();
+        fd.append('nama_aset', row.nama_aset.trim());
+        if (row.kode_aset) fd.append('kode_aset', row.kode_aset.trim());
+        if (row.merek) fd.append('merek', row.merek.trim());
+        if (row.tipe) fd.append('tipe', row.tipe.trim());
+        if (row.warna) fd.append('warna', row.warna.trim());
+        fd.append('jumlah', row.jumlah || '1');
+        fd.append('satuan', row.satuan || 'Unit');
+        if (row.harga_perolehan) fd.append('harga_perolehan', row.harga_perolehan);
+        fd.append('id_kondisi', row.id_kondisi || String(kondisiList[0]?.id ?? 1));
+        fd.append('id_ruangan', String(ruanganId));
+        fd.append('tahun_perolehan', String(new Date().getFullYear()));
+        fd.append('status_aset', 'aktif');
+        await axios.post('/api/asets', fd);
+        setBulkProgress({ done: i + 1, total: validRows.length });
+      }
+      showToast(`${validRows.length} aset berhasil disimpan`, 'success');
+      setShowAsetModal(false);
+      fetchAsets(); fetchRuangans(); fetchGedungs();
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      showToast(e?.response?.data?.message || 'Gagal menyimpan sebagian aset', 'error');
+    } finally {
+      setSavingBulk(false);
+      setBulkProgress(null);
+    }
+  };
+
   /* ── Pagination ── */
   const totalPages = activeRuanganId !== null 
     ? Math.ceil(filteredAsets.length / PER_PAGE)
@@ -592,7 +663,7 @@ export default function GedungDrivePage() {
       )}
 
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-2xl p-6 shadow-xl relative overflow-hidden">
+      <div className="bg-linear-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-2xl p-6 shadow-xl relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl pointer-events-none -translate-y-12 translate-x-12" />
         <div className="flex items-center justify-between relative z-10 flex-wrap gap-4">
           <div className="flex items-center gap-4">
@@ -703,7 +774,7 @@ export default function GedungDrivePage() {
           ].map(({ label, value, icon: Icon, from, to, bg, border, text }) => (
             <div key={label} className={`${bg} border ${border} rounded-xl p-4 shadow-sm`}>
               <div className="flex items-center gap-2 mb-1.5">
-                <div className={`p-2 bg-gradient-to-br ${from} ${to} rounded-lg`}>
+                <div className={`p-2 bg-linear-to-br ${from} ${to} rounded-lg`}>
                   <Icon className="h-4 w-4 text-white" />
                 </div>
                 <p className={`text-[11px] font-semibold ${text} uppercase tracking-wide`}>{label}</p>
@@ -775,7 +846,7 @@ export default function GedungDrivePage() {
                     className="relative bg-white overflow-hidden rounded-2xl border border-slate-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 p-5 cursor-pointer flex flex-col justify-between group"
                   >
                     {/* Gradient strip top — muncul saat hover, sama persis dengan dashboard */}
-                    <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${color.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
+                    <div className={`absolute top-0 left-0 right-0 h-1 bg-linear-to-r ${color.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
 
                     <div>
                       <div className="flex items-start justify-between mb-3">
@@ -917,7 +988,7 @@ export default function GedungDrivePage() {
                         className="relative bg-white overflow-hidden rounded-2xl border border-slate-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 p-5 cursor-pointer flex flex-col justify-between group"
                       >
                         {/* Gradient strip top */}
-                        <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${color.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
+                        <div className={`absolute top-0 left-0 right-0 h-1 bg-linear-to-r ${color.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
 
                         <div>
                           <div className="flex items-start justify-between mb-3">
@@ -1453,7 +1524,8 @@ export default function GedungDrivePage() {
       {/* ════════ ASET CREATE / EDIT MODAL ════════ */}
       {showAsetModal && createPortal(
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl max-h-[85vh] flex flex-col">
+          <div className="bg-white rounded-2xl w-full max-w-3xl shadow-2xl max-h-[90vh] flex flex-col">
+            {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
               <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
                 <Package className="h-5 w-5 text-indigo-600" />
@@ -1464,172 +1536,388 @@ export default function GedungDrivePage() {
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Nama Aset <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={asetForm.nama_aset}
-                    onChange={e => setAsetForm(f => ({ ...f, nama_aset: e.target.value }))}
-                    placeholder="Contoh: Kursi Kuliah, Meja Guru, Proyektor..."
-                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
+            {/* Mode Tabs — hanya tampil saat Create (bukan Edit) */}
+            {!editAsetTarget && (
+              <div className="px-6 pt-4 pb-0 flex gap-2">
+                <button
+                  onClick={() => setAsetInputMode('single')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-t-lg text-sm font-semibold border-b-2 transition-colors ${
+                    asetInputMode === 'single'
+                      ? 'border-indigo-600 text-indigo-700 bg-indigo-50'
+                      : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                  }`}
+                >
+                  <LayoutList className="h-4 w-4" />
+                  Satu Aset
+                </button>
+                <button
+                  onClick={() => setAsetInputMode('bulk')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-t-lg text-sm font-semibold border-b-2 transition-colors ${
+                    asetInputMode === 'bulk'
+                      ? 'border-indigo-600 text-indigo-700 bg-indigo-50'
+                      : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                  }`}
+                >
+                  <ClipboardList className="h-4 w-4" />
+                  Input Massal
+                  <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-700">
+                    {bulkRows.filter(r => r.nama_aset.trim()).length || bulkRows.length} baris
+                  </span>
+                </button>
+              </div>
+            )}
+
+            {/* ── SINGLE MODE ── */}
+            {(editAsetTarget || asetInputMode === 'single') && (
+              <>
+                <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="col-span-2">
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Nama Aset <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={asetForm.nama_aset}
+                        onChange={e => setAsetForm(f => ({ ...f, nama_aset: e.target.value }))}
+                        placeholder="Contoh: Kursi Kuliah, Meja Guru, Proyektor..."
+                        className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">Kode Aset</label>
+                      <input
+                        type="text"
+                        value={asetForm.kode_aset}
+                        onChange={e => setAsetForm(f => ({ ...f, kode_aset: e.target.value }))}
+                        placeholder="AST-001"
+                        className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">Merek</label>
+                      <input
+                        type="text"
+                        value={asetForm.merek}
+                        onChange={e => setAsetForm(f => ({ ...f, merek: e.target.value }))}
+                        placeholder="Merek aset"
+                        className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">Tipe</label>
+                      <input
+                        type="text"
+                        value={asetForm.tipe}
+                        onChange={e => setAsetForm(f => ({ ...f, tipe: e.target.value }))}
+                        placeholder="Tipe aset"
+                        className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">Warna</label>
+                      <input
+                        type="text"
+                        value={asetForm.warna}
+                        onChange={e => setAsetForm(f => ({ ...f, warna: e.target.value }))}
+                        placeholder="Warna aset"
+                        className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">Jumlah</label>
+                      <input
+                        type="number"
+                        value={asetForm.jumlah}
+                        onChange={e => setAsetForm(f => ({ ...f, jumlah: e.target.value }))}
+                        min="1"
+                        className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">Satuan</label>
+                      <input
+                        type="text"
+                        value={asetForm.satuan}
+                        onChange={e => setAsetForm(f => ({ ...f, satuan: e.target.value }))}
+                        placeholder="Unit, Pcs, Set..."
+                        className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">Harga Perolehan</label>
+                      <input
+                        type="number"
+                        value={asetForm.harga_perolehan}
+                        onChange={e => setAsetForm(f => ({ ...f, harga_perolehan: e.target.value }))}
+                        placeholder="0"
+                        min="0"
+                        className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">Kondisi</label>
+                      <select
+                        value={asetForm.id_kondisi || String(kondisiList.find(k => k.nama_kondisi.toLowerCase() === 'baik')?.id ?? 1)}
+                        onChange={e => setAsetForm(f => ({ ...f, id_kondisi: e.target.value }))}
+                        className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      >
+                        {kondisiList.map(k => (
+                          <option key={k.id} value={k.id}>{k.nama_kondisi}{k.nama_kondisi.toLowerCase() === 'baik' ? ' (Default)' : ''}</option>
+                        ))}
+                      </select>
+                      <p className="text-[11px] text-slate-400 mt-1">
+                        Kondisi awal otomatis diset &quot;Baik&quot;. Anda dapat mengubahnya jika perlu.
+                      </p>
+                    </div>
+
+                    <div className="col-span-2">
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">Deskripsi</label>
+                      <textarea
+                        value={asetForm.deskripsi}
+                        onChange={e => setAsetForm(f => ({ ...f, deskripsi: e.target.value }))}
+                        placeholder="Deskripsi aset..."
+                        rows={2}
+                        className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                      />
+                    </div>
+
+                    <div className="col-span-2">
+                      <label className="block text-xs font-semibold text-slate-700 mb-1.5">Foto Aset</label>
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={e => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              setAsetFoto(file);
+                              const reader = new FileReader();
+                              reader.onloadend = () => setAsetFotoPreview(reader.result as string);
+                              reader.readAsDataURL(file);
+                            }
+                          }}
+                          className="text-xs text-slate-600 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-600 hover:file:bg-indigo-100"
+                        />
+                        {asetFotoPreview && (
+                          <img
+                            src={asetFotoPreview}
+                            alt="Preview"
+                            className="w-16 h-16 rounded-lg object-cover border border-slate-200"
+                          />
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Kode Aset</label>
-                  <input
-                    type="text"
-                    value={asetForm.kode_aset}
-                    onChange={e => setAsetForm(f => ({ ...f, kode_aset: e.target.value }))}
-                    placeholder="AST-001"
-                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Merek</label>
-                  <input
-                    type="text"
-                    value={asetForm.merek}
-                    onChange={e => setAsetForm(f => ({ ...f, merek: e.target.value }))}
-                    placeholder="Merek aset"
-                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Tipe</label>
-                  <input
-                    type="text"
-                    value={asetForm.tipe}
-                    onChange={e => setAsetForm(f => ({ ...f, tipe: e.target.value }))}
-                    placeholder="Tipe aset"
-                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Warna</label>
-                  <input
-                    type="text"
-                    value={asetForm.warna}
-                    onChange={e => setAsetForm(f => ({ ...f, warna: e.target.value }))}
-                    placeholder="Warna aset"
-                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Jumlah</label>
-                  <input
-                    type="number"
-                    value={asetForm.jumlah}
-                    onChange={e => setAsetForm(f => ({ ...f, jumlah: e.target.value }))}
-                    min="1"
-                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Satuan</label>
-                  <input
-                    type="text"
-                    value={asetForm.satuan}
-                    onChange={e => setAsetForm(f => ({ ...f, satuan: e.target.value }))}
-                    placeholder="Unit, Pcs, Set..."
-                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Harga Perolehan</label>
-                  <input
-                    type="number"
-                    value={asetForm.harga_perolehan}
-                    onChange={e => setAsetForm(f => ({ ...f, harga_perolehan: e.target.value }))}
-                    placeholder="0"
-                    min="0"
-                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Kondisi</label>
-                  <select
-                    value={asetForm.id_kondisi || String(kondisiList.find(k => k.nama_kondisi.toLowerCase() === 'baik')?.id ?? 1)}
-                    onChange={e => setAsetForm(f => ({ ...f, id_kondisi: e.target.value }))}
-                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                <div className="px-6 py-4 border-t border-slate-100 flex gap-3">
+                  <button
+                    onClick={() => setShowAsetModal(false)}
+                    disabled={savingAset}
+                    className="flex-1 py-2.5 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 text-sm font-medium transition-colors"
                   >
-                    {kondisiList.map(k => (
-                      <option key={k.id} value={k.id}>{k.nama_kondisi}{k.nama_kondisi.toLowerCase() === 'baik' ? ' (Default)' : ''}</option>
-                    ))}
-                  </select>
-                  <p className="text-[11px] text-slate-400 mt-1">
-                    Kondisi awal otomatis diset &quot;Baik&quot;. Anda dapat mengubahnya jika perlu.
+                    Batal
+                  </button>
+                  <button
+                    onClick={handleSaveAset}
+                    disabled={savingAset}
+                    className="flex-1 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:opacity-50 text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                  >
+                    {savingAset ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                    {savingAset ? 'Simpan...' : 'Simpan Aset'}
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* ── BULK MODE ── */}
+            {!editAsetTarget && asetInputMode === 'bulk' && (
+              <>
+                <div className="flex-1 overflow-y-auto px-6 py-4">
+                  {/* Info Banner */}
+                  <div className="mb-4 p-3 bg-indigo-50 border border-indigo-200 rounded-xl flex items-start gap-2">
+                    <ClipboardList className="h-4 w-4 text-indigo-600 mt-0.5 shrink-0" />
+                    <p className="text-xs text-indigo-700">
+                      Isi tabel di bawah untuk menambah beberapa aset sekaligus. Baris yang <strong>Nama Aset</strong>-nya kosong akan diabaikan.
+                    </p>
+                  </div>
+
+                  {/* Progress Bar (saat menyimpan) */}
+                  {bulkProgress && (
+                    <div className="mb-4">
+                      <div className="flex justify-between text-xs text-slate-600 mb-1">
+                        <span>Menyimpan aset...</span>
+                        <span>{bulkProgress.done}/{bulkProgress.total}</span>
+                      </div>
+                      <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-indigo-600 rounded-full transition-all duration-300"
+                          style={{ width: `${(bulkProgress.done / bulkProgress.total) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Tabel Bulk */}
+                  <div className="overflow-x-auto rounded-xl border border-slate-200">
+                    <table className="w-full text-xs">
+                      <thead className="bg-slate-50 border-b border-slate-200">
+                        <tr>
+                          <th className="px-3 py-2.5 text-left font-semibold text-slate-600 w-6">#</th>
+                          <th className="px-3 py-2.5 text-left font-semibold text-slate-600 min-w-[160px]">
+                            Nama Aset <span className="text-red-500">*</span>
+                          </th>
+                          <th className="px-3 py-2.5 text-left font-semibold text-slate-600 min-w-[100px]">Kode Aset</th>
+                          <th className="px-3 py-2.5 text-left font-semibold text-slate-600 min-w-[100px]">Merek</th>
+                          <th className="px-3 py-2.5 text-left font-semibold text-slate-600 min-w-[100px]">Tipe</th>
+                          <th className="px-3 py-2.5 text-left font-semibold text-slate-600 w-[70px]">Jumlah</th>
+                          <th className="px-3 py-2.5 text-left font-semibold text-slate-600 w-[80px]">Satuan</th>
+                          <th className="px-3 py-2.5 text-left font-semibold text-slate-600 min-w-[110px]">Kondisi</th>
+                          <th className="px-3 py-2.5 text-center font-semibold text-slate-600 w-8"></th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {bulkRows.map((row, idx) => (
+                          <tr key={row.id} className={`${row.nama_aset.trim() ? 'bg-white' : 'bg-slate-50/50'} hover:bg-indigo-50/30 transition-colors`}>
+                            <td className="px-3 py-2 text-slate-400 font-mono text-center">{idx + 1}</td>
+                            <td className="px-2 py-1.5">
+                              <input
+                                type="text"
+                                value={row.nama_aset}
+                                onChange={e => setBulkRows(rows => rows.map(r => r.id === row.id ? { ...r, nama_aset: e.target.value } : r))}
+                                placeholder="Nama aset..."
+                                className="w-full border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
+                              />
+                            </td>
+                            <td className="px-2 py-1.5">
+                              <input
+                                type="text"
+                                value={row.kode_aset}
+                                onChange={e => setBulkRows(rows => rows.map(r => r.id === row.id ? { ...r, kode_aset: e.target.value } : r))}
+                                placeholder="AST-001"
+                                className="w-full border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
+                              />
+                            </td>
+                            <td className="px-2 py-1.5">
+                              <input
+                                type="text"
+                                value={row.merek}
+                                onChange={e => setBulkRows(rows => rows.map(r => r.id === row.id ? { ...r, merek: e.target.value } : r))}
+                                placeholder="Merek"
+                                className="w-full border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
+                              />
+                            </td>
+                            <td className="px-2 py-1.5">
+                              <input
+                                type="text"
+                                value={row.tipe}
+                                onChange={e => setBulkRows(rows => rows.map(r => r.id === row.id ? { ...r, tipe: e.target.value } : r))}
+                                placeholder="Tipe"
+                                className="w-full border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
+                              />
+                            </td>
+                            <td className="px-2 py-1.5">
+                              <input
+                                type="number"
+                                value={row.jumlah}
+                                onChange={e => setBulkRows(rows => rows.map(r => r.id === row.id ? { ...r, jumlah: e.target.value } : r))}
+                                min="1"
+                                className="w-full border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-center focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
+                              />
+                            </td>
+                            <td className="px-2 py-1.5">
+                              <input
+                                type="text"
+                                value={row.satuan}
+                                onChange={e => setBulkRows(rows => rows.map(r => r.id === row.id ? { ...r, satuan: e.target.value } : r))}
+                                placeholder="Unit"
+                                className="w-full border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
+                              />
+                            </td>
+                            <td className="px-2 py-1.5">
+                              <select
+                                value={row.id_kondisi}
+                                onChange={e => setBulkRows(rows => rows.map(r => r.id === row.id ? { ...r, id_kondisi: e.target.value } : r))}
+                                className="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
+                              >
+                                {kondisiList.map(k => (
+                                  <option key={k.id} value={k.id}>{k.nama_kondisi}</option>
+                                ))}
+                              </select>
+                            </td>
+                            <td className="px-2 py-1.5 text-center">
+                              <button
+                                onClick={() => setBulkRows(rows => rows.length > 1 ? rows.filter(r => r.id !== row.id) : rows)}
+                                className="p-1 text-slate-300 hover:text-red-500 transition-colors rounded"
+                                title="Hapus baris"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Add Row Buttons */}
+                  <div className="flex items-center gap-2 mt-3">
+                    <button
+                      onClick={() => setBulkRows(rows => [...rows, emptyBulkRow()])}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-lg transition-colors"
+                    >
+                      <Plus className="h-3.5 w-3.5" /> Tambah 1 Baris
+                    </button>
+                    <button
+                      onClick={() => setBulkRows(rows => [...rows, emptyBulkRow(), emptyBulkRow(), emptyBulkRow(), emptyBulkRow(), emptyBulkRow()])}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-600 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors"
+                    >
+                      <Plus className="h-3.5 w-3.5" /> +5 Baris
+                    </button>
+                    <button
+                      onClick={() => setBulkRows(rows => rows.filter(r => r.nama_aset.trim() !== ''))}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-500 bg-slate-50 hover:bg-red-50 hover:text-red-600 hover:border-red-200 border border-slate-200 rounded-lg transition-colors ml-auto"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" /> Hapus Baris Kosong
+                    </button>
+                  </div>
+
+                  {/* Summary */}
+                  <p className="text-xs text-slate-400 mt-2">
+                    <span className="font-semibold text-indigo-600">{bulkRows.filter(r => r.nama_aset.trim()).length}</span> dari {bulkRows.length} baris akan disimpan
                   </p>
                 </div>
 
-                <div className="col-span-2">
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Deskripsi</label>
-                  <textarea
-                    value={asetForm.deskripsi}
-                    onChange={e => setAsetForm(f => ({ ...f, deskripsi: e.target.value }))}
-                    placeholder="Deskripsi aset..."
-                    rows={2}
-                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-                  />
+                <div className="px-6 py-4 border-t border-slate-100 flex gap-3">
+                  <button
+                    onClick={() => setShowAsetModal(false)}
+                    disabled={savingBulk}
+                    className="flex-1 py-2.5 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 text-sm font-medium transition-colors"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    onClick={handleSaveBulkAset}
+                    disabled={savingBulk || bulkRows.filter(r => r.nama_aset.trim()).length === 0}
+                    className="flex-1 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:opacity-50 text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                  >
+                    {savingBulk
+                      ? <><RefreshCw className="h-4 w-4 animate-spin" /> Menyimpan {bulkProgress?.done ?? 0}/{bulkProgress?.total ?? 0}...</>
+                      : <><Save className="h-4 w-4" /> Simpan {bulkRows.filter(r => r.nama_aset.trim()).length} Aset Sekaligus</>
+                    }
+                  </button>
                 </div>
-
-                <div className="col-span-2">
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Foto Aset</label>
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={e => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          setAsetFoto(file);
-                          const reader = new FileReader();
-                          reader.onloadend = () => setAsetFotoPreview(reader.result as string);
-                          reader.readAsDataURL(file);
-                        }
-                      }}
-                      className="text-xs text-slate-600 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-600 hover:file:bg-indigo-100"
-                    />
-                    {asetFotoPreview && (
-                      <img 
-                        src={asetFotoPreview} 
-                        alt="Preview" 
-                        className="w-16 h-16 rounded-lg object-cover border border-slate-200" 
-                      />
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="px-6 py-4 border-t border-slate-100 flex gap-3">
-              <button
-                onClick={() => setShowAsetModal(false)}
-                disabled={savingAset}
-                className="flex-1 py-2.5 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 text-sm font-medium transition-colors"
-              >
-                Batal
-              </button>
-              <button
-                onClick={handleSaveAset}
-                disabled={savingAset}
-                className="flex-1 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:opacity-50 text-sm font-medium transition-colors flex items-center justify-center gap-2"
-              >
-                {savingAset ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                {savingAset ? 'Simpan...' : 'Simpan Aset'}
-              </button>
-            </div>
+              </>
+            )}
           </div>
         </div>,
         document.body

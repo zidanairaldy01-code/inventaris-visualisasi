@@ -127,7 +127,7 @@ export default function HistoryPage() {
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="bg-gradient-to-r from-indigo-600 to-indigo-500 rounded-lg p-5 shadow-lg">
+      <div className="bg-linear-to-r from-indigo-600 to-indigo-500 rounded-lg p-5 shadow-lg">
         <div className="flex items-center gap-3">
           <div className="p-3 bg-white/20 rounded-lg">
             <HistoryIcon className="h-8 w-8 text-white" />
@@ -248,7 +248,7 @@ export default function HistoryPage() {
                   className="flex gap-4 p-4 bg-slate-50 rounded-lg border border-slate-200 hover:border-indigo-300 hover:shadow-md transition-all"
                 >
                   {/* Icon */}
-                  <div className="flex-shrink-0">
+                  <div className="shrink-0">
                     <div className="p-3 bg-white rounded-lg border border-slate-200 shadow-sm">
                       {getAksiIcon(history.aksi)}
                     </div>
