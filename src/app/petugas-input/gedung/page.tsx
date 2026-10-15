@@ -7,11 +7,8 @@ import {
   Building2, Search, Plus, Edit2, Trash2, RefreshCw,
   MapPin, Layers, X, Save, AlertTriangle, ChevronLeft,
   ChevronRight, ArrowLeft, Grid,
-<<<<<<< HEAD
-  List as ListIcon, Package, LayoutList, ClipboardList
-=======
-  List as ListIcon, Package, ZoomIn
->>>>>>> d038f4fa42427bf6a174c961998d33361e52311e
+  List as ListIcon, Package, ZoomIn, Eye,
+  LayoutList, ClipboardList
 } from 'lucide-react';
 import Toast from '@/components/Toast';
 import { showErrorAlert } from '@/utils/errorHandler';
