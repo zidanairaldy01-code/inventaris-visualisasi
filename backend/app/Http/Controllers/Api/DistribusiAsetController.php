@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use App\Services\SupabaseStorageService;
 
 class DistribusiAsetController extends Controller
 {
@@ -386,10 +387,10 @@ class DistribusiAsetController extends Controller
 
             $fotoKerusakanPath = $distribusi->foto_kerusakan;
             if ($request->hasFile('foto_kerusakan')) {
-                if ($fotoKerusakanPath && Storage::disk('public')->exists($fotoKerusakanPath)) {
-                    Storage::disk('public')->delete($fotoKerusakanPath);
+                if ($fotoKerusakanPath) {
+                    $this->deleteFotoKerusakan($fotoKerusakanPath);
                 }
-                $fotoKerusakanPath = $request->file('foto_kerusakan')->store('distribusi/kerusakan', 'public');
+                $fotoKerusakanPath = $this->uploadFotoKerusakan($request->file('foto_kerusakan'));
             }
 
             // Generate Nomor BAST: BAST-YYYYMM-XXXX
@@ -1165,5 +1166,58 @@ class DistribusiAsetController extends Controller
         }
 
         return response()->json(array_values($grouped));
+    }
+
+    /**
+     * Upload foto kerusakan ke Supabase Storage (fallback ke local).
+     */
+    private function uploadFotoKerusakan($file): string
+    {
+        $hasSupabase = !empty(config('services.supabase.url'))
+            && !empty(config('services.supabase.service_key'));
+
+        if ($hasSupabase) {
+            try {
+                $supabase = app(SupabaseStorageService::class);
+                $result   = $supabase->uploadWithHash($file, 'distribusi/kerusakan');
+                if (!empty($result['url'])) {
+                    return $result['url'];
+                }
+            } catch (\Throwable $e) {
+                \Log::warning('Supabase upload gagal untuk foto_kerusakan distribusi, fallback ke local: ' . $e->getMessage());
+            }
+        }
+
+        // Fallback: simpan ke local public storage
+        return $file->store('distribusi/kerusakan', 'public');
+    }
+
+    /**
+     * Hapus foto kerusakan dari Supabase atau local storage.
+     */
+    private function deleteFotoKerusakan(?string $path): void
+    {
+        if (empty($path)) return;
+
+        if (str_contains($path, 'supabase')) {
+            try {
+                $supabase = app(SupabaseStorageService::class);
+                $urlParts = parse_url($path);
+                if (isset($urlParts['path'])) {
+                    $segments = explode('/', trim($urlParts['path'], '/'));
+                    $filePath = implode('/', array_slice($segments, 5));
+                    $supabase->delete($filePath);
+                }
+            } catch (\Throwable $e) {
+                \Log::warning('Supabase delete gagal untuk foto_kerusakan: ' . $e->getMessage());
+            }
+            return;
+        }
+
+        // Fallback: hapus dari local storage
+        $localPath = str_replace('/storage/', '', $path);
+        if (Storage::disk('public')->exists($localPath)) {
+            Storage::disk('public')->delete($localPath);
+        }
     }
 }

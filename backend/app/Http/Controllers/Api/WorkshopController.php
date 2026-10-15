@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Workshop;
+use App\Services\SupabaseStorageService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
@@ -30,32 +31,23 @@ class WorkshopController extends Controller
                 ];
             });
 
-        return response()->json($workshops);
+        return response()->json([
+            'status' => 'success',
+            'data' => $workshops
+        ]);
     }
 
     /**
-     * Display a listing for admin (semua workshop).
+     * Display a listing of all resources (Admin).
      */
-    public function indexAdmin()
+    public function adminIndex()
     {
-        $workshops = Workshop::orderBy('created_at', 'desc')
-            ->get()
-            ->map(function ($workshop) {
-                return [
-                    'id' => $workshop->id,
-                    'nama_workshop' => $workshop->nama_workshop,
-                    'deskripsi' => $workshop->deskripsi,
-                    'kategori' => $workshop->kategori,
-                    'icon' => $workshop->icon,
-                    'foto_url' => $workshop->foto_url,
-                    'fasilitas' => $workshop->fasilitas ?? [],
-                    'is_active' => $workshop->is_active,
-                    'created_at' => $workshop->created_at,
-                    'updated_at' => $workshop->updated_at,
-                ];
-            });
+        $workshops = Workshop::orderBy('created_at', 'desc')->get();
 
-        return response()->json($workshops);
+        return response()->json([
+            'status' => 'success',
+            'data' => $workshops
+        ]);
     }
 
     /**
@@ -85,10 +77,7 @@ class WorkshopController extends Controller
 
         // Upload foto jika ada
         if ($request->hasFile('foto_workshop')) {
-            $file = $request->file('foto_workshop');
-            $filename = time() . '_' . $file->getClientOriginalName();
-            $path = $file->storeAs('workshops', $filename, 'public');
-            $data['foto_workshop'] = $path;
+            $data['foto_workshop'] = $this->uploadFoto($request->file('foto_workshop'));
         }
 
         $workshop = Workshop::create($data);
@@ -161,13 +150,9 @@ class WorkshopController extends Controller
         if ($request->hasFile('foto_workshop')) {
             // Hapus foto lama
             if ($workshop->foto_workshop) {
-                Storage::disk('public')->delete($workshop->foto_workshop);
+                $this->deleteFoto($workshop->foto_workshop);
             }
-
-            $file = $request->file('foto_workshop');
-            $filename = time() . '_' . $file->getClientOriginalName();
-            $path = $file->storeAs('workshops', $filename, 'public');
-            $data['foto_workshop'] = $path;
+            $data['foto_workshop'] = $this->uploadFoto($request->file('foto_workshop'));
         }
 
         $workshop->update($data);
@@ -193,7 +178,7 @@ class WorkshopController extends Controller
 
         // Hapus foto jika ada
         if ($workshop->foto_workshop) {
-            Storage::disk('public')->delete($workshop->foto_workshop);
+            $this->deleteFoto($workshop->foto_workshop);
         }
 
         $workshop->delete();
@@ -201,5 +186,60 @@ class WorkshopController extends Controller
         return response()->json([
             'message' => 'Workshop berhasil dihapus'
         ]);
+    }
+
+    /**
+     * Upload foto workshop ke Supabase Storage (fallback ke local).
+     */
+    private function uploadFoto($file): string
+    {
+        $hasSupabase = !empty(config('services.supabase.url'))
+            && !empty(config('services.supabase.service_key'));
+
+        if ($hasSupabase) {
+            try {
+                $supabase = app(SupabaseStorageService::class);
+                $result   = $supabase->uploadWithHash($file, 'workshops');
+                if (!empty($result['url'])) {
+                    return $result['url'];
+                }
+            } catch (\Throwable $e) {
+                \Log::warning('Supabase upload gagal untuk foto_workshop, fallback ke local: ' . $e->getMessage());
+            }
+        }
+
+        // Fallback: simpan ke local public storage
+        $filename = time() . '_' . $file->getClientOriginalName();
+        $path = $file->storeAs('workshops', $filename, 'public');
+        return '/storage/' . $path;
+    }
+
+    /**
+     * Hapus foto workshop dari Supabase atau local storage.
+     */
+    private function deleteFoto(?string $path): void
+    {
+        if (empty($path)) return;
+
+        if (str_contains($path, 'supabase')) {
+            try {
+                $supabase = app(SupabaseStorageService::class);
+                $urlParts = parse_url($path);
+                if (isset($urlParts['path'])) {
+                    $segments = explode('/', trim($urlParts['path'], '/'));
+                    $filePath = implode('/', array_slice($segments, 5));
+                    $supabase->delete($filePath);
+                }
+            } catch (\Throwable $e) {
+                \Log::warning('Supabase delete gagal untuk foto_workshop: ' . $e->getMessage());
+            }
+            return;
+        }
+
+        // Fallback: hapus dari local storage
+        $localPath = str_replace('/storage/', '', $path);
+        if (Storage::disk('public')->exists($localPath)) {
+            Storage::disk('public')->delete($localPath);
+        }
     }
 }

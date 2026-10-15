@@ -27,9 +27,12 @@ class Workshop extends Model
     // Accessor untuk URL foto
     public function getFotoUrlAttribute()
     {
-        if ($this->foto_workshop) {
-            return url('storage/' . $this->foto_workshop);
+        if (!$this->foto_workshop) {
+            return null;
         }
-        return null;
+        if (str_starts_with($this->foto_workshop, 'http')) {
+            return $this->foto_workshop;
+        }
+        return url('storage/' . ltrim(str_replace('/storage/', '', $this->foto_workshop), '/'));
     }
 }
