@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import axios from '@/lib/axios'
+import { showErrorAlert } from '@/utils/errorHandler'
 import { useIsMobile } from '@/hooks/useMediaQuery'
 import { useNotification } from '@/hooks/useNotification'
 import {
@@ -118,7 +119,7 @@ export default function PenerimaanPage() {
       generateSuratJalan(data)
     } catch (err) {
       console.error('Gagal cetak surat jalan:', err)
-      alert('Gagal mengambil data surat jalan.')
+      showErrorAlert(err, 'Gagal Mengambil Data Surat Jalan')
     } finally {
       setPrintingId(null)
     }
@@ -131,7 +132,7 @@ export default function PenerimaanPage() {
       generateBast(data)
     } catch (err) {
       console.error('Gagal cetak BAST:', err)
-      alert('Gagal mengambil data BAST.')
+      showErrorAlert(err, 'Gagal Mengambil Data BAST')
     } finally {
       setPrintingBastId(null)
     }
@@ -168,7 +169,7 @@ export default function PenerimaanPage() {
     if (!selectedItem) return
 
     if (aksi === 'terima' && isKondisiRusak(kondisiDiterima) && !fotoFile) {
-      showError('Wajib upload foto kerusakan barang jika kondisi Rusak Ringan atau Rusak Berat!')
+      showErrorAlert('Wajib upload foto kerusakan barang jika kondisi Rusak Ringan atau Rusak Berat!', 'Validasi Penerimaan')
       return
     }
 
@@ -200,8 +201,7 @@ export default function PenerimaanPage() {
       setSelectedItem(null)
       fetchDistribusi()
     } catch (error: any) {
-      const msg = error?.response?.data?.message || 'Terjadi kesalahan saat konfirmasi'
-      showError(msg)
+      showErrorAlert(error, 'Gagal Konfirmasi Penerimaan')
     } finally {
       setProcessing(false)
     }

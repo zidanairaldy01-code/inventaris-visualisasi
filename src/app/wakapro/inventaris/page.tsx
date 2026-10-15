@@ -9,6 +9,7 @@ import {
 import { useIsMobile } from '@/hooks/useMediaQuery'
 import { MobileCard, MobileCardHeader, MobileCardRow, MobileCardDivider, MobileCardActions } from '@/components/MobileCard'
 import { useNotification } from '@/hooks/useNotification'
+import { showErrorAlert } from '@/utils/errorHandler'
 
 interface InventarisItem {
   id: number
@@ -121,8 +122,7 @@ export default function InventarisWorkshopPage() {
       closeEditModal()
       fetchInventaris() // Refresh data
     } catch (err: any) {
-      const msg = err.response?.data?.message || 'Gagal memperbarui kondisi aset'
-      showError(msg)
+      showErrorAlert(err, 'Gagal Memperbarui Kondisi Aset')
     } finally {
       setSubmitting(false)
     }

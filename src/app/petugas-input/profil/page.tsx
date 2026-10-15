@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import axios from '@/lib/axios';
 import Toast from '@/components/Toast';
+import { showErrorAlert } from '@/utils/errorHandler';
 import {
   User, KeyRound, ShieldCheck, Save, Loader2, CheckCircle2,
   Lock, Mail, UserCheck, Calendar, AlertCircle, Eye, EyeOff, Sparkles
@@ -55,8 +56,7 @@ function ProfileContent() {
       setUsername(res.data.username || '');
       setEmail(res.data.email || '');
     } catch (err) {
-      console.error(err);
-      setToast({ message: 'Gagal memuat data profil.', type: 'error' });
+      showErrorAlert(err, 'Gagal Memuat Data Profil');
     } finally {
       setLoading(false);
     }
@@ -83,9 +83,8 @@ function ProfileContent() {
           errObj[key] = err.response.data.errors[key][0];
         });
         setErrors(errObj);
-      } else {
-        setToast({ message: err.response?.data?.message || 'Gagal memperbarui profil.', type: 'error' });
       }
+      showErrorAlert(err, 'Gagal Memperbarui Profil');
     } finally {
       setIsSubmittingInfo(false);
     }
@@ -114,9 +113,8 @@ function ProfileContent() {
           errObj[key] = err.response.data.errors[key][0];
         });
         setErrors(errObj);
-      } else {
-        setToast({ message: err.response?.data?.message || 'Gagal memperbarui password.', type: 'error' });
       }
+      showErrorAlert(err, 'Gagal Memperbarui Password');
     } finally {
       setIsSubmittingPassword(false);
     }

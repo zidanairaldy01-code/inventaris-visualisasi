@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import Toast from '@/components/Toast';
+import { showErrorAlert } from '@/utils/errorHandler';
 
 /* ─────────────────────── Types ─────────────────────── */
 interface CustomFolder {
@@ -586,8 +587,8 @@ export default function InventarisGudangPage() {
       }
       setShowFolderModal(false);
       fetchFolders();
-    } catch {
-      showToast('Gagal menyimpan folder gudang', 'error');
+    } catch (err) {
+      showErrorAlert(err, 'Gagal Menyimpan Folder Gudang');
     } finally { setSavingFolder(false); }
   };
 
@@ -602,8 +603,8 @@ export default function InventarisGudangPage() {
       fetchFolders();
       fetchData();
       fetchTrashFolders();
-    } catch {
-      showToast('Gagal memindahkan folder ke tempat sampah', 'error');
+    } catch (err) {
+      showErrorAlert(err, 'Gagal Memindahkan Folder ke Tempat Sampah');
     } finally {
       setDeletingFolder(false);
     }
@@ -622,8 +623,8 @@ export default function InventarisGudangPage() {
       fetchFolders();
       fetchData();
       fetchTrashFolders();
-    } catch {
-      showToast('Gagal menghapus folder permanen', 'error');
+    } catch (err) {
+      showErrorAlert(err, 'Gagal Menghapus Folder Permanen');
     } finally {
       setDeletingFolder(false);
     }
@@ -639,8 +640,8 @@ export default function InventarisGudangPage() {
       fetchFolders();
       fetchData();
       fetchTrashFolders();
-    } catch {
-      showToast('Gagal memulihkan folder dari tempat sampah', 'error');
+    } catch (err) {
+      showErrorAlert(err, 'Gagal Memulihkan Folder dari Tempat Sampah');
     } finally {
       setActionTrashLoading(null);
     }
@@ -657,8 +658,8 @@ export default function InventarisGudangPage() {
       fetchFolders();
       fetchData();
       fetchTrashFolders();
-    } catch {
-      showToast('Gagal mengosongkan tempat sampah', 'error');
+    } catch (err) {
+      showErrorAlert(err, 'Gagal Mengosongkan Tempat Sampah');
     } finally {
       setActionTrashLoading(null);
     }
@@ -716,8 +717,7 @@ export default function InventarisGudangPage() {
       setShowFormModal(false);
       fetchData(); fetchFolders();
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Gagal menyimpan data gudang';
-      showToast(msg, 'error');
+      showErrorAlert(err, 'Gagal Menyimpan Data Gudang');
     } finally { setSaving(false); }
   };
 
@@ -754,8 +754,8 @@ export default function InventarisGudangPage() {
       showToast(`Berhasil ${isAdd ? 'tambah' : 'kurang'} stok (${mutasiJumlah} ${mutasiTarget.satuan})`, 'success');
       setShowMutasiModal(false);
       fetchData();
-    } catch {
-      showToast('Gagal memproses mutasi stok', 'error');
+    } catch (err) {
+      showErrorAlert(err, 'Gagal Memproses Mutasi Stok');
     } finally { setSavingMutasi(false); }
   };
 
@@ -767,8 +767,8 @@ export default function InventarisGudangPage() {
       showToast('Barang gudang berhasil dihapus', 'success');
       setDeleteTarget(null);
       fetchData(); fetchFolders();
-    } catch {
-      showToast('Gagal menghapus data gudang', 'error');
+    } catch (err) {
+      showErrorAlert(err, 'Gagal Menghapus Data Gudang');
     } finally { setDeleting(false); }
   };
 
@@ -786,7 +786,7 @@ export default function InventarisGudangPage() {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Gagal membaca file Excel';
       setParseError(msg);
-      showToast(msg, 'error');
+      showErrorAlert(err, 'Gagal Membaca File Excel');
     }
   };
 
@@ -852,8 +852,7 @@ export default function InventarisGudangPage() {
         }
       }, 600);
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Gagal meng-import data Excel';
-      showToast(msg, 'error');
+      showErrorAlert(err, 'Gagal Meng-Import File Excel');
       setImportState('idle');
     } finally {
       setImporting(false);

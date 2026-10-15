@@ -9,6 +9,7 @@ import {
   Upload, Image as ImageIcon, CheckCircle2, AlertTriangle, Link as LinkIcon
 } from 'lucide-react';
 import Toast from '@/components/Toast';
+import { showErrorAlert } from '@/utils/errorHandler';
 
 interface BeritaItem {
   id: number;
@@ -259,7 +260,7 @@ export default function KelolaBeritaPage() {
         });
         setFormErrors(mappedErrors);
       } else {
-        showToast(err?.response?.data?.message || 'Gagal menyimpan berita', 'error');
+        showErrorAlert(err, 'Gagal Menyimpan Berita');
       }
     } finally {
       setSubmitting(false);
@@ -277,8 +278,8 @@ export default function KelolaBeritaPage() {
         newStatus ? `Berita "${item.judul}" kini ditampilkan di publik` : `Berita "${item.judul}" disembunyikan`,
         'success'
       );
-    } catch {
-      showToast('Gagal mengubah status berita', 'error');
+    } catch (err) {
+      showErrorAlert(err, 'Gagal Mengubah Status Berita');
     } finally {
       setTogglingId(null);
     }
@@ -293,8 +294,8 @@ export default function KelolaBeritaPage() {
       showToast(`Berita "${deleteTarget.judul}" berhasil dihapus`, 'success');
       setBeritas(prev => prev.filter(b => b.id !== deleteTarget.id));
       setDeleteTarget(null);
-    } catch {
-      showToast('Gagal menghapus berita', 'error');
+    } catch (err) {
+      showErrorAlert(err, 'Gagal Menghapus Berita');
     } finally {
       setDeleting(false);
     }

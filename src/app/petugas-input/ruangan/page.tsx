@@ -10,6 +10,7 @@ import {
   Tag, CheckCircle2, Wrench
 } from 'lucide-react';
 import Toast from '@/components/Toast';
+import { showErrorAlert } from '@/utils/errorHandler';
 
 /* ─────────────────────── Types ─────────────────────── */
 interface Ruangan {
@@ -358,7 +359,7 @@ export default function RuanganWorkshopPage() {
       setShowRuanganModal(false);
       fetchRuangans();
     } catch (err) {
-      showToast('Gagal menyimpan ruangan workshop', 'error');
+      showErrorAlert(err, 'Gagal Menyimpan Ruangan Workshop');
     } finally {
       setSavingRuangan(false);
     }
@@ -375,8 +376,8 @@ export default function RuanganWorkshopPage() {
         setActiveWorkshop(null);
       }
       fetchRuangans();
-    } catch {
-      showToast('Gagal menghapus ruangan workshop', 'error');
+    } catch (err) {
+      showErrorAlert(err, 'Gagal Menghapus Ruangan Workshop');
     } finally {
       setDeletingRuangan(false);
     }
@@ -467,7 +468,7 @@ export default function RuanganWorkshopPage() {
       fetchRuangans(); // Update asets_count on rooms
     } catch (e) {
       console.error(e);
-      showToast('Gagal menyimpan aset workshop', 'error');
+      showErrorAlert(e, 'Gagal Menyimpan Aset Workshop');
     } finally {
       setSavingAset(false);
     }
@@ -482,8 +483,8 @@ export default function RuanganWorkshopPage() {
       setDeleteAsetTarget(null);
       fetchWorkshopAsets(activeWorkshop.id);
       fetchRuangans();
-    } catch {
-      showToast('Gagal menghapus aset workshop', 'error');
+    } catch (err) {
+      showErrorAlert(err, 'Gagal Menghapus Aset Workshop');
     } finally {
       setDeletingAset(false);
     }
@@ -783,7 +784,9 @@ export default function RuanganWorkshopPage() {
                   <img
                     src={getImageUrl(activeWorkshop.foto_ruangan)!}
                     alt={activeWorkshop.nama_ruangan}
-                    className="w-16 h-16 rounded-2xl object-cover border-2 border-white/30 shadow-lg"
+                    className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover border-2 border-white/40 shadow-xl cursor-zoom-in hover:scale-105 transition-transform"
+                    onClick={() => window.open(getImageUrl(activeWorkshop.foto_ruangan)!, '_blank')}
+                    title="Klik untuk membuka foto asli"
                   />
                 ) : (
                   <div className="p-4 bg-white/20 backdrop-blur-md rounded-2xl ring-1 ring-white/30">

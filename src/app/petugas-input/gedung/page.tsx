@@ -7,9 +7,10 @@ import {
   Building2, Search, Plus, Edit2, Trash2, RefreshCw,
   MapPin, Layers, X, Save, AlertTriangle, ChevronLeft,
   ChevronRight, ArrowLeft, Grid,
-  List as ListIcon, Package
+  List as ListIcon, Package, ZoomIn
 } from 'lucide-react';
 import Toast from '@/components/Toast';
+import { showErrorAlert } from '@/utils/errorHandler';
 
 /* ─────────────────────── Types ─────────────────────── */
 interface Ruangan {
@@ -188,6 +189,7 @@ export default function GedungDrivePage() {
   
   // Master data
   const [kondisiList, setKondisiList] = useState<{ id: number; nama_kondisi: string }[]>(DEFAULT_KONDISIS);
+  const [previewPhoto, setPreviewPhoto] = useState<{ url: string; title: string } | null>(null);
 
   const showToast = useCallback((message: string, type: 'success' | 'error' | 'warning') => {
     setToast({ show: true, message, type });
@@ -552,14 +554,7 @@ export default function GedungDrivePage() {
       setShowAsetModal(false);
       fetchAsets(); fetchRuangans(); fetchGedungs();
     } catch (err: unknown) {
-      const e = err as { response?: { status?: number; data?: { message?: string; errors?: Record<string, string[]> } } };
-      if (e?.response?.status === 401) {
-        showToast('Sesi login telah berakhir. Silakan login kembali.', 'error');
-        return;
-      }
-      const errMsg = e?.response?.data?.message ||
-        (e?.response?.data?.errors ? Object.values(e.response.data.errors).flat().join(', ') : 'Gagal menyimpan aset');
-      showToast(errMsg, 'error');
+      showErrorAlert(err, 'Gagal Menyimpan Aset');
     } finally { setSavingAset(false); }
   };
 
@@ -778,36 +773,77 @@ export default function GedungDrivePage() {
                     <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${color.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
 
                     <div>
-                      <div className="flex items-start justify-between mb-3">
-                        <div className={`p-3 rounded-2xl ${color.bg} group-hover:scale-110 transition-transform duration-300`}>
-                          {g.foto_gedung ? (
-                            <img src={getImageUrl(g.foto_gedung) || ''} alt={g.nama_gedung} className="w-5 h-5 object-cover rounded" />
-                          ) : (
-                            <Building2 className={`h-5 w-5 ${color.iconColor}`} />
-                          )}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${color.bg} ${color.iconColor} border border-slate-100`}>
-                            Gedung
-                          </span>
-                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-1">
+                      {g.foto_gedung ? (
+                        <div className="relative -mx-5 -mt-5 mb-3.5 h-44 overflow-hidden rounded-t-2xl bg-slate-100 group/img">
+                          <img
+                            src={getImageUrl(g.foto_gedung) || ''}
+                            alt={g.nama_gedung}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-black/20 pointer-events-none" />
+                          <div className="absolute top-3 left-3">
+                            <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-slate-900/60 backdrop-blur-md text-white border border-white/20 shadow-sm">
+                              Gedung
+                            </span>
+                          </div>
+                          <div className="absolute top-3 right-3 flex items-center gap-1.5 opacity-90 sm:opacity-0 group-hover:opacity-100 transition-opacity">
                             <button
-                              onClick={(e) => openEditGedung(g, e)}
-                              className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg"
-                              title="Edit Gedung"
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setPreviewPhoto({ url: getImageUrl(g.foto_gedung) || '', title: g.nama_gedung });
+                              }}
+                              className="p-1.5 bg-black/50 hover:bg-black/75 text-white rounded-lg shadow-sm backdrop-blur-md transition-all"
+                              title="Lihat Foto Lebih Besar"
                             >
-                              <Edit2 className="h-3 w-3" />
+                              <ZoomIn className="h-3.5 w-3.5" />
                             </button>
                             <button
+                              type="button"
+                              onClick={(e) => openEditGedung(g, e)}
+                              className="p-1.5 bg-white/90 hover:bg-white text-slate-700 rounded-lg shadow-sm backdrop-blur-md transition-all"
+                              title="Edit Gedung"
+                            >
+                              <Edit2 className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              type="button"
                               onClick={(e) => { e.stopPropagation(); setDeleteGedungTarget(g); }}
-                              className="p-1.5 bg-red-50 hover:bg-red-100 text-red-500 rounded-lg"
+                              className="p-1.5 bg-red-600/90 hover:bg-red-600 text-white rounded-lg shadow-sm backdrop-blur-md transition-all"
                               title="Hapus Gedung"
                             >
-                              <Trash2 className="h-3 w-3" />
+                              <Trash2 className="h-3.5 w-3.5" />
                             </button>
                           </div>
                         </div>
-                      </div>
+                      ) : (
+                        <div className="flex items-start justify-between mb-3">
+                          <div className={`p-3 rounded-2xl ${color.bg} group-hover:scale-110 transition-transform duration-300`}>
+                            <Building2 className={`h-5 w-5 ${color.iconColor}`} />
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${color.bg} ${color.iconColor} border border-slate-100`}>
+                              Gedung
+                            </span>
+                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-1">
+                              <button
+                                onClick={(e) => openEditGedung(g, e)}
+                                className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg"
+                                title="Edit Gedung"
+                              >
+                                <Edit2 className="h-3 w-3" />
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setDeleteGedungTarget(g); }}
+                                className="p-1.5 bg-red-50 hover:bg-red-100 text-red-500 rounded-lg"
+                                title="Hapus Gedung"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
 
                       <p className="text-xs font-semibold text-slate-500 mb-1">{g.kode_gedung ?? 'Tanpa Kode'}</p>
                       <p className="text-lg font-black text-slate-900 tracking-tight mb-1 line-clamp-1">{g.nama_gedung}</p>
@@ -920,36 +956,77 @@ export default function GedungDrivePage() {
                         <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${color.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
 
                         <div>
-                          <div className="flex items-start justify-between mb-3">
-                            <div className={`p-3 rounded-2xl ${color.bg} group-hover:scale-110 transition-transform duration-300`}>
-                              {r.foto_ruangan ? (
-                                <img src={getImageUrl(r.foto_ruangan) || ''} alt={r.nama_ruangan} className="w-5 h-5 object-cover rounded" />
-                              ) : (
-                                <MapPin className={`h-5 w-5 ${color.iconColor}`} />
-                              )}
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${color.bg} ${color.iconColor} border border-slate-100`}>
-                                Lantai {r.lantai ?? '-'}
-                              </span>
-                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-1">
+                          {r.foto_ruangan ? (
+                            <div className="relative -mx-5 -mt-5 mb-3.5 h-36 overflow-hidden rounded-t-2xl bg-slate-100 group/img">
+                              <img
+                                src={getImageUrl(r.foto_ruangan) || ''}
+                                alt={r.nama_ruangan}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-black/20 pointer-events-none" />
+                              <div className="absolute top-3 left-3">
+                                <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-slate-900/60 backdrop-blur-md text-white border border-white/20 shadow-sm">
+                                  Lantai {r.lantai ?? '-'}
+                                </span>
+                              </div>
+                              <div className="absolute top-3 right-3 flex items-center gap-1.5 opacity-90 sm:opacity-0 group-hover:opacity-100 transition-opacity">
                                 <button
-                                  onClick={(e) => { e.stopPropagation(); openEditRuangan(r); }}
-                                  className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg"
-                                  title="Edit Ruangan"
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setPreviewPhoto({ url: getImageUrl(r.foto_ruangan) || '', title: r.nama_ruangan });
+                                  }}
+                                  className="p-1.5 bg-black/50 hover:bg-black/75 text-white rounded-lg shadow-sm backdrop-blur-md transition-all"
+                                  title="Lihat Foto Lebih Besar"
                                 >
-                                  <Edit2 className="h-3 w-3" />
+                                  <ZoomIn className="h-3.5 w-3.5" />
                                 </button>
                                 <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); openEditRuangan(r); }}
+                                  className="p-1.5 bg-white/90 hover:bg-white text-slate-700 rounded-lg shadow-sm backdrop-blur-md transition-all"
+                                  title="Edit Ruangan"
+                                >
+                                  <Edit2 className="h-3.5 w-3.5" />
+                                </button>
+                                <button
+                                  type="button"
                                   onClick={(e) => { e.stopPropagation(); setDeleteRuanganTarget(r); }}
-                                  className="p-1.5 bg-red-50 hover:bg-red-100 text-red-500 rounded-lg"
+                                  className="p-1.5 bg-red-600/90 hover:bg-red-600 text-white rounded-lg shadow-sm backdrop-blur-md transition-all"
                                   title="Hapus Ruangan"
                                 >
-                                  <Trash2 className="h-3 w-3" />
+                                  <Trash2 className="h-3.5 w-3.5" />
                                 </button>
                               </div>
                             </div>
-                          </div>
+                          ) : (
+                            <div className="flex items-start justify-between mb-3">
+                              <div className={`p-3 rounded-2xl ${color.bg} group-hover:scale-110 transition-transform duration-300`}>
+                                <MapPin className={`h-5 w-5 ${color.iconColor}`} />
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${color.bg} ${color.iconColor} border border-slate-100`}>
+                                  Lantai {r.lantai ?? '-'}
+                                </span>
+                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-1">
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); openEditRuangan(r); }}
+                                    className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg"
+                                    title="Edit Ruangan"
+                                  >
+                                    <Edit2 className="h-3 w-3" />
+                                  </button>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); setDeleteRuanganTarget(r); }}
+                                    className="p-1.5 bg-red-50 hover:bg-red-100 text-red-500 rounded-lg"
+                                    title="Hapus Ruangan"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          )}
 
                           {r.kode_ruangan && (
                             <p className="text-xs font-semibold text-slate-500 mb-1 font-mono">{r.kode_ruangan}</p>
@@ -1663,6 +1740,39 @@ export default function GedungDrivePage() {
                 {deletingAset ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                 {deletingAset ? 'Hapus...' : 'Ya, Hapus'}
               </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ════════ PHOTO LIGHTBOX PREVIEW MODAL ════════ */}
+      {previewPhoto && createPortal(
+        <div 
+          className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center z-[100] p-4 animate-fadeIn"
+          onClick={() => setPreviewPhoto(null)}
+        >
+          <div 
+            className="relative max-w-4xl max-h-[90vh] bg-slate-900 rounded-2xl overflow-hidden shadow-2xl border border-white/10 flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-5 py-3.5 bg-slate-800/80 border-b border-white/10">
+              <span className="font-semibold text-white text-sm sm:text-base truncate">{previewPhoto.title}</span>
+              <button
+                type="button"
+                onClick={() => setPreviewPhoto(null)}
+                className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-white/10 transition-colors"
+                title="Tutup"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-2 flex items-center justify-center bg-black/50 overflow-auto">
+              <img 
+                src={previewPhoto.url} 
+                alt={previewPhoto.title} 
+                className="max-h-[75vh] w-auto max-w-full object-contain rounded-lg"
+              />
             </div>
           </div>
         </div>,

@@ -8,6 +8,7 @@ import {
   Inbox, Check, X, FileText, Coins
 } from 'lucide-react';
 import axios from '@/lib/axios';
+import { showErrorAlert } from '@/utils/errorHandler';
 
 interface WakaproStats {
   ruangan: any;
@@ -46,10 +47,10 @@ export default function WakaproDashboard({ user, wakaproStats, loading, onRefres
       await axios.post(`/distribusi/${distribusiId}/konfirmasi`, {
         status_bast: 'disetujui'
       });
-      alert('Penerimaan sarana berhasil dikonfirmasi dan BAST resmi diterbitkan!');
+      window.dispatchEvent(new CustomEvent('app:show-success-toast', { detail: 'Penerimaan sarana berhasil dikonfirmasi dan BAST resmi diterbitkan!' }));
       onRefresh();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Gagal mengonfirmasi penerimaan sarana.');
+      showErrorAlert(err, 'Gagal Mengonfirmasi Penerimaan Sarana');
     } finally {
       setConfirmingId(null);
     }

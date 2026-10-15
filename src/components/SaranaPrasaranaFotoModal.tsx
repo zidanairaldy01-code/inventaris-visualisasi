@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import axios from '@/lib/axios';
+import { showErrorAlert } from '@/utils/errorHandler';
 import {
   X, Upload, Trash2, Star, ImageOff, Loader2, CheckCircle2,
   AlertCircle, Database, ChevronDown, ChevronUp, Check, Images
@@ -75,6 +76,7 @@ export default function SaranaPrasaranaFotoModal({ item, onClose, onUpdate }: Pr
     setUploading(true);
     setMessage(null);
     let successCount = 0;
+    let lastError: any = null;
     const existingCount = fotos.length;
 
     for (const file of Array.from(files)) {
@@ -85,6 +87,7 @@ export default function SaranaPrasaranaFotoModal({ item, onClose, onUpdate }: Pr
         await axios.post(`/api/sarana-prasaranas/${item.id}/fotos`, fd);
         successCount++;
       } catch (err) {
+        lastError = err;
         console.error(err);
       }
     }
@@ -92,7 +95,11 @@ export default function SaranaPrasaranaFotoModal({ item, onClose, onUpdate }: Pr
     await refreshFotos();
     onUpdate();
     setUploading(false);
-    setMessage({ type: 'success', text: `${successCount} foto berhasil diunggah.` });
+    if (successCount > 0) {
+      setMessage({ type: 'success', text: `${successCount} foto berhasil diunggah.` });
+    } else if (lastError) {
+      showErrorAlert(lastError, 'Gagal Mengunggah Foto');
+    }
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -103,8 +110,8 @@ export default function SaranaPrasaranaFotoModal({ item, onClose, onUpdate }: Pr
       await refreshFotos();
       onUpdate();
       setMessage({ type: 'success', text: 'Foto berhasil dihapus.' });
-    } catch {
-      setMessage({ type: 'error', text: 'Gagal menghapus foto.' });
+    } catch (err) {
+      showErrorAlert(err, 'Gagal Menghapus Foto');
     } finally {
       setDeleting(null);
     }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import axios from '@/lib/axios'
+import { showErrorAlert } from '@/utils/errorHandler'
 import {
   generateSuratJalan,
   generateBast,
@@ -156,7 +157,7 @@ export default function PetugasDistribusiPage() {
       generateSuratJalan(data)
     } catch (err) {
       console.error('Gagal cetak surat jalan:', err)
-      alert('Gagal mengambil data surat jalan.')
+      showErrorAlert(err, 'Gagal Mengambil Data Surat Jalan')
     } finally {
       setPrintingId(null)
     }
@@ -169,7 +170,7 @@ export default function PetugasDistribusiPage() {
       generateBast(data)
     } catch (err) {
       console.error('Gagal cetak BAST:', err)
-      alert('Gagal mengambil data BAST.')
+      showErrorAlert(err, 'Gagal Mengambil Data BAST')
     } finally {
       setPrintingBastId(null)
     }

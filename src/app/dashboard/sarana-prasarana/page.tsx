@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import axios from '@/lib/axios';
+import { showErrorAlert } from '@/utils/errorHandler';
 import {
   Package, AlertTriangle, CheckCircle2, Search, RefreshCw,
   FileSpreadsheet, Plus, Upload, DollarSign, Layers, TrendingUp,
@@ -506,8 +507,8 @@ export default function SaranaPrasaranaPage() {
       }
       setShowFolderModal(false);
       fetchFolders();
-    } catch {
-      showToast('Gagal menyimpan folder', 'error');
+    } catch (err) {
+      showErrorAlert(err, 'Gagal Menyimpan Folder');
     } finally { setSavingFolder(false); }
   };
 
@@ -519,8 +520,9 @@ export default function SaranaPrasaranaPage() {
       setDeleteFolderTarget(null);
       if (activeFolderId === folder.id) setActiveFolderId(null);
       fetchFolders(); fetchAsets(true); fetchTrashFolders();
-    } catch { showToast('Gagal memindahkan folder ke tempat sampah', 'error'); }
-    finally { setDeletingFolder(false); }
+    } catch (err) {
+      showErrorAlert(err, 'Gagal Memindahkan Folder ke Tempat Sampah');
+    } finally { setDeletingFolder(false); }
   };
 
   const handleForceDeleteFolder = async (folder: CustomFolder) => {
@@ -532,8 +534,9 @@ export default function SaranaPrasaranaPage() {
       if (viewingTrashFolder?.id === folder.id) setViewingTrashFolder(null);
       if (activeFolderId === folder.id) setActiveFolderId(null);
       fetchFolders(); fetchAsets(true); fetchTrashFolders();
-    } catch { showToast('Gagal menghapus folder permanen', 'error'); }
-    finally { setDeletingFolder(false); }
+    } catch (err) {
+      showErrorAlert(err, 'Gagal Menghapus Folder Permanen');
+    } finally { setDeletingFolder(false); }
   };
 
   const handleRestoreFolder = async (folderId: number) => {
@@ -543,8 +546,9 @@ export default function SaranaPrasaranaPage() {
       showToast(res.data?.message || 'Folder berhasil dipulihkan', 'success');
       if (viewingTrashFolder?.id === folderId) setViewingTrashFolder(null);
       fetchFolders(); fetchAsets(true); fetchTrashFolders();
-    } catch { showToast('Gagal memulihkan folder', 'error'); }
-    finally { setActionTrashLoading(null); }
+    } catch (err) {
+      showErrorAlert(err, 'Gagal Memulihkan Folder');
+    } finally { setActionTrashLoading(null); }
   };
 
   const handleEmptyTrash = async () => {
@@ -554,8 +558,9 @@ export default function SaranaPrasaranaPage() {
       showToast(res.data?.message || 'Tempat sampah dikosongkan', 'success');
       setShowEmptyTrashConfirm(false); setViewingTrashFolder(null);
       fetchFolders(); fetchAsets(true); fetchTrashFolders();
-    } catch { showToast('Gagal mengosongkan tempat sampah', 'error'); }
-    finally { setActionTrashLoading(null); }
+    } catch (err) {
+      showErrorAlert(err, 'Gagal Mengosongkan Tempat Sampah');
+    } finally { setActionTrashLoading(null); }
   };
 
   /* ── Batch Selection Handlers ── */
@@ -590,8 +595,8 @@ export default function SaranaPrasaranaPage() {
       setIsSelectMode(false);
       setShowBatchDeleteConfirm(false);
       fetchAsets(true);
-    } catch {
-      showToast('Gagal menghapus data terpilih', 'error');
+    } catch (err) {
+      showErrorAlert(err, 'Gagal Menghapus Data Terpilih');
     } finally { setDeletingBatch(false); }
   };
 
@@ -673,8 +678,9 @@ export default function SaranaPrasaranaPage() {
         const errs: Record<string, string> = {};
         Object.entries(e.response.data.errors).forEach(([k, v]) => { errs[k] = v[0]; });
         setFormErrors(errs);
+        showErrorAlert(err, 'Validasi Gagal Menyimpan Data');
       } else {
-        showToast(e?.response?.data?.message || 'Gagal menyimpan data.', 'error');
+        showErrorAlert(err, 'Gagal Menyimpan Data');
         setShowFormModal(false);
       }
     } finally {
@@ -691,8 +697,8 @@ export default function SaranaPrasaranaPage() {
       setDeleteTarget(null);
       fetchAsets(true);
       fetchFolders();
-    } catch {
-      showToast('Gagal menghapus data.', 'error');
+    } catch (err) {
+      showErrorAlert(err, 'Gagal Menghapus Data');
     } finally { setDeleting(false); }
   };
 
