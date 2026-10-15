@@ -18,13 +18,13 @@ Mulai dari gedung bertingkat, ruang kelas, bengkel/workshop kejuruan, stok pergu
 ### 1. 🏢 Visualisasi Fasilitas & Ruangan Interaktif
 * **Pemetaan Gedung & Ruangan:** Visualisasi hierarki gedung sekolah per lantai dengan tampilan kartu modern, lengkap dengan informasi kapasitas, luas ruangan, dan jumlah aset yang ada di dalamnya.
 * **Galeri Foto High-Definition:** Foto gedung dan ruang kelas ditampilkan dengan banner foto beresolusi tajam, dilengkapi fitur **Lightbox Zoom Modal** untuk inspeksi visual langsung dari web.
-* **Pembeda Workshop & Ruang Teori:** Penanganan khusus untuk ruang praktik kejuruan (TKRO, TKJ, TITL, TP, RPL, dll.) dengan katalog aset workshop terpisah.
+* **Pembeda Workshop & Ruang Teori:** Penanganan khusus untuk ruang praktik kejuruan (TKR, TKJ, TMI, TP, RPL) dengan katalog aset workshop terpisah.
 
 ### 2. 👥 Multi-Role & Hak Akses Berjenjang
 * **🛡️ Administrator (Super Admin):** Akses penuh ke seluruh konfigurasi master data gedung, ruangan, pengguna, kategori, kondisi, berita, dan monitoring laporan.
 * **👔 Wakil Kepala Sekolah (Wakasek Sarpras & Keuangan):** Otoritas kontrol perencanaan, verifikasi pengadaan barang, rekap belanja per sumber dana, dan pemantauan kondisi aset sekolah secara berkala.
 * **🔧 Waka Program Keahlian (Wakapro):** Portal khusus kepala bengkel/jurusan untuk memantau inventaris lab masing-masing, mengajukan servis perbaikan, memverifikasi tanda terima distribusi, dan mengatur peminjaman alat praktik.
-* **✍️ Petugas Input:** Didesain efisien untuk operasional harian: input cepat mutasi stok, barcode/kode aset, upload nota belanja, dan pencatatan inventaris lapangan.
+* **✍️ Petugas Input:** Didesain efisien untuk operasional harian: input cepat mutasi stok,kode aset, upload nota belanja, dan pencatatan inventaris lapangan.
 * **🌐 Portal Publik (Tanpa Login):** Halaman transparansi publik untuk melihat profil jurusan, daftar fasilitas unggulan, berita sekolah, serta cek aset per kelas.
 
 ### 3. 📦 Tata Kelola Gudang & Logistik Modern
@@ -116,27 +116,7 @@ npm run dev
 
 ---
 
-## 📂 Struktur Modul Aplikasi
 
-```text
-├── src/
-│   ├── app/
-│   │   ├── dashboard/          # Portal Administrasi & Super Admin
-│   │   ├── wakasek/            # Portal Wakil Kepala Sekolah
-│   │   ├── wakapro/            # Portal Waka Program Keahlian / Bengkel
-│   │   ├── petugas-input/      # Portal Operasional Petugas Input
-│   │   ├── public/             # Portal Informasi Publik & Transparansi Aset Kelas
-│   │   ├── login/              # Halaman Masuk Terpusat Multi-Role
-│   │   └── layout.tsx          # Master Layout dengan Global Error Modal & Toast
-│   ├── components/             # Reusable UI (Foto Modal, Alert Dialog, Toast, Navigasi)
-│   ├── hooks/                  # Custom React Hooks (useNotification, useAuth)
-│   ├── lib/                    # Instance Axios & Konfigurasi Helper
-│   └── utils/                  # Handler Error Terpusat & Parser
-└── backend/                    # Server Laravel REST API
-    ├── app/Http/Controllers/   # API Endpoints (Gedung, Ruangan, Aset, Inventaris, Gudang)
-    ├── database/migrations/    # Skema Struktur Tabel Database
-    └── routes/api.php          # Definisi Routing REST API
-```
 
 ---
 
