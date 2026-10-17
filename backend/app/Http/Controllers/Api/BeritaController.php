@@ -237,11 +237,16 @@ class BeritaController extends Controller
                     return $res['url'];
                 }
             } catch (\Throwable $e) {
-                \Log::warning('Supabase upload gagal untuk foto berita, fallback ke local: ' . $e->getMessage());
+                \Log::error('Supabase upload gagal untuk foto berita: ' . $e->getMessage(), [
+                    'trace' => $e->getTraceAsString()
+                ]);
+                if (app()->isProduction() || config('app.env') === 'production') {
+                    throw new \Exception('Gagal mengunggah foto ke Supabase Storage: ' . $e->getMessage());
+                }
             }
         }
 
-        // Fallback: simpan ke local public storage
+        // Fallback: simpan ke local public storage (hanya untuk development lokal tanpa Supabase)
         $path = $file->store('berita', 'public');
         return '/storage/' . $path;
     }

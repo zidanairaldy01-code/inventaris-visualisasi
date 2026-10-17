@@ -51,15 +51,32 @@ class SupabaseStorageService
     {
         $url = "{$this->url}/storage/v1/object/{$this->bucket}/{$path}";
         
-        // Read file content
-        $fileContent = file_get_contents($file->getRealPath());
+        // Read file content reliably (try getContent first, fallback to getRealPath)
+        $fileContent = $file->getContent();
+        if ($fileContent === false || strlen($fileContent) === 0) {
+            $realPath = $file->getRealPath();
+            if ($realPath && file_exists($realPath)) {
+                $fileContent = file_get_contents($realPath);
+            }
+        }
         
-        // Upload using HTTP PUT with file content directly in body
-        $response = Http::withHeaders([
+        if (empty($fileContent)) {
+            throw new \Exception("File kosong atau tidak dapat dibaca: " . $file->getClientOriginalName());
+        }
+
+        // Determine mime type reliably
+        $mimeType = $file->getMimeType() ?: $file->getClientMimeType() ?: 'application/octet-stream';
+        // Normalize common browser / Windows mime types
+        if ($mimeType === 'image/x-png') $mimeType = 'image/png';
+        if ($mimeType === 'image/pjpeg') $mimeType = 'image/jpeg';
+        
+        // Upload using HTTP POST with apikey and Bearer authorization
+        $response = Http::timeout(60)->withHeaders([
+            'apikey'        => $this->key,
             'Authorization' => "Bearer {$this->key}",
-            'Content-Type' => $file->getMimeType(),
-            'x-upsert' => 'true', // Allow overwrite if file exists
-        ])->withBody($fileContent, $file->getMimeType())
+            'Content-Type'  => $mimeType,
+            'x-upsert'      => 'true', // Allow overwrite if file exists
+        ])->withBody($fileContent, $mimeType)
           ->post($url);
 
         if (!$response->successful()) {
@@ -67,13 +84,13 @@ class SupabaseStorageService
             $errorStatus = $response->status();
             
             \Log::error('Supabase upload failed', [
-                'status' => $errorStatus,
-                'body' => $errorBody,
-                'path' => $path,
-                'url' => $url,
-                'bucket' => $this->bucket,
+                'status'    => $errorStatus,
+                'body'      => $errorBody,
+                'path'      => $path,
+                'url'       => $url,
+                'bucket'    => $this->bucket,
                 'file_size' => strlen($fileContent),
-                'mime_type' => $file->getMimeType(),
+                'mime_type' => $mimeType,
             ]);
             
             throw new \Exception("Failed to upload to Supabase (HTTP {$errorStatus}): {$errorBody}");
@@ -83,11 +100,11 @@ class SupabaseStorageService
 
         \Log::info('Supabase upload successful', [
             'path' => $path,
-            'url' => $publicUrl,
+            'url'  => $publicUrl,
         ]);
 
         return [
-            'url' => $publicUrl,
+            'url'  => $publicUrl,
             'path' => $path,
         ];
     }
@@ -97,7 +114,7 @@ class SupabaseStorageService
      */
     public function uploadWithHash(UploadedFile $file, string $folder = ''): array
     {
-        $extension = $file->getClientOriginalExtension();
+        $extension = $file->getClientOriginalExtension() ?: $file->guessExtension() ?: 'jpg';
         $filename = uniqid() . '_' . time() . '.' . $extension;
         $path = $folder ? "{$folder}/{$filename}" : $filename;
         
@@ -111,7 +128,8 @@ class SupabaseStorageService
     {
         $url = "{$this->url}/storage/v1/object/{$this->bucket}/{$path}";
         
-        $response = Http::withHeaders([
+        $response = Http::timeout(30)->withHeaders([
+            'apikey'        => $this->key,
             'Authorization' => "Bearer {$this->key}",
         ])->delete($url);
 
@@ -134,7 +152,8 @@ class SupabaseStorageService
         $url = "{$this->url}/storage/v1/bucket/{$this->bucket}";
         
         // Check if bucket exists
-        $response = Http::withHeaders([
+        $response = Http::timeout(30)->withHeaders([
+            'apikey'        => $this->key,
             'Authorization' => "Bearer {$this->key}",
         ])->get($url);
 
@@ -144,15 +163,15 @@ class SupabaseStorageService
 
         // Create bucket if not exists
         $createUrl = "{$this->url}/storage/v1/bucket";
-        $response = Http::withHeaders([
+        $response = Http::timeout(30)->withHeaders([
+            'apikey'        => $this->key,
             'Authorization' => "Bearer {$this->key}",
-            'Content-Type' => 'application/json',
+            'Content-Type'  => 'application/json',
         ])->post($createUrl, [
-            'id' => $this->bucket,
-            'name' => $this->bucket,
-            'public' => true,
-            'file_size_limit' => 5242880, // 5MB
-            'allowed_mime_types' => ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'],
+            'id'              => $this->bucket,
+            'name'            => $this->bucket,
+            'public'          => true,
+            'file_size_limit' => 10485760, // 10MB
         ]);
 
         return $response->successful();

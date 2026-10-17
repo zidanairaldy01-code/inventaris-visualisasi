@@ -711,11 +711,16 @@ class AsetController extends Controller
                     return $result['url'];
                 }
             } catch (\Throwable $e) {
-                \Log::warning('Supabase upload gagal untuk foto_thumbnail aset, fallback ke local: ' . $e->getMessage());
+                \Log::error('Supabase upload gagal untuk foto_thumbnail aset: ' . $e->getMessage(), [
+                    'trace' => $e->getTraceAsString()
+                ]);
+                if (app()->isProduction() || config('app.env') === 'production') {
+                    throw new \Exception('Gagal mengunggah foto ke Supabase Storage: ' . $e->getMessage());
+                }
             }
         }
 
-        // Fallback: simpan ke local public storage
+        // Fallback: simpan ke local public storage (hanya untuk development lokal tanpa Supabase)
         $path = $file->store('aset', 'public');
         return '/storage/' . $path;
     }

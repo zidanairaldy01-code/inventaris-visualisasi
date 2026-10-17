@@ -204,11 +204,16 @@ class WorkshopController extends Controller
                     return $result['url'];
                 }
             } catch (\Throwable $e) {
-                \Log::warning('Supabase upload gagal untuk foto_workshop, fallback ke local: ' . $e->getMessage());
+                \Log::error('Supabase upload gagal untuk foto_workshop: ' . $e->getMessage(), [
+                    'trace' => $e->getTraceAsString()
+                ]);
+                if (app()->isProduction() || config('app.env') === 'production') {
+                    throw new \Exception('Gagal mengunggah foto ke Supabase Storage: ' . $e->getMessage());
+                }
             }
         }
 
-        // Fallback: simpan ke local public storage
+        // Fallback: simpan ke local public storage (hanya untuk development lokal tanpa Supabase)
         $filename = time() . '_' . $file->getClientOriginalName();
         $path = $file->storeAs('workshops', $filename, 'public');
         return '/storage/' . $path;
