@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Workshop;
+use App\Models\Ruangan;
 use App\Services\SupabaseStorageService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -13,10 +14,72 @@ class WorkshopController extends Controller
 {
     /**
      * Display a listing of the resource (Public - hanya yang active).
+     * Terintegrasi langsung dengan Ruangan Workshop yang dibuat Admin di dashboard.
      */
     public function index()
     {
-        $workshops = Workshop::where('is_active', true)
+        // 1. Ambil data Ruangan Workshop yang dibuat Admin (dari tabel ruangans)
+        $ruangans = Ruangan::where('jenis', 'workshop')
+            ->with(['gedung', 'asets'])
+            ->withCount('asets')
+            ->orderBy('id', 'desc')
+            ->get();
+
+        $ruanganWorkshops = $ruangans->map(function ($r) {
+            $nameLower = strtolower($r->nama_ruangan);
+            $kategori = 'Workshop';
+            $icon = 'wrench';
+
+            if (str_contains($nameLower, 'komputer') || str_contains($nameLower, 'tkj') || str_contains($nameLower, 'rpl') || str_contains($nameLower, 'lab')) {
+                $kategori = 'Teknologi';
+                $icon = 'laptop';
+            } elseif (str_contains($nameLower, 'listrik') || str_contains($nameLower, 'elektro') || str_contains($nameLower, 'titl')) {
+                $kategori = 'Listrik';
+                $icon = 'zap';
+            } elseif (str_contains($nameLower, 'mesin') || str_contains($nameLower, 'tmi') || str_contains($nameLower, 'tpm') || str_contains($nameLower, 'bubut') || str_contains($nameLower, 'frais')) {
+                $kategori = 'Manufaktur';
+                $icon = 'cog';
+            } elseif (str_contains($nameLower, 'otomotif') || str_contains($nameLower, 'tkr') || str_contains($nameLower, 'tsm') || str_contains($nameLower, 'tbsm') || str_contains($nameLower, 'mobil') || str_contains($nameLower, 'motor')) {
+                $kategori = 'Otomotif';
+                $icon = 'wrench';
+            }
+
+            // Ambil daftar aset nyata di ruangan ini sebagai fasilitas
+            $fasilitas = $r->asets->pluck('nama_aset')->take(5)->filter()->values()->toArray();
+            if (empty($fasilitas)) {
+                $fasilitas = array_values(array_filter([
+                    $r->luas_ruangan ? "Luas {$r->luas_ruangan} m²" : null,
+                    $r->lantai ? "Lantai {$r->lantai}" : null,
+                    $r->gedung ? $r->gedung->nama_gedung : null,
+                    $r->asets_count > 0 ? "{$r->asets_count} Unit Aset" : 'Peralatan Praktik Kejuruan',
+                ]));
+            }
+
+            // Resolusi URL foto ruangan
+            $fotoUrl = null;
+            if ($r->foto_ruangan) {
+                if (str_starts_with($r->foto_ruangan, 'http')) {
+                    $fotoUrl = $r->foto_ruangan;
+                } else {
+                    $fotoUrl = url('storage/' . ltrim(str_replace('/storage/', '', $r->foto_ruangan), '/'));
+                }
+            }
+
+            return [
+                'id' => $r->id,
+                'nama_workshop' => $r->nama_ruangan,
+                'deskripsi' => $r->deskripsi ?: "Fasilitas {$r->nama_ruangan} dilengkapi sarana prasarana modern untuk mendukung kompetensi dan pembelajaran praktik siswa.",
+                'kategori' => $kategori,
+                'icon' => $icon,
+                'foto_url' => $fotoUrl,
+                'fasilitas' => $fasilitas,
+                'asets_count' => $r->asets_count,
+                'kode_ruangan' => $r->kode_ruangan,
+            ];
+        });
+
+        // 2. Ambil juga dari tabel workshops jika ada
+        $staticWorkshops = Workshop::where('is_active', true)
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($workshop) {
@@ -31,9 +94,12 @@ class WorkshopController extends Controller
                 ];
             });
 
+        // Gabungkan keduanya, prioritaskan Ruangan Workshop yang dibuat Admin
+        $allWorkshops = $ruanganWorkshops->concat($staticWorkshops)->values();
+
         return response()->json([
             'status' => 'success',
-            'data' => $workshops
+            'data' => $allWorkshops
         ]);
     }
 

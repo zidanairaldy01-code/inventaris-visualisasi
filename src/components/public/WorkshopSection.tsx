@@ -51,7 +51,11 @@ export default function WorkshopSection() {
   // Fallback image jika foto_url null
   const getImageUrl = (workshop: Workshop) => {
     if (workshop.foto_url) {
-      return workshop.foto_url;
+      if (workshop.foto_url.startsWith('http')) {
+        return workshop.foto_url;
+      }
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      return `${apiBase}${workshop.foto_url.startsWith('/') ? '' : '/'}${workshop.foto_url}`;
     }
     // Default images based on category
     const defaultImages: any = {
@@ -60,8 +64,9 @@ export default function WorkshopSection() {
       'Listrik': 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=600',
       'Manufaktur': 'https://images.unsplash.com/photo-1565680018434-b513d5e5fd47?w=600',
       'Multimedia': 'https://images.unsplash.com/photo-1558655146-9f40138edfeb?w=600',
+      'Workshop': 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=600',
     };
-    return defaultImages[workshop.kategori] || 'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?w=600';
+    return defaultImages[workshop.kategori] || 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=600';
   };
 
   return (
