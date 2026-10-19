@@ -30,9 +30,20 @@ class SaranaPrasaranaController extends Controller
             }
         }
 
-        $items = $query->orderBy('tanggal_pengambilan', 'desc')
-            ->orderBy('created_at', 'desc')
-            ->get();
+        if ($request->get('sort') === 'termahal') {
+            $query->orderBy('nilai_harga_pembelian', 'desc')->orderBy('id', 'desc');
+        } elseif ($request->get('sort') === 'terbaru') {
+            $query->latest('id');
+        } else {
+            $query->orderBy('tanggal_pengambilan', 'desc')
+                ->orderBy('created_at', 'desc');
+        }
+
+        if ($request->filled('limit')) {
+            $items = $query->take((int) $request->limit)->get();
+        } else {
+            $items = $query->get();
+        }
 
         return response()->json([
             'status' => 'success',

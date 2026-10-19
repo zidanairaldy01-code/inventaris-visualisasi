@@ -26,6 +26,7 @@ use App\Http\Controllers\Api\NotifikasiController;
 use App\Http\Controllers\Api\FotoSaranaPrasaranaController;
 use App\Http\Controllers\Api\WorkshopController;
 use App\Http\Controllers\Api\BeritaController;
+use App\Http\Controllers\Api\SiteSettingController;
 use Illuminate\Support\Facades\Route;
 
 
@@ -61,11 +62,19 @@ Route::get('aset-per-kelas/summary/kelas/{id}', [AsetPerKelasController::class, 
 // Public Routes for Workshop (untuk halaman public)
 Route::get('workshops', [WorkshopController::class, 'index']);
 
+// Public Route for Site Settings (landing page data)
+Route::get('site-settings', [SiteSettingController::class, 'index']);
+
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [AuthController::class, 'me']);
     Route::put('/profile', [AuthController::class, 'updateProfile']);
     Route::put('/profile/password', [AuthController::class, 'updatePassword']);
+
+    // Site Settings (Super Admin only)
+    Route::put('site-settings', [SiteSettingController::class, 'update']);
+    Route::post('site-settings/upload-hero', [SiteSettingController::class, 'uploadHero']);
+    Route::post('site-settings/upload-fasilitas', [SiteSettingController::class, 'uploadFasilitas']);
 
     Route::apiResource('gedungs', GedungController::class)->except(['index']);
     Route::apiResource('ruangans', RuanganController::class)->except(['index', 'show']);

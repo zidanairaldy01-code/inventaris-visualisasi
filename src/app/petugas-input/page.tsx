@@ -12,6 +12,7 @@ interface PetugasStats {
   selesai_serah_terima: number;
   distribusi_terbaru: any[];
   input_terbaru: any[];
+  input_termahal?: any[];
   sebaran_bengkel: { nama_ruangan: string; total_aset: number }[];
 }
 
@@ -22,6 +23,7 @@ const defaultPetugasStats: PetugasStats = {
   selesai_serah_terima: 0,
   distribusi_terbaru: [],
   input_terbaru: [],
+  input_termahal: [],
   sebaran_bengkel: [],
 };
 

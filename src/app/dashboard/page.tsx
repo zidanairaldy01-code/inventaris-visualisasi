@@ -83,9 +83,9 @@ export default function DashboardPage() {
   const loadDashboardData = async () => {
     setLoading(true);
     try {
-      const [statsRes, saranaRes] = await Promise.all([
+      const [statsRes, terbaruRes] = await Promise.all([
         axios.get('/api/stats').catch(() => null),
-        axios.get('/api/sarana-prasaranas').catch(() => null),
+        axios.get('/api/sarana-prasaranas?sort=terbaru&limit=5').catch(() => null),
       ]);
       
       if (statsRes?.data) {
@@ -94,8 +94,10 @@ export default function DashboardPage() {
         setStats(getDefaultStats());
       }
 
-      if (saranaRes?.data?.data && Array.isArray(saranaRes.data.data)) {
-        setRecentSarana(saranaRes.data.data.slice(0, 5));
+      if (terbaruRes?.data?.data && Array.isArray(terbaruRes.data.data)) {
+        setRecentSarana(terbaruRes.data.data);
+      } else {
+        setRecentSarana([]);
       }
     } catch (error: any) {
       console.error('Error loading dashboard data:', error);

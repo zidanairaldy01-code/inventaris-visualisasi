@@ -6,6 +6,8 @@ import {
   Package, Inbox, ArrowUpRight, ChevronRight
 } from 'lucide-react';
 
+import RecentSaranaTable from '@/components/dashboard/RecentSaranaTable';
+
 interface PetugasStats {
   total_diinput: number;
   input_bulan_ini: number;
@@ -13,6 +15,7 @@ interface PetugasStats {
   selesai_serah_terima: number;
   distribusi_terbaru: any[];
   input_terbaru: any[];
+  input_termahal?: any[];
   sebaran_bengkel: { nama_ruangan: string; total_aset: number }[];
 }
 
@@ -71,84 +74,92 @@ export default function PetugasDashboard({ user, greeting, petugasStats, loading
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
         <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between mb-3">
-            <div className="p-2 bg-indigo-50 rounded-xl text-indigo-600">
-              <Package className="h-4 w-4" />
+            <div className="p-2.5 bg-indigo-50 rounded-xl text-indigo-600">
+              <Package className="h-5 w-5" />
             </div>
-            <span className="text-[10px] bg-indigo-50 text-indigo-700 font-bold px-2 py-0.5 rounded-full border border-indigo-200">
+            <span className="text-xs bg-indigo-50 text-indigo-700 font-bold px-2.5 py-1 rounded-full border border-indigo-200">
               Total Input
             </span>
           </div>
           {loading ? (
-            <div className="h-8 w-20 bg-slate-100 rounded-lg animate-pulse" />
+            <div className="h-9 w-24 bg-slate-100 rounded-lg animate-pulse" />
           ) : (
-            <p className="text-2xl font-black text-slate-900 tracking-tight">
+            <p className="text-3xl font-black text-slate-900 tracking-tight">
               {petugasStats.total_diinput.toLocaleString('id-ID')}{' '}
-              <span className="text-sm font-semibold text-slate-500">Sarana</span>
+              <span className="text-base font-semibold text-slate-500">Sarana</span>
             </p>
           )}
-          <p className="text-xs text-slate-400 mt-1">Item sarana prasarana yang diinput</p>
+          <p className="text-sm text-slate-500 mt-1.5 font-medium">Item sarana prasarana yang diinput</p>
         </div>
 
         <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between mb-3">
-            <div className="p-2 bg-blue-50 rounded-xl text-blue-600">
-              <Plus className="h-4 w-4" />
+            <div className="p-2.5 bg-blue-50 rounded-xl text-blue-600">
+              <Plus className="h-5 w-5" />
             </div>
-            <span className="text-[10px] bg-blue-50 text-blue-700 font-bold px-2 py-0.5 rounded-full border border-blue-200">
+            <span className="text-xs bg-blue-50 text-blue-700 font-bold px-2.5 py-1 rounded-full border border-blue-200">
               Bulan Ini
             </span>
           </div>
           {loading ? (
-            <div className="h-8 w-20 bg-slate-100 rounded-lg animate-pulse" />
+            <div className="h-9 w-24 bg-slate-100 rounded-lg animate-pulse" />
           ) : (
-            <p className="text-2xl font-black text-blue-600 tracking-tight">
+            <p className="text-3xl font-black text-blue-600 tracking-tight">
               {petugasStats.input_bulan_ini}{' '}
-              <span className="text-sm font-semibold text-slate-500">Item Baru</span>
+              <span className="text-base font-semibold text-slate-500">Item Baru</span>
             </p>
           )}
-          <p className="text-xs text-slate-400 mt-1">Ditambahkan bulan berjalan</p>
+          <p className="text-sm text-slate-500 mt-1.5 font-medium">Ditambahkan bulan berjalan</p>
         </div>
 
         <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between mb-3">
-            <div className="p-2 bg-amber-50 rounded-xl text-amber-600">
-              <Clock className="h-4 w-4" />
+            <div className="p-2.5 bg-amber-50 rounded-xl text-amber-600">
+              <Clock className="h-5 w-5" />
             </div>
-            <span className="text-[10px] bg-amber-50 text-amber-700 font-bold px-2 py-0.5 rounded-full border border-amber-200">
+            <span className="text-xs bg-amber-50 text-amber-700 font-bold px-2.5 py-1 rounded-full border border-amber-200">
               Pending BAST
             </span>
           </div>
           {loading ? (
-            <div className="h-8 w-20 bg-slate-100 rounded-lg animate-pulse" />
+            <div className="h-9 w-24 bg-slate-100 rounded-lg animate-pulse" />
           ) : (
-            <p className="text-2xl font-black text-amber-600 tracking-tight">
+            <p className="text-3xl font-black text-amber-600 tracking-tight">
               {petugasStats.menunggu_konfirmasi}{' '}
-              <span className="text-sm font-semibold text-amber-700">Distribusi</span>
+              <span className="text-base font-semibold text-amber-700">Distribusi</span>
             </p>
           )}
-          <p className="text-xs text-slate-400 mt-1">Menunggu konfirmasi Wakapro</p>
+          <p className="text-sm text-slate-500 mt-1.5 font-medium">Menunggu konfirmasi Wakapro</p>
         </div>
 
         <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between mb-3">
-            <div className="p-2 bg-emerald-50 rounded-xl text-emerald-600">
-              <CheckCircle2 className="h-4 w-4" />
+            <div className="p-2.5 bg-emerald-50 rounded-xl text-emerald-600">
+              <CheckCircle2 className="h-5 w-5" />
             </div>
-            <span className="text-[10px] bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded-full border border-emerald-200">
+            <span className="text-xs bg-emerald-50 text-emerald-700 font-bold px-2.5 py-1 rounded-full border border-emerald-200">
               Tersetujui
             </span>
           </div>
           {loading ? (
-            <div className="h-8 w-20 bg-slate-100 rounded-lg animate-pulse" />
+            <div className="h-9 w-24 bg-slate-100 rounded-lg animate-pulse" />
           ) : (
-            <p className="text-2xl font-black text-emerald-600 tracking-tight">
+            <p className="text-3xl font-black text-emerald-600 tracking-tight">
               {petugasStats.selesai_serah_terima}{' '}
-              <span className="text-sm font-semibold text-slate-500">BAST Sah</span>
+              <span className="text-base font-semibold text-slate-500">BAST Sah</span>
             </p>
           )}
-          <p className="text-xs text-slate-400 mt-1">Selesai serah terima fisik</p>
+          <p className="text-sm text-slate-500 mt-1.5 font-medium">Selesai serah terima fisik</p>
         </div>
       </div>
+
+      {/* ── Table Sarana Prasarana Terbaru (Sinkron dengan Super Admin) ── */}
+      <RecentSaranaTable
+        recentSarana={petugasStats.input_terbaru || []}
+        loading={loading}
+        viewAllHref="/petugas-input/sarana-prasarana"
+        title="Aset Sarana Prasarana Terbaru"
+      />
 
       {/* ── Distribusi Terbaru & Sebaran Bengkel ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

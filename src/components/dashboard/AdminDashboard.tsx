@@ -4,11 +4,13 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import axios from '@/lib/axios';
 import {
-  Package, Building2, Warehouse, ArrowUpRight, TrendingUp,
-  DollarSign, Layers, ShoppingCart, Handshake, Wrench, Clock,
-  ChevronRight, FileText, Sparkles, Plus, Users, ArrowRight, ShieldCheck,
-  AlertTriangle
+  Package, Building2, ArrowUpRight, TrendingUp, TrendingDown,
+  DollarSign, ShoppingCart, Wrench, Clock,
+  FileText, Sparkles, Plus, Users, ArrowRight, ShieldCheck,
+  AlertTriangle, History as HistoryIcon, AlertCircle
 } from 'lucide-react';
+
+import RecentSaranaTable from '@/components/dashboard/RecentSaranaTable';
 
 const formatRupiah = (n: number | null | undefined) =>
   new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n || 0);
@@ -51,6 +53,7 @@ export default function AdminDashboard({
   loading
 }: AdminDashboardProps) {
   const [unreadDamagedNotifs, setUnreadDamagedNotifs] = useState<any[]>([]);
+  const [recentHistory, setRecentHistory] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchNotifs = async () => {
@@ -69,8 +72,44 @@ export default function AdminDashboard({
         // ignore
       }
     };
+
+    const fetchHistory = async () => {
+      try {
+        const res = await axios.get('/api/histories');
+        const data: any[] = Array.isArray(res.data) ? res.data : [];
+        // Sort by created_at desc, take latest 6
+        const sorted = [...data].sort((a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+        setRecentHistory(sorted.slice(0, 6));
+      } catch {
+        // ignore
+      }
+    };
+
     fetchNotifs();
+    fetchHistory();
   }, []);
+
+  const getAksiColor = (aksi: string) => {
+    switch (aksi) {
+      case 'PENAMBAHAN': case 'PENGEMBALIAN': case 'SELESAI SERVIS':
+        return { badge: 'bg-emerald-100 text-emerald-700 border-emerald-300', dot: 'bg-emerald-500', icon: <TrendingUp className="h-3.5 w-3.5 text-emerald-600" /> };
+      case 'PEMINJAMAN': case 'SERVIS':
+        return { badge: 'bg-orange-100 text-orange-700 border-orange-300', dot: 'bg-orange-500', icon: <TrendingDown className="h-3.5 w-3.5 text-orange-600" /> };
+      case 'MUTASI':
+        return { badge: 'bg-blue-100 text-blue-700 border-blue-300', dot: 'bg-blue-500', icon: <Package className="h-3.5 w-3.5 text-blue-600" /> };
+      case 'UBAH KONDISI':
+        return { badge: 'bg-yellow-100 text-yellow-700 border-yellow-300', dot: 'bg-yellow-500', icon: <AlertCircle className="h-3.5 w-3.5 text-yellow-600" /> };
+      case 'PENGHAPUSAN':
+        return { badge: 'bg-red-100 text-red-700 border-red-300', dot: 'bg-red-500', icon: <TrendingDown className="h-3.5 w-3.5 text-red-600" /> };
+      default:
+        return { badge: 'bg-slate-100 text-slate-700 border-slate-300', dot: 'bg-slate-400', icon: <HistoryIcon className="h-3.5 w-3.5 text-slate-500" /> };
+    }
+  };
+
+  const formatHistoryDate = (d: string) =>
+    new Date(d).toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 
   return (
     <div className="space-y-6 sm:space-y-8 animate-fadeIn pb-12">
@@ -153,152 +192,140 @@ export default function AdminDashboard({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
         <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between mb-3">
-            <div className="p-2 bg-indigo-50 rounded-xl text-indigo-600">
-              <Package className="h-4 w-4" />
+            <div className="p-2.5 bg-indigo-50 rounded-xl text-indigo-600">
+              <Package className="h-5 w-5" />
             </div>
-            <span className="text-[10px] bg-indigo-50 text-indigo-700 font-bold px-2 py-0.5 rounded-full border border-indigo-200">
+            <span className="text-xs bg-indigo-50 text-indigo-700 font-bold px-2.5 py-1 rounded-full border border-indigo-200">
               Inventaris
             </span>
           </div>
           {loading ? (
-            <div className="h-8 w-20 bg-slate-100 rounded-lg animate-pulse" />
+            <div className="h-9 w-24 bg-slate-100 rounded-lg animate-pulse" />
           ) : (
-            <p className="text-2xl font-black text-slate-900 tracking-tight">
+            <p className="text-3xl font-black text-slate-900 tracking-tight">
               {(stats?.total_item_sarana || 0).toLocaleString('id-ID')}{' '}
-              <span className="text-sm font-semibold text-slate-500">Jenis</span>
+              <span className="text-base font-semibold text-slate-500">Jenis</span>
             </p>
           )}
-          <p className="text-xs text-slate-400 mt-1">Total {(stats?.total_unit || 0).toLocaleString('id-ID')} unit barang fisik</p>
+          <p className="text-sm text-slate-500 mt-1.5 font-medium">Total {(stats?.total_unit || 0).toLocaleString('id-ID')} unit barang fisik</p>
         </div>
 
         <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between mb-3">
-            <div className="p-2 bg-emerald-50 rounded-xl text-emerald-600">
-              <DollarSign className="h-4 w-4" />
+            <div className="p-2.5 bg-emerald-50 rounded-xl text-emerald-600">
+              <DollarSign className="h-5 w-5" />
             </div>
-            <span className="text-[10px] bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded-full border border-emerald-200">
+            <span className="text-xs bg-emerald-50 text-emerald-700 font-bold px-2.5 py-1 rounded-full border border-emerald-200">
               Finansial
             </span>
           </div>
           {loading ? (
-            <div className="h-8 w-28 bg-slate-100 rounded-lg animate-pulse" />
+            <div className="h-9 w-32 bg-slate-100 rounded-lg animate-pulse" />
           ) : (
-            <p className="text-xl sm:text-2xl font-black text-emerald-600 tracking-tight">
+            <p className="text-xl sm:text-2xl font-black text-emerald-600 tracking-tight leading-tight">
               {formatRupiah(stats?.total_nilai_pembelian_sarana)}
             </p>
           )}
-          <p className="text-xs text-slate-400 mt-1">Total nilai pengadaan sarana</p>
+          <p className="text-sm text-slate-500 mt-1.5 font-medium">Total nilai pengadaan sarana</p>
         </div>
 
         <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between mb-3">
-            <div className="p-2 bg-blue-50 rounded-xl text-blue-600">
-              <Building2 className="h-4 w-4" />
+            <div className="p-2.5 bg-blue-50 rounded-xl text-blue-600">
+              <Building2 className="h-5 w-5" />
             </div>
-            <span className="text-[10px] bg-blue-50 text-blue-700 font-bold px-2 py-0.5 rounded-full border border-blue-200">
+            <span className="text-xs bg-blue-50 text-blue-700 font-bold px-2.5 py-1 rounded-full border border-blue-200">
               Fasilitas
             </span>
           </div>
           {loading ? (
-            <div className="h-8 w-20 bg-slate-100 rounded-lg animate-pulse" />
+            <div className="h-9 w-24 bg-slate-100 rounded-lg animate-pulse" />
           ) : (
-            <p className="text-2xl font-black text-slate-900 tracking-tight">
+            <p className="text-3xl font-black text-slate-900 tracking-tight">
               {stats?.total_ruangan_all || stats?.total_ruangan || 0}{' '}
-              <span className="text-sm font-semibold text-slate-500">Ruangan</span>
+              <span className="text-base font-semibold text-slate-500">Ruangan</span>
             </p>
           )}
-          <p className="text-xs text-slate-400 mt-1">{stats?.total_gedung || 0} Gedung &amp; 5 Workshop Jurusan</p>
+          <p className="text-sm text-slate-500 mt-1.5 font-medium">{stats?.total_gedung || 0} Gedung &amp; 5 Workshop Jurusan</p>
         </div>
 
         <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between mb-3">
-            <div className="p-2 bg-purple-50 rounded-xl text-purple-600">
-              <ShoppingCart className="h-4 w-4" />
+            <div className="p-2.5 bg-purple-50 rounded-xl text-purple-600">
+              <ShoppingCart className="h-5 w-5" />
             </div>
-            <span className="text-[10px] bg-purple-50 text-purple-700 font-bold px-2 py-0.5 rounded-full border border-purple-200">
+            <span className="text-xs bg-purple-50 text-purple-700 font-bold px-2.5 py-1 rounded-full border border-purple-200">
               Pengadaan
             </span>
           </div>
           {loading ? (
-            <div className="h-8 w-24 bg-slate-100 rounded-lg animate-pulse" />
+            <div className="h-9 w-28 bg-slate-100 rounded-lg animate-pulse" />
           ) : (
-            <p className="text-xl sm:text-2xl font-black text-purple-700 tracking-tight">
+            <p className="text-xl sm:text-2xl font-black text-purple-700 tracking-tight leading-tight">
               {formatRupiah(stats?.total_belanja)}
             </p>
           )}
-          <p className="text-xs text-slate-400 mt-1">{stats?.total_item_belanja || 0} usulan rencana belanja</p>
+          <p className="text-sm text-slate-500 mt-1.5 font-medium">{stats?.total_item_belanja || 0} usulan rencana belanja</p>
         </div>
       </div>
 
       {/* ── Table Sarana Terbaru & Log Aktivitas ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-200 shadow-sm p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2">
-              <Package className="h-4 w-4 text-indigo-600" />
-              Aset Sarana Prasarana Terbaru
-            </h3>
-            <Link href="/dashboard/sarana-prasarana" className="text-xs font-bold text-indigo-600 hover:text-indigo-700">
-              Lihat Semua
-            </Link>
-          </div>
-
-          {loading ? (
-            <div className="space-y-3">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="h-14 bg-slate-100 rounded-xl animate-pulse" />
-              ))}
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className="border-b border-slate-100 text-slate-400 font-semibold">
-                    <th className="py-2.5 px-3">Kode &amp; Nama Sarana</th>
-                    <th className="py-2.5 px-3">Merek / Spek</th>
-                    <th className="py-2.5 px-3 text-center">Jumlah</th>
-                    <th className="py-2.5 px-3 text-right">Nilai Pembelian</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {recentSarana.map((s: any) => (
-                    <tr key={s.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="py-3 px-3">
-                        <p className="font-bold text-slate-900">{s.nama_sarana || s.nama_barang}</p>
-                        <p className="text-[10px] font-mono text-slate-400">{s.kode_sarana || s.kode}</p>
-                      </td>
-                      <td className="py-3 px-3 text-slate-600">
-                        {s.merek || s.spesifikasi || '-'}
-                      </td>
-                      <td className="py-3 px-3 text-center font-bold text-slate-900">
-                        {s.jumlah || 1} Unit
-                      </td>
-                      <td className="py-3 px-3 text-right font-semibold text-emerald-600">
-                        {formatRupiah(s.harga_pembelian)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+        <div className="lg:col-span-2">
+          <RecentSaranaTable
+            recentSarana={recentSarana}
+            loading={loading}
+            viewAllHref="/dashboard/sarana-prasarana"
+            title="Aset Sarana Prasarana Terbaru"
+          />
         </div>
 
-        {/* Audit Log / Aktivitas Terbaru */}
-        <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6">
-          <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
-            <Clock className="h-4 w-4 text-indigo-600" />
-            Aktivitas Sistem Terbaru
-          </h3>
-          <div className="space-y-3">
-            {recentActivity.slice(0, 5).map((act: any, idx: number) => (
-              <div key={idx} className="p-3 bg-slate-50/70 rounded-2xl border border-slate-100 space-y-1 text-xs">
-                <p className="font-bold text-slate-800">{act.deskripsi || act.action || 'Aktivitas Pengguna'}</p>
-                <p className="text-[10px] text-slate-400 font-mono">
-                  {act.created_at ? new Date(act.created_at).toLocaleString('id-ID') : 'Baru saja'}
-                </p>
+        {/* Riwayat Aktivitas Sistem (sinkron /api/histories) */}
+        <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 flex flex-col">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <HistoryIcon className="h-4 w-4 text-indigo-600" />
+              Riwayat Aktivitas Sistem
+            </h3>
+            <Link href="/dashboard/history" className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1">
+              Lihat Semua <ArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
+          <div className="space-y-2.5 flex-1">
+            {recentHistory.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 text-slate-400 text-xs">
+                <HistoryIcon className="w-8 h-8 text-slate-300 mb-2 stroke-1" />
+                Belum ada riwayat aktivitas.
               </div>
-            ))}
+            ) : (
+              recentHistory.map((h: any, idx: number) => {
+                const style = getAksiColor(h.aksi);
+                return (
+                  <div key={h.id || idx} className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50/70 border border-slate-100 hover:bg-slate-100/70 transition-colors">
+                    <div className={`mt-0.5 p-1.5 rounded-lg bg-white border border-slate-200 shadow-xs`}>
+                      {style.icon}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${style.badge}`}>
+                          {h.aksi}
+                        </span>
+                        {h.aset?.kode_aset && (
+                          <span className="text-[10px] font-mono text-slate-400">{h.aset.kode_aset}</span>
+                        )}
+                      </div>
+                      <p className="text-xs font-semibold text-slate-800 truncate">
+                        {h.aset?.nama_aset || h.keterangan || 'Aktivitas sistem'}
+                      </p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">
+                        {h.created_at ? formatHistoryDate(h.created_at) : '—'}
+                        {h.user?.name && <span className="ml-1 font-medium text-slate-500">· {h.user.name}</span>}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
       </div>

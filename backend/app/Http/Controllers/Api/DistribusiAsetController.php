@@ -570,6 +570,12 @@ class DistribusiAsetController extends Controller
             ->take(5)
             ->get();
 
+        // 5 Aset Termahal
+        $inputTermahal = SaranaPrasarana::orderBy('nilai_harga_pembelian', 'desc')
+            ->orderBy('id', 'desc')
+            ->take(5)
+            ->get();
+
         // Sebaran Aset per Bengkel / Ruangan
         $sebaranBengkel = Ruangan::where('jenis', 'workshop')
             ->orWhere('nama_ruangan', 'like', '%Bengkel%')
@@ -591,6 +597,7 @@ class DistribusiAsetController extends Controller
             'selesai_serah_terima' => $selesaiSerahTerima,
             'distribusi_terbaru'   => $distribusiTerbaru,
             'input_terbaru'        => $inputTerbaru,
+            'input_termahal'       => $inputTermahal,
             'sebaran_bengkel'      => $sebaranBengkel,
         ]);
     }
