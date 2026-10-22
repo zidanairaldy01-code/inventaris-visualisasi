@@ -108,6 +108,16 @@ const getCleanKeterangan = (item: GudangItem): string => {
   return s.trim().replace(/^\||\|$/g, '').trim();
 };
 
+const getKeteranganBadgeStyle = (ket?: string | null) => {
+  if (!ket) return 'bg-slate-50 text-slate-700 border-slate-200';
+  const l = ket.toLowerCase().trim();
+  if (l === 'digunakan') return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+  if (l === 'dicadangkan') return 'bg-amber-50 text-amber-700 border-amber-200';
+  if (l.includes('digunakan') && l.includes('dicadangkan')) return 'bg-blue-50 text-blue-700 border-blue-200';
+  return 'bg-slate-50 text-slate-700 border-slate-200';
+};
+
+
 const parseDate = (cell: unknown): string => {
   if (!cell) return '';
   if (cell instanceof Date) return cell.toISOString().split('T')[0];
@@ -289,12 +299,9 @@ function parseExcelFileGudang(file: File, activeFolderId: number | null): Promis
             const rawSatuan = colMap.satuan !== undefined ? String(row[colMap.satuan] ?? '').trim() : '';
             const satuan = rawSatuan || 'Unit';
 
-            let ketParts: string[] = [];
-            if (rak && rak !== 'Gudang Utama') ketParts.push(`Rak: ${rak}`);
-            if (colMap.keterangan !== undefined && row[colMap.keterangan]) {
-              const userKet = String(row[colMap.keterangan]).trim();
-              if (userKet) ketParts.push(userKet);
-            }
+            const userKet = (colMap.keterangan !== undefined && row[colMap.keterangan])
+              ? String(row[colMap.keterangan]).trim()
+              : '';
 
             result.push({
               tanggal_pengambilan: tgl,
@@ -306,7 +313,7 @@ function parseExcelFileGudang(file: File, activeFolderId: number | null): Promis
               stok_masuk: masuk,
               stok_keluar: keluar,
               stok_akhir: akhir,
-              keterangan: ketParts.join(' | '),
+              keterangan: userKet,
               id_folder: activeFolderId,
             });
             autoIdx++;
@@ -822,7 +829,16 @@ export default function InventarisGudangPage() {
   };
 
   const handleImportSelected = async () => {
-    const rows = Array.from(selectedRows).map(i => previewData[i]);
+    const rows = Array.from(selectedRows).map(i => {
+      const r = previewData[i];
+      const rak = r.lokasi_rak || 'Gudang Utama';
+      const cleanKet = r.keterangan?.trim() || '';
+      const ketFormatted = `Rak: ${rak}${cleanKet ? ' | ' + cleanKet : ''}`;
+      return {
+        ...r,
+        keterangan: ketFormatted,
+      };
+    });
     if (rows.length === 0) {
       showToast('Pilih minimal 1 data untuk di-import', 'warning');
       return;
@@ -889,13 +905,22 @@ export default function InventarisGudangPage() {
 
   const downloadTemplate = () => {
     const ws = XLSX.utils.aoa_to_sheet([
-      ['NO', 'TANGGAL PENGAMBILAN', 'KODE', 'NAMA BARANG', 'SATUAN', 'STOK', '', '', ''],
-      ['', '', '', '', '', 'AWAL', 'IN', 'OUT', 'AKHIR'],
-      [1, '08/07/2026', '', 'Mesin Pengasah Endmill', 'Unit', 1, 0, 1, 0],
-      [2, '08/07/2026', 'GDG-0002', 'Semen Gresik 50kg', 'Sak', 50, 20, 10, 60],
-      [3, '09/07/2026', 'GDG-0003', 'Cat Tembok Nippon Paint 5kg', 'Kaleng', 15, 0, 3, 12],
+      ['NO', 'TANGGAL PENGAMBILAN', 'KODE', 'NAMA BARANG', 'SATUAN', 'STOK', '', '', '', 'KETERANGAN'],
+      ['', '', '', '', '', 'AWAL', 'IN', 'OUT', 'AKHIR', ''],
+      [1, '08/07/2026', '', 'Mesin Pengasah Endmill', 'Unit', 1, 0, 1, 0, 'Digunakan'],
+      [2, '08/07/2026', 'GDG-0002', 'Semen Gresik 50kg', 'Sak', 50, 20, 10, 60, 'Dicadangkan'],
+      [3, '09/07/2026', 'GDG-0003', 'Cat Tembok Nippon Paint 5kg', 'Kaleng', 15, 0, 3, 12, 'Digunakan & Dicadangkan'],
     ]);
-    ws['!cols'] = [{ wch: 6 }, { wch: 22 }, { wch: 16 }, { wch: 35 }, { wch: 12 }, { wch: 10 }, { wch: 8 }, { wch: 8 }, { wch: 10 }];
+    ws['!merges'] = [
+      { s: { r: 0, c: 0 }, e: { r: 1, c: 0 } },
+      { s: { r: 0, c: 1 }, e: { r: 1, c: 1 } },
+      { s: { r: 0, c: 2 }, e: { r: 1, c: 2 } },
+      { s: { r: 0, c: 3 }, e: { r: 1, c: 3 } },
+      { s: { r: 0, c: 4 }, e: { r: 1, c: 4 } },
+      { s: { r: 0, c: 5 }, e: { r: 0, c: 8 } },
+      { s: { r: 0, c: 9 }, e: { r: 1, c: 9 } },
+    ];
+    ws['!cols'] = [{ wch: 6 }, { wch: 22 }, { wch: 16 }, { wch: 35 }, { wch: 12 }, { wch: 10 }, { wch: 8 }, { wch: 8 }, { wch: 10 }, { wch: 24 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Template Gudang');
     XLSX.writeFile(wb, 'Template_Inventaris_Gudang.xlsx');
@@ -1295,6 +1320,7 @@ export default function InventarisGudangPage() {
                       <th className="px-4 py-3 text-xs font-bold text-orange-700 uppercase tracking-wide text-center">OUT (-)</th>
                       <th className="px-4 py-3 text-xs font-bold text-purple-700 uppercase tracking-wide text-center">Stok Akhir</th>
                       <th className="px-4 py-3 text-xs font-bold text-slate-600 uppercase tracking-wide text-center">Status</th>
+                      <th className="px-4 py-3 text-xs font-bold text-slate-600 uppercase tracking-wide text-center">Keterangan</th>
                       <th className="px-4 py-3 text-xs font-bold text-slate-600 uppercase tracking-wide text-center">Aksi</th>
                     </tr>
                   </thead>
@@ -1338,7 +1364,6 @@ export default function InventarisGudangPage() {
                           </td>
                           <td className="px-4 py-3">
                             <div className="font-semibold text-slate-900">{item.nama_barang}</div>
-                            {cleanKet && <div className="text-xs text-slate-400 truncate max-w-[220px]">{cleanKet}</div>}
                           </td>
                           <td className="px-4 py-3 text-center"><span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded">{item.satuan}</span></td>
                           <td className="px-4 py-3 text-center"><span className="px-2.5 py-1 bg-blue-100 text-blue-700 text-xs font-bold rounded-lg border border-blue-200">{item.stok_awal}</span></td>
@@ -1363,6 +1388,11 @@ export default function InventarisGudangPage() {
                                 <CheckCircle2 className="h-3 w-3" /> Safe
                               </span>
                             )}
+                          </td>
+                          <td className="px-4 py-3 text-center whitespace-nowrap">
+                            <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold border ${getKeteranganBadgeStyle(cleanKet)}`}>
+                              {cleanKet || '-'}
+                            </span>
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex items-center justify-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1995,9 +2025,23 @@ export default function InventarisGudangPage() {
                 </div>
 
                 <div className="col-span-2">
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Keterangan / Spesifikasi</label>
-                  <textarea value={formData.keterangan || ''} onChange={e => setFormData(f => ({ ...f, keterangan: e.target.value }))}
-                    rows={2} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none" placeholder="Catatan tambahan spesifikasi barang..." />
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Keterangan</label>
+                  <select
+                    value={formData.keterangan || ''}
+                    onChange={e => setFormData(f => ({ ...f, keterangan: e.target.value }))}
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
+                  >
+                    <option value="">-- Pilih Keterangan --</option>
+                    <option value="Digunakan">Digunakan</option>
+                    <option value="Dicadangkan">Dicadangkan</option>
+                    <option value="Digunakan & Dicadangkan">Digunakan & Dicadangkan</option>
+                    {formData.keterangan && !['Digunakan', 'Dicadangkan', 'Digunakan & Dicadangkan', ''].includes(formData.keterangan) && (
+                      <option value={formData.keterangan}>{formData.keterangan} (Kustom)</option>
+                    )}
+                  </select>
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Status pemanfaatan barang: Digunakan, Dicadangkan, atau Digunakan &amp; Dicadangkan.
+                  </p>
                 </div>
               </div>
             </div>
@@ -2131,6 +2175,7 @@ export default function InventarisGudangPage() {
                             <th rowSpan={2} className="px-2 py-1 border border-teal-200">NAMA BARANG</th>
                             <th rowSpan={2} className="px-2 py-1 border border-teal-200">SATUAN</th>
                             <th colSpan={4} className="px-2 py-1 border border-teal-200">STOK</th>
+                            <th rowSpan={2} className="px-2 py-1 border border-teal-200">KETERANGAN</th>
                           </tr>
                           <tr>
                             <th className="px-2 py-1 border border-teal-200">AWAL</th>
@@ -2150,10 +2195,12 @@ export default function InventarisGudangPage() {
                             <td className="px-2 py-1 border border-teal-200 text-slate-400">-</td>
                             <td className="px-2 py-1 border border-teal-200 font-bold text-orange-700">1</td>
                             <td className="px-2 py-1 border border-teal-200 font-bold text-purple-700">0</td>
+                            <td className="px-2 py-1 border border-teal-200 font-semibold text-emerald-700">Digunakan</td>
                           </tr>
                         </tbody>
                       </table>
                     </div>
+                    <p className="text-[11px] text-teal-700">✓ Kolom <strong>KETERANGAN</strong> mendukung: Digunakan, Dicadangkan, Digunakan &amp; Dicadangkan (bisa diedit di tabel preview)</p>
                     <p className="text-[11px] text-teal-700">✓ Target Folder: <strong className="text-teal-900">{activeFolderTitle}</strong></p>
                   </div>
 
@@ -2211,6 +2258,7 @@ export default function InventarisGudangPage() {
                             <th className="px-2 sm:px-3 py-2 sm:py-2.5 text-center font-bold text-emerald-700">IN</th>
                             <th className="px-2 sm:px-3 py-2 sm:py-2.5 text-center font-bold text-orange-700">OUT</th>
                             <th className="px-2 sm:px-3 py-2 sm:py-2.5 text-center font-bold text-purple-700">Stok Akhir</th>
+                            <th className="px-2 sm:px-3 py-2 sm:py-2.5 text-center font-bold text-slate-600">Keterangan</th>
                             <th className="px-2 sm:px-3 py-2 sm:py-2.5 text-center font-bold text-slate-600 sticky right-0 bg-slate-100 shadow-[-2px_0_4px_rgba(0,0,0,0.05)]">Aksi</th>
                           </tr>
                       </thead>
@@ -2235,6 +2283,21 @@ export default function InventarisGudangPage() {
                                   <td className="px-2 py-1 text-center"><input type="number" min="0" value={eRow.stok_masuk} onChange={e => setEditingPreviewRow(r => r ? { ...r, stok_masuk: +e.target.value } : r)} className="w-12 sm:w-14 border border-emerald-300 rounded px-1.5 py-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-emerald-400 bg-emerald-50" /></td>
                                   <td className="px-2 py-1 text-center"><input type="number" min="0" value={eRow.stok_keluar} onChange={e => setEditingPreviewRow(r => r ? { ...r, stok_keluar: +e.target.value } : r)} className="w-12 sm:w-14 border border-orange-300 rounded px-1.5 py-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-orange-400 bg-orange-50" /></td>
                                   <td className="px-2 py-1 text-center"><span className="w-12 sm:w-14 inline-block text-center px-2 py-1 bg-purple-100 text-purple-700 font-bold rounded">{eRow.stok_awal + eRow.stok_masuk - eRow.stok_keluar}</span></td>
+                                  <td className="px-2 py-1">
+                                    <select
+                                      value={eRow.keterangan || ''}
+                                      onChange={e => setEditingPreviewRow(r => r ? { ...r, keterangan: e.target.value } : r)}
+                                      className="w-32 sm:w-36 border border-amber-300 rounded px-1.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-amber-400 bg-white"
+                                    >
+                                      <option value="">-- Pilih --</option>
+                                      <option value="Digunakan">Digunakan</option>
+                                      <option value="Dicadangkan">Dicadangkan</option>
+                                      <option value="Digunakan & Dicadangkan">Digunakan & Dicadangkan</option>
+                                      {eRow.keterangan && !['Digunakan', 'Dicadangkan', 'Digunakan & Dicadangkan', ''].includes(eRow.keterangan) && (
+                                        <option value={eRow.keterangan}>{eRow.keterangan}</option>
+                                      )}
+                                    </select>
+                                  </td>
                                   <td className="px-2 py-1 sticky right-0 bg-amber-50 border-l border-slate-100">
                                     <div className="flex gap-1 justify-center">
                                       <button onClick={() => saveEditPreview(idx)} className="p-1 bg-emerald-500 text-white rounded hover:bg-emerald-600 transition-colors" title="Simpan"><Save className="h-3 w-3" /></button>
@@ -2252,6 +2315,11 @@ export default function InventarisGudangPage() {
                                   <td className="px-2 sm:px-3 py-2 text-center font-bold text-emerald-700">+{row.stok_masuk}</td>
                                   <td className="px-2 sm:px-3 py-2 text-center font-bold text-orange-700">-{row.stok_keluar}</td>
                                   <td className="px-2 sm:px-3 py-2 text-center font-bold text-purple-700">{row.stok_akhir}</td>
+                                  <td className="px-2 sm:px-3 py-2 text-center whitespace-nowrap">
+                                    <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold border ${getKeteranganBadgeStyle(row.keterangan)}`}>
+                                      {row.keterangan || '-'}
+                                    </span>
+                                  </td>
                                   <td className="px-2 sm:px-3 py-2 sticky right-0 bg-white border-l border-slate-100">
                                     <div className="flex gap-1 justify-center">
                                       <button onClick={() => startEditPreview(idx)} className="p-1 bg-indigo-100 text-indigo-600 rounded hover:bg-indigo-200 transition-colors" title="Edit baris ini">

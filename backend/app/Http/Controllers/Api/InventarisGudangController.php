@@ -291,6 +291,10 @@ class InventarisGudangController extends Controller
                 if ((str_contains($combined, 'akhir') || ($v1 === 'stok' && $v2 === 'akhir')) && !isset($colMap['stok_akhir'])) {
                     $colMap['stok_akhir'] = $i;
                 }
+                // Keterangan / Ket
+                if ((str_contains($combined, 'keterangan') || $v1 === 'ket' || $v2 === 'ket') && !isset($colMap['keterangan'])) {
+                    $colMap['keterangan'] = $i;
+                }
             }
 
             // Fallback jika tidak ditemukan nama barang secara eksplisit
@@ -399,6 +403,8 @@ class InventarisGudangController extends Controller
                     $parsedTanggal = !empty($tanggalRaw) ? $this->parseDate($tanggalRaw) : null;
                     $finalKode     = !empty($kodeRaw) ? $kodeRaw : null;
 
+                    $ketRaw = isset($colMap['keterangan']) ? trim(strval($row[$colMap['keterangan']] ?? '')) : null;
+
                     $data = [
                         'tanggal_pengambilan' => $parsedTanggal,
                         'kode'                => $finalKode,
@@ -407,7 +413,7 @@ class InventarisGudangController extends Controller
                         'stok_awal'           => $this->parseNumber($awalRaw),
                         'stok_masuk'          => $this->parseNumber($masukRaw),
                         'stok_keluar'         => $this->parseNumber($keluarRaw),
-                        'keterangan'          => null,
+                        'keterangan'          => !empty($ketRaw) ? $ketRaw : null,
                         'id_user'             => $request->user()?->id,
                         'id_folder'           => $idFolder ?: null,
                     ];

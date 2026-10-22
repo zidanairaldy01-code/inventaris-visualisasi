@@ -9,7 +9,8 @@ import {
   Package, Layers, Download, Calendar, X, Save, AlertTriangle,
   ChevronLeft, ChevronRight, Folder, FolderOpen, ArrowLeft,
   Grid, List as ListIcon, HardDrive, FolderPlus, CheckCircle2,
-  Warehouse, ArrowUpRight, ArrowDownLeft, AlertCircle
+  Warehouse, ArrowUpRight, ArrowDownLeft, AlertCircle,
+  RotateCcw, Clock, Eye, Archive
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import Toast from '@/components/Toast';
@@ -24,8 +25,11 @@ interface CustomFolder {
   items_count?: number;
   total_belanja?: number | null;
   created_at?: string;
+  deleted_at?: string;
+  sisa_hari?: number;
   id_sumber_dana?: number | null;
   sumber_dana?: { id: number; nama_sumber: string; jenis_sumber: string | null } | null;
+  inventaris_gudangs?: GudangItem[];
 }
 
 interface SumberDana {
@@ -103,6 +107,16 @@ const getCleanKeterangan = (item: GudangItem): string => {
   s = s.replace(/Lokasi:\s*[^|]+\|?/i, '');
   return s.trim().replace(/^\||\|$/g, '').trim();
 };
+
+const getKeteranganBadgeStyle = (ket?: string | null) => {
+  if (!ket) return 'bg-slate-50 text-slate-700 border-slate-200';
+  const l = ket.toLowerCase().trim();
+  if (l === 'digunakan') return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+  if (l === 'dicadangkan') return 'bg-amber-50 text-amber-700 border-amber-200';
+  if (l.includes('digunakan') && l.includes('dicadangkan')) return 'bg-blue-50 text-blue-700 border-blue-200';
+  return 'bg-slate-50 text-slate-700 border-slate-200';
+};
+
 
 const parseDate = (cell: unknown): string => {
   if (!cell) return '';
@@ -285,12 +299,9 @@ function parseExcelFileGudang(file: File, activeFolderId: number | null): Promis
             const rawSatuan = colMap.satuan !== undefined ? String(row[colMap.satuan] ?? '').trim() : '';
             const satuan = rawSatuan || 'Unit';
 
-            let ketParts: string[] = [];
-            if (rak && rak !== 'Gudang Utama') ketParts.push(`Rak: ${rak}`);
-            if (colMap.keterangan !== undefined && row[colMap.keterangan]) {
-              const userKet = String(row[colMap.keterangan]).trim();
-              if (userKet) ketParts.push(userKet);
-            }
+            const userKet = (colMap.keterangan !== undefined && row[colMap.keterangan])
+              ? String(row[colMap.keterangan]).trim()
+              : '';
 
             result.push({
               tanggal_pengambilan: tgl,
@@ -302,7 +313,7 @@ function parseExcelFileGudang(file: File, activeFolderId: number | null): Promis
               stok_masuk: masuk,
               stok_keluar: keluar,
               stok_akhir: akhir,
-              keterangan: ketParts.join(' | '),
+              keterangan: userKet,
               id_folder: activeFolderId,
             });
             autoIdx++;
@@ -420,6 +431,15 @@ export default function InventarisGudangPage() {
   const [deleteFolderTarget, setDeleteFolderTarget] = useState<CustomFolder | null>(null);
   const [deletingFolder, setDeletingFolder] = useState(false);
 
+  // Trash bin state
+  const [trashFolders, setTrashFolders] = useState<CustomFolder[]>([]);
+  const [showTrashModal, setShowTrashModal] = useState(false);
+  const [loadingTrash, setLoadingTrash] = useState(false);
+  const [viewingTrashFolder, setViewingTrashFolder] = useState<CustomFolder | null>(null);
+  const [actionTrashLoading, setActionTrashLoading] = useState<number | 'empty' | null>(null);
+  const [showEmptyTrashConfirm, setShowEmptyTrashConfirm] = useState(false);
+  const [confirmForceDeleteTarget, setConfirmForceDeleteTarget] = useState<CustomFolder | null>(null);
+
   // Item CRUD modal
   const [showFormModal, setShowFormModal] = useState(false);
   const [editTarget, setEditTarget] = useState<GudangItem | null>(null);
@@ -467,6 +487,21 @@ export default function InventarisGudangPage() {
     }
   }, []);
 
+  /* ── Fetch Trashed Folders (Recycle Bin) ── */
+  const fetchTrashFolders = useCallback(async () => {
+    try {
+      setLoadingTrash(true);
+      const res = await axios.get('/api/folder-inventaris/trash?jenis=inventaris-gudang');
+      if (res.data?.status === 'success') {
+        setTrashFolders(res.data.data || []);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingTrash(false);
+    }
+  }, []);
+
   /* ── Fetch Inventaris Gudang Items ── */
   const fetchData = useCallback(async (folderId: number | null | -1 = activeFolderId) => {
     try {
@@ -497,8 +532,9 @@ export default function InventarisGudangPage() {
 
   useEffect(() => {
     fetchFolders();
+    fetchTrashFolders();
     fetchSumberDana();
-  }, [fetchFolders, fetchSumberDana]);
+  }, [fetchFolders, fetchTrashFolders, fetchSumberDana]);
 
   useEffect(() => {
     fetchData(activeFolderId);
@@ -561,18 +597,77 @@ export default function InventarisGudangPage() {
     } finally { setSavingFolder(false); }
   };
 
-  const handleDeleteFolder = async () => {
-    if (!deleteFolderTarget) return;
+  // ── Pindahkan ke Tempat Sampah (Soft Delete - 30 Hari) ──
+  const handleSoftDeleteFolder = async (folder: CustomFolder) => {
     try {
       setDeletingFolder(true);
-      await axios.delete(`/api/folder-inventaris/${deleteFolderTarget.id}`);
-      showToast('Folder gudang berhasil dihapus', 'success');
+      const res = await axios.delete(`/api/folder-inventaris/${folder.id}`);
+      showToast(res.data?.message || 'Folder berhasil dipindahkan ke tempat sampah', 'success');
       setDeleteFolderTarget(null);
-      if (activeFolderId === deleteFolderTarget.id) setActiveFolderId(null);
-      fetchFolders(); fetchData();
+      if (activeFolderId === folder.id) setActiveFolderId(null);
+      fetchFolders();
+      fetchData();
+      fetchTrashFolders();
     } catch (err) {
-      showErrorAlert(err, 'Gagal Menghapus Folder Gudang');
-    } finally { setDeletingFolder(false); }
+      showErrorAlert(err, 'Gagal Memindahkan Folder ke Tempat Sampah');
+    } finally {
+      setDeletingFolder(false);
+    }
+  };
+
+  // ── Hapus Permanen Sekarang (Hard Delete Langsung) ──
+  const handleForceDeleteFolder = async (folder: CustomFolder) => {
+    try {
+      setDeletingFolder(true);
+      const res = await axios.delete(`/api/folder-inventaris/${folder.id}/force`);
+      showToast(res.data?.message || 'Folder dan seluruh isinya berhasil dihapus permanen', 'success');
+      setDeleteFolderTarget(null);
+      setConfirmForceDeleteTarget(null);
+      if (viewingTrashFolder?.id === folder.id) setViewingTrashFolder(null);
+      if (activeFolderId === folder.id) setActiveFolderId(null);
+      fetchFolders();
+      fetchData();
+      fetchTrashFolders();
+    } catch (err) {
+      showErrorAlert(err, 'Gagal Menghapus Folder Permanen');
+    } finally {
+      setDeletingFolder(false);
+    }
+  };
+
+  // ── Pulihkan Folder dari Tempat Sampah (Restore) ──
+  const handleRestoreFolder = async (folderId: number) => {
+    try {
+      setActionTrashLoading(folderId);
+      const res = await axios.post(`/api/folder-inventaris/${folderId}/restore`);
+      showToast(res.data?.message || 'Folder berhasil dipulihkan dari tempat sampah', 'success');
+      if (viewingTrashFolder?.id === folderId) setViewingTrashFolder(null);
+      fetchFolders();
+      fetchData();
+      fetchTrashFolders();
+    } catch (err) {
+      showErrorAlert(err, 'Gagal Memulihkan Folder dari Tempat Sampah');
+    } finally {
+      setActionTrashLoading(null);
+    }
+  };
+
+  // ── Kosongkan Seluruh Tempat Sampah ──
+  const handleEmptyTrash = async () => {
+    try {
+      setActionTrashLoading('empty');
+      const res = await axios.delete('/api/folder-inventaris/trash/empty?jenis=inventaris-gudang');
+      showToast(res.data?.message || 'Tempat sampah berhasil dikosongkan', 'success');
+      setShowEmptyTrashConfirm(false);
+      setViewingTrashFolder(null);
+      fetchFolders();
+      fetchData();
+      fetchTrashFolders();
+    } catch (err) {
+      showErrorAlert(err, 'Gagal Mengosongkan Tempat Sampah');
+    } finally {
+      setActionTrashLoading(null);
+    }
   };
 
   /* ── ITEM CRUD HANDLERS ── */
@@ -586,7 +681,7 @@ export default function InventarisGudangPage() {
   const openEdit = (item: GudangItem) => {
     setEditTarget(item);
     setFormData({
-      tanggal_pengambilan: item.tanggal_pengambilan,
+      tanggal_pengambilan: item.tanggal_pengambilan || '',
       kode: item.kode || '',
       lokasi_rak: getLokasiRak(item),
       nama_barang: item.nama_barang || '',
@@ -734,8 +829,18 @@ export default function InventarisGudangPage() {
   };
 
   const handleImportSelected = async () => {
-    if (!importFile && previewData.length === 0) {
-      showToast('Pilih file Excel terlebih dahulu', 'warning');
+    const rows = Array.from(selectedRows).map(i => {
+      const r = previewData[i];
+      const rak = r.lokasi_rak || 'Gudang Utama';
+      const cleanKet = r.keterangan?.trim() || '';
+      const ketFormatted = `Rak: ${rak}${cleanKet ? ' | ' + cleanKet : ''}`;
+      return {
+        ...r,
+        keterangan: ketFormatted,
+      };
+    });
+    if (rows.length === 0) {
+      showToast('Pilih minimal 1 data untuk di-import', 'warning');
       return;
     }
 
@@ -743,51 +848,23 @@ export default function InventarisGudangPage() {
     setImportState('importing');
 
     try {
-      if (importFile) {
-        // Fast direct bulk file upload — always use when file is available
-        const fd = new FormData();
-        fd.append('file', importFile);
-        if (activeFolderId && activeFolderId > 0) {
-          fd.append('id_folder', String(activeFolderId));
-        }
+      // Kirim data yang sudah diverifikasi dan ditampilkan di preview ke batch-store
+      const res = await axios.post('/api/inventaris-gudang/batch-store', {
+        items: rows,
+        id_folder: activeFolderId && activeFolderId > 0 ? activeFolderId : null,
+      });
 
-        const res = await axios.post('/api/inventaris-gudang/import', fd, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
-
-        setImportState('completed');
-        setTimeout(() => {
-          if (res.data.status === 'success') {
-            showToast(res.data.message || 'Import data gudang berhasil!', 'success');
-            closeImport();
-            fetchData();
-            fetchFolders();
-          } else {
-            showToast(res.data.message || 'Gagal import data gudang', 'error');
-          }
-        }, 600);
-      } else {
-        // Fallback: no file reference, send rows individually
-        const rows = Array.from(selectedRows).map(i => previewData[i]);
-        if (rows.length === 0) {
-          showToast('Pilih minimal 1 data', 'warning');
-          return;
-        }
-        let ok = 0;
-        for (const row of rows) {
-          try {
-            await axios.post('/api/inventaris-gudang', row);
-            ok++;
-          } catch { /* ignore */ }
-        }
-        setImportState('completed');
-        setTimeout(() => {
-          showToast(`Berhasil meng-import ${ok} data gudang`, 'success');
+      setImportState('completed');
+      setTimeout(() => {
+        if (res.data.status === 'success') {
+          showToast(res.data.message || `Berhasil meng-import ${rows.length} data gudang!`, 'success');
           closeImport();
           fetchData();
           fetchFolders();
-        }, 600);
-      }
+        } else {
+          showToast(res.data.message || 'Gagal import data gudang', 'error');
+        }
+      }, 600);
     } catch (err: unknown) {
       showErrorAlert(err, 'Gagal Meng-Import File Excel');
       setImportState('idle');
@@ -828,13 +905,22 @@ export default function InventarisGudangPage() {
 
   const downloadTemplate = () => {
     const ws = XLSX.utils.aoa_to_sheet([
-      ['NO', 'TANGGAL PENGAMBILAN', 'KODE', 'NAMA BARANG', 'SATUAN', 'STOK', '', '', ''],
-      ['', '', '', '', '', 'AWAL', 'IN', 'OUT', 'AKHIR'],
-      [1, '08/07/2026', '', 'Mesin Pengasah Endmill', 'Unit', 1, 0, 1, 0],
-      [2, '08/07/2026', 'GDG-0002', 'Semen Gresik 50kg', 'Sak', 50, 20, 10, 60],
-      [3, '09/07/2026', 'GDG-0003', 'Cat Tembok Nippon Paint 5kg', 'Kaleng', 15, 0, 3, 12],
+      ['NO', 'TANGGAL PENGAMBILAN', 'KODE', 'NAMA BARANG', 'SATUAN', 'STOK', '', '', '', 'KETERANGAN'],
+      ['', '', '', '', '', 'AWAL', 'IN', 'OUT', 'AKHIR', ''],
+      [1, '08/07/2026', '', 'Mesin Pengasah Endmill', 'Unit', 1, 0, 1, 0, 'Digunakan'],
+      [2, '08/07/2026', 'GDG-0002', 'Semen Gresik 50kg', 'Sak', 50, 20, 10, 60, 'Dicadangkan'],
+      [3, '09/07/2026', 'GDG-0003', 'Cat Tembok Nippon Paint 5kg', 'Kaleng', 15, 0, 3, 12, 'Digunakan & Dicadangkan'],
     ]);
-    ws['!cols'] = [{ wch: 6 }, { wch: 22 }, { wch: 16 }, { wch: 35 }, { wch: 12 }, { wch: 10 }, { wch: 8 }, { wch: 8 }, { wch: 10 }];
+    ws['!merges'] = [
+      { s: { r: 0, c: 0 }, e: { r: 1, c: 0 } },
+      { s: { r: 0, c: 1 }, e: { r: 1, c: 1 } },
+      { s: { r: 0, c: 2 }, e: { r: 1, c: 2 } },
+      { s: { r: 0, c: 3 }, e: { r: 1, c: 3 } },
+      { s: { r: 0, c: 4 }, e: { r: 1, c: 4 } },
+      { s: { r: 0, c: 5 }, e: { r: 0, c: 8 } },
+      { s: { r: 0, c: 9 }, e: { r: 1, c: 9 } },
+    ];
+    ws['!cols'] = [{ wch: 6 }, { wch: 22 }, { wch: 16 }, { wch: 35 }, { wch: 12 }, { wch: 10 }, { wch: 8 }, { wch: 8 }, { wch: 10 }, { wch: 24 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Template Gudang');
     XLSX.writeFile(wb, 'Template_Inventaris_Gudang.xlsx');
@@ -905,6 +991,19 @@ export default function InventarisGudangPage() {
               }`}
             >
               <ListIcon className="h-4 w-4" /> Semua Barang Gudang
+            </button>
+            <button
+              onClick={() => { setShowTrashModal(true); fetchTrashFolders(); }}
+              className="px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 bg-rose-500/25 hover:bg-rose-500/35 text-white backdrop-blur-sm border border-rose-300/30 shadow-sm"
+              title="Tempat Sampah Folder Gudang"
+            >
+              <Trash2 className="h-4 w-4 text-rose-200" />
+              <span>Tempat Sampah</span>
+              {trashFolders.length > 0 && (
+                <span className="px-1.5 py-0.5 text-[10px] font-black bg-rose-600 text-white rounded-full leading-none shadow-sm">
+                  {trashFolders.length}
+                </span>
+              )}
             </button>
           </div>
         </div>
@@ -1221,6 +1320,7 @@ export default function InventarisGudangPage() {
                       <th className="px-4 py-3 text-xs font-bold text-orange-700 uppercase tracking-wide text-center">OUT (-)</th>
                       <th className="px-4 py-3 text-xs font-bold text-purple-700 uppercase tracking-wide text-center">Stok Akhir</th>
                       <th className="px-4 py-3 text-xs font-bold text-slate-600 uppercase tracking-wide text-center">Status</th>
+                      <th className="px-4 py-3 text-xs font-bold text-slate-600 uppercase tracking-wide text-center">Keterangan</th>
                       <th className="px-4 py-3 text-xs font-bold text-slate-600 uppercase tracking-wide text-center">Aksi</th>
                     </tr>
                   </thead>
@@ -1264,7 +1364,6 @@ export default function InventarisGudangPage() {
                           </td>
                           <td className="px-4 py-3">
                             <div className="font-semibold text-slate-900">{item.nama_barang}</div>
-                            {cleanKet && <div className="text-xs text-slate-400 truncate max-w-[220px]">{cleanKet}</div>}
                           </td>
                           <td className="px-4 py-3 text-center"><span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded">{item.satuan}</span></td>
                           <td className="px-4 py-3 text-center"><span className="px-2.5 py-1 bg-blue-100 text-blue-700 text-xs font-bold rounded-lg border border-blue-200">{item.stok_awal}</span></td>
@@ -1289,6 +1388,11 @@ export default function InventarisGudangPage() {
                                 <CheckCircle2 className="h-3 w-3" /> Safe
                               </span>
                             )}
+                          </td>
+                          <td className="px-4 py-3 text-center whitespace-nowrap">
+                            <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold border ${getKeteranganBadgeStyle(cleanKet)}`}>
+                              {cleanKet || '-'}
+                            </span>
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex items-center justify-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1433,6 +1537,420 @@ export default function InventarisGudangPage() {
         document.body
       )}
 
+      {/* ════════ DELETE / TRASH FOLDER OPTIONS MODAL ════════ */}
+      {deleteFolderTarget && createPortal(
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl p-5 border border-slate-100">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+                <Trash2 className="h-4 w-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-sm font-semibold text-slate-900">Hapus Folder</h3>
+                <p className="text-xs text-slate-500 mt-0.5 truncate">
+                  &ldquo;<span className="font-medium text-slate-700">{deleteFolderTarget.nama_folder}</span>&rdquo;
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-2 mb-4">
+              <button
+                type="button"
+                onClick={() => handleSoftDeleteFolder(deleteFolderTarget)}
+                disabled={deletingFolder}
+                className="w-full text-left px-3.5 py-2.5 rounded-xl border border-slate-200 hover:border-slate-300 hover:bg-slate-50/80 transition-colors flex items-center justify-between group disabled:opacity-50"
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <Archive className="h-4 w-4 text-slate-400 group-hover:text-slate-600 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-slate-800">Pindahkan ke Sampah</p>
+                    <p className="text-[11px] text-slate-400">Tersimpan selama 30 hari</p>
+                  </div>
+                </div>
+                <span className="text-[11px] font-semibold text-slate-400 group-hover:text-slate-700 shrink-0">Pilih</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const target = deleteFolderTarget;
+                  setDeleteFolderTarget(null);
+                  setConfirmForceDeleteTarget(target);
+                }}
+                disabled={deletingFolder}
+                className="w-full text-left px-3.5 py-2.5 rounded-xl border border-rose-100 hover:border-rose-200 hover:bg-rose-50/40 transition-colors flex items-center justify-between group disabled:opacity-50"
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <Trash2 className="h-4 w-4 text-rose-400 group-hover:text-rose-600 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-rose-700">Hapus Permanen</p>
+                    <p className="text-[11px] text-rose-400/80">Langsung dihapus permanen</p>
+                  </div>
+                </div>
+                <span className="text-[11px] font-semibold text-rose-400 group-hover:text-rose-600 shrink-0">Pilih</span>
+              </button>
+            </div>
+
+            <div className="flex justify-end pt-1">
+              <button
+                type="button"
+                onClick={() => setDeleteFolderTarget(null)}
+                disabled={deletingFolder}
+                className="px-3.5 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                Batal
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ════════ CONFIRM FORCE DELETE MODAL ════════ */}
+      {confirmForceDeleteTarget && createPortal(
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl p-5 border border-slate-100">
+            <div className="flex items-start gap-3 mb-3">
+              <div className="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+                <AlertTriangle className="h-4 w-4" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-slate-900">Hapus Permanen?</h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Folder <strong className="text-slate-800">&quot;{confirmForceDeleteTarget.nama_folder}&quot;</strong> dan seluruh data barang di dalamnya akan dihapus permanen dan tidak dapat dipulihkan.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2 justify-end mt-4">
+              <button
+                type="button"
+                onClick={() => setConfirmForceDeleteTarget(null)}
+                disabled={deletingFolder}
+                className="px-3.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={() => handleForceDeleteFolder(confirmForceDeleteTarget)}
+                disabled={deletingFolder}
+                className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-sm disabled:opacity-50"
+              >
+                {deletingFolder ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                <span>{deletingFolder ? 'Menghapus...' : 'Hapus'}</span>
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ════════ CONFIRM EMPTY TRASH MODAL ════════ */}
+      {showEmptyTrashConfirm && createPortal(
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl p-6 text-center">
+            <div className="inline-flex items-center justify-center w-14 h-14 bg-red-100 rounded-full mb-4">
+              <Trash2 className="h-7 w-7 text-red-600" />
+            </div>
+            <h3 className="text-base font-bold text-slate-900 mb-1">Kosongkan Tempat Sampah?</h3>
+            <p className="text-xs text-slate-600 mb-4">
+              Semua folder ({trashFolders.length}) dan seluruh data barang di dalamnya akan dihapus secara permanen dari database. Tindakan ini tidak dapat dibatalkan.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowEmptyTrashConfirm(false)}
+                disabled={actionTrashLoading === 'empty'}
+                className="flex-1 py-2.5 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 text-xs font-semibold transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleEmptyTrash}
+                disabled={actionTrashLoading === 'empty'}
+                className="flex-1 py-2.5 bg-red-600 text-white rounded-xl hover:bg-red-700 disabled:opacity-50 text-xs font-semibold transition-colors flex items-center justify-center gap-2"
+              >
+                {actionTrashLoading === 'empty' ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                {actionTrashLoading === 'empty' ? 'Mengosongkan...' : 'Ya, Kosongkan'}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ════════ TEMPAT SAMPAH (RECYCLE BIN) MODAL ════════ */}
+      {showTrashModal && createPortal(
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl w-full max-w-4xl shadow-2xl overflow-hidden flex flex-col max-h-[88vh] border border-slate-200">
+            {/* Modal Header */}
+            <div className="px-6 py-5 bg-linear-to-r from-slate-900 via-rose-950 to-slate-900 text-white flex items-center justify-between border-b border-rose-900/30">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-rose-500/20 border border-rose-400/30 flex items-center justify-center text-rose-300">
+                  <Trash2 className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg font-bold">Tempat Sampah Folder Gudang</h2>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500 text-white">
+                      {trashFolders.length} Folder
+                    </span>
+                  </div>
+                  <p className="text-xs text-rose-200/80 mt-0.5">
+                    Folder di tempat sampah otomatis terhapus permanen setelah 30 hari jika tidak dipulihkan.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {trashFolders.length > 0 && !viewingTrashFolder && (
+                  <button
+                    onClick={() => setShowEmptyTrashConfirm(true)}
+                    disabled={actionTrashLoading === 'empty'}
+                    className="px-3 py-1.5 bg-rose-500/20 hover:bg-rose-600 text-rose-200 hover:text-white rounded-xl text-xs font-bold transition-all border border-rose-400/30 flex items-center gap-1.5"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    <span>Kosongkan Sampah</span>
+                  </button>
+                )}
+                <button
+                  onClick={() => { setShowTrashModal(false); setViewingTrashFolder(null); }}
+                  className="p-2 hover:bg-white/10 rounded-xl text-slate-400 hover:text-white transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto flex-1 bg-slate-50/50">
+              {viewingTrashFolder ? (
+                /* ── DETAIL ISI FOLDER DI TEMPAT SAMPAH ── */
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between flex-wrap gap-3 pb-3 border-b border-slate-200">
+                    <button
+                      onClick={() => setViewingTrashFolder(null)}
+                      className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-emerald-700 bg-white px-3 py-2 rounded-xl border border-slate-200 shadow-sm transition-colors"
+                    >
+                      <ArrowLeft className="h-4 w-4" /> Kembali ke Daftar Sampah
+                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleRestoreFolder(viewingTrashFolder.id)}
+                        disabled={actionTrashLoading === viewingTrashFolder.id}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm transition-all disabled:opacity-50"
+                      >
+                        {actionTrashLoading === viewingTrashFolder.id ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
+                        <span>Pulihkan Folder Ini</span>
+                      </button>
+                      <button
+                        onClick={() => setConfirmForceDeleteTarget(viewingTrashFolder)}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-sm transition-all"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        <span>Hapus Permanen</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Folder Summary Card */}
+                  <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between flex-wrap gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600">
+                        <Folder className="h-6 w-6" />
+                      </div>
+                      <div>
+                        <h3 className="text-base font-bold text-slate-800">{viewingTrashFolder.nama_folder}</h3>
+                        {viewingTrashFolder.sumber_dana && (
+                          <span className="inline-flex items-center gap-1 mt-0.5 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-teal-100 text-teal-700 border border-teal-200">
+                            💰 {viewingTrashFolder.sumber_dana.nama_sumber}
+                          </span>
+                        )}
+                        <p className="text-xs text-slate-500">{viewingTrashFolder.keterangan || 'Tanpa keterangan'}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 text-xs">
+                      <div className="bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-xl text-amber-800 font-semibold flex items-center gap-1.5">
+                        <Clock className="h-3.5 w-3.5" />
+                        <span>Sisa Waktu: <strong>{viewingTrashFolder.sisa_hari ?? 30} Hari</strong></span>
+                      </div>
+                      <div className="bg-slate-100 px-3 py-1.5 rounded-xl text-slate-600 font-semibold">
+                        Total {viewingTrashFolder.inventaris_gudangs?.length || 0} Barang
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Notice Banner */}
+                  <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-xl flex items-start gap-2.5 text-xs text-amber-900">
+                    <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                    <span>
+                      Folder ini dan barang-barang di bawah ini saat ini berada di <strong>Tempat Sampah</strong>. Klik tombol <strong>&quot;Pulihkan Folder Ini&quot;</strong> untuk mengaktifkan kembali folder dan barang-barangnya ke menu Gudang utama.
+                    </span>
+                  </div>
+
+                  {/* Table Barang di Folder Sampah */}
+                  <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-700">Daftar Barang di Dalam Folder Ini</span>
+                      <span className="text-[11px] text-slate-500">{viewingTrashFolder.inventaris_gudangs?.length || 0} SKU</span>
+                    </div>
+                    <div className="overflow-x-auto max-h-[42vh]">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="bg-slate-100/70 text-slate-600 font-semibold border-b border-slate-200 sticky top-0">
+                            <th className="py-2.5 px-3 w-12 text-center">No</th>
+                            <th className="py-2.5 px-3">Kode</th>
+                            <th className="py-2.5 px-3">Nama Barang</th>
+                            <th className="py-2.5 px-3">Satuan</th>
+                            <th className="py-2.5 px-3 text-right">Stok Akhir</th>
+                            <th className="py-2.5 px-3">Lokasi / Keterangan</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {(!viewingTrashFolder.inventaris_gudangs || viewingTrashFolder.inventaris_gudangs.length === 0) ? (
+                            <tr>
+                              <td colSpan={6} className="py-8 text-center text-slate-400">
+                                Tidak ada data barang di dalam folder ini saat dihapus.
+                              </td>
+                            </tr>
+                          ) : (
+                            viewingTrashFolder.inventaris_gudangs.map((item, idx) => (
+                              <tr key={item.id} className="hover:bg-slate-50/80">
+                                <td className="py-2.5 px-3 text-center text-slate-400">{idx + 1}</td>
+                                <td className="py-2.5 px-3 font-mono text-slate-600">{item.kode || '-'}</td>
+                                <td className="py-2.5 px-3 font-semibold text-slate-800">{item.nama_barang}</td>
+                                <td className="py-2.5 px-3 text-slate-600">{item.satuan}</td>
+                                <td className="py-2.5 px-3 text-right font-bold text-emerald-700">{item.stok_akhir}</td>
+                                <td className="py-2.5 px-3 text-slate-500 max-w-xs truncate">{item.keterangan || '-'}</td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* ── DAFTAR SEMUA FOLDER DI TEMPAT SAMPAH ── */
+                <div>
+                  {loadingTrash ? (
+                    <div className="py-16 text-center">
+                      <RefreshCw className="h-8 w-8 animate-spin text-slate-400 mx-auto mb-2" />
+                      <p className="text-xs text-slate-500">Memuat data tempat sampah...</p>
+                    </div>
+                  ) : trashFolders.length === 0 ? (
+                    <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-12 text-center">
+                      <div className="w-14 h-14 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 mx-auto mb-3">
+                        <Trash2 className="h-7 w-7" />
+                      </div>
+                      <h3 className="text-base font-bold text-slate-700 mb-1">Tempat Sampah Kosong</h3>
+                      <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                        Tidak ada folder gudang yang berada di tempat sampah. Folder yang dihapus akan disimpan di sini selama 30 hari sebelum terhapus permanen otomatis.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {trashFolders.map((f) => {
+                        const sisa = f.sisa_hari ?? 30;
+                        const badgeColor =
+                          sisa <= 3
+                            ? 'bg-rose-100 text-rose-800 border-rose-300'
+                            : sisa <= 7
+                            ? 'bg-amber-100 text-amber-800 border-amber-300'
+                            : 'bg-emerald-100 text-emerald-800 border-emerald-300';
+
+                        const deletedDateStr = f.deleted_at
+                          ? new Date(f.deleted_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                          : '-';
+
+                        return (
+                          <div
+                            key={f.id}
+                            className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden flex flex-col justify-between"
+                          >
+                            <div>
+                              <div className="flex items-start justify-between gap-2 mb-3">
+                                <div className="flex items-center gap-3">
+                                  <div className="p-3 bg-rose-50 text-rose-600 rounded-xl border border-rose-100 shadow-sm">
+                                    <Folder className="h-6 w-6" />
+                                  </div>
+                                  <div>
+                                    <h4 className="font-bold text-sm text-slate-800 line-clamp-1">{f.nama_folder}</h4>
+                                    {f.sumber_dana && (
+                                      <p className="text-[11px] text-teal-700 font-medium">💰 {f.sumber_dana.nama_sumber}</p>
+                                    )}
+                                    <p className="text-[11px] text-slate-400">Dihapus: {deletedDateStr}</p>
+                                  </div>
+                                </div>
+                                <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border flex items-center gap-1 ${badgeColor}`}>
+                                  <Clock className="h-3 w-3" />
+                                  <span>{sisa} Hari Lagi</span>
+                                </span>
+                              </div>
+
+                              {f.keterangan && (
+                                <p className="text-xs text-slate-500 line-clamp-1 mb-3 bg-slate-50 px-2.5 py-1 rounded-lg">
+                                  {f.keterangan}
+                                </p>
+                              )}
+
+                              <div className="flex items-center justify-between text-xs text-slate-600 py-2 border-t border-slate-100">
+                                <span className="flex items-center gap-1 font-medium">
+                                  <Package className="h-3.5 w-3.5 text-slate-400" />
+                                  <strong className="text-slate-800">{f.items_count ?? f.inventaris_gudangs?.length ?? 0}</strong> SKU Barang di dalamnya
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-slate-100">
+                              <button
+                                onClick={() => setViewingTrashFolder(f)}
+                                className="px-2.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-colors"
+                                title="Buka dan lihat barang di dalam folder ini"
+                              >
+                                <Eye className="h-3.5 w-3.5" />
+                                <span>Lihat Isi</span>
+                              </button>
+                              <button
+                                onClick={() => handleRestoreFolder(f.id)}
+                                disabled={actionTrashLoading === f.id}
+                                className="px-2.5 py-2 bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-colors border border-emerald-200 disabled:opacity-50"
+                                title="Pulihkan folder ke aktif"
+                              >
+                                {actionTrashLoading === f.id ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
+                                <span>Pulihkan</span>
+                              </button>
+                              <button
+                                onClick={() => setConfirmForceDeleteTarget(f)}
+                                className="px-2.5 py-2 bg-rose-50 hover:bg-rose-600 text-rose-700 hover:text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-colors border border-rose-200"
+                                title="Hapus permanen sekarang"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                                <span>Permanen</span>
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 bg-white border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
+              <span>* Data di tempat sampah dapat dipulihkan kapan saja sebelum 30 hari.</span>
+              <button
+                onClick={() => { setShowTrashModal(false); setViewingTrashFolder(null); }}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold transition-colors"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
       {/* ════════ ITEM CRUD MODAL GUDANG ════════ */}
       {showFormModal && createPortal(
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -1507,9 +2025,23 @@ export default function InventarisGudangPage() {
                 </div>
 
                 <div className="col-span-2">
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Keterangan / Spesifikasi</label>
-                  <textarea value={formData.keterangan || ''} onChange={e => setFormData(f => ({ ...f, keterangan: e.target.value }))}
-                    rows={2} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none" placeholder="Catatan tambahan spesifikasi barang..." />
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Keterangan</label>
+                  <select
+                    value={formData.keterangan || ''}
+                    onChange={e => setFormData(f => ({ ...f, keterangan: e.target.value }))}
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
+                  >
+                    <option value="">-- Pilih Keterangan --</option>
+                    <option value="Digunakan">Digunakan</option>
+                    <option value="Dicadangkan">Dicadangkan</option>
+                    <option value="Digunakan & Dicadangkan">Digunakan & Dicadangkan</option>
+                    {formData.keterangan && !['Digunakan', 'Dicadangkan', 'Digunakan & Dicadangkan', ''].includes(formData.keterangan) && (
+                      <option value={formData.keterangan}>{formData.keterangan} (Kustom)</option>
+                    )}
+                  </select>
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Status pemanfaatan barang: Digunakan, Dicadangkan, atau Digunakan &amp; Dicadangkan.
+                  </p>
                 </div>
               </div>
             </div>
@@ -1643,6 +2175,7 @@ export default function InventarisGudangPage() {
                             <th rowSpan={2} className="px-2 py-1 border border-teal-200">NAMA BARANG</th>
                             <th rowSpan={2} className="px-2 py-1 border border-teal-200">SATUAN</th>
                             <th colSpan={4} className="px-2 py-1 border border-teal-200">STOK</th>
+                            <th rowSpan={2} className="px-2 py-1 border border-teal-200">KETERANGAN</th>
                           </tr>
                           <tr>
                             <th className="px-2 py-1 border border-teal-200">AWAL</th>
@@ -1662,10 +2195,12 @@ export default function InventarisGudangPage() {
                             <td className="px-2 py-1 border border-teal-200 text-slate-400">-</td>
                             <td className="px-2 py-1 border border-teal-200 font-bold text-orange-700">1</td>
                             <td className="px-2 py-1 border border-teal-200 font-bold text-purple-700">0</td>
+                            <td className="px-2 py-1 border border-teal-200 font-semibold text-emerald-700">Digunakan</td>
                           </tr>
                         </tbody>
                       </table>
                     </div>
+                    <p className="text-[11px] text-teal-700">✓ Kolom <strong>KETERANGAN</strong> mendukung: Digunakan, Dicadangkan, Digunakan &amp; Dicadangkan (bisa diedit di tabel preview)</p>
                     <p className="text-[11px] text-teal-700">✓ Target Folder: <strong className="text-teal-900">{activeFolderTitle}</strong></p>
                   </div>
 
@@ -1723,6 +2258,7 @@ export default function InventarisGudangPage() {
                             <th className="px-2 sm:px-3 py-2 sm:py-2.5 text-center font-bold text-emerald-700">IN</th>
                             <th className="px-2 sm:px-3 py-2 sm:py-2.5 text-center font-bold text-orange-700">OUT</th>
                             <th className="px-2 sm:px-3 py-2 sm:py-2.5 text-center font-bold text-purple-700">Stok Akhir</th>
+                            <th className="px-2 sm:px-3 py-2 sm:py-2.5 text-center font-bold text-slate-600">Keterangan</th>
                             <th className="px-2 sm:px-3 py-2 sm:py-2.5 text-center font-bold text-slate-600 sticky right-0 bg-slate-100 shadow-[-2px_0_4px_rgba(0,0,0,0.05)]">Aksi</th>
                           </tr>
                       </thead>
@@ -1747,6 +2283,21 @@ export default function InventarisGudangPage() {
                                   <td className="px-2 py-1 text-center"><input type="number" min="0" value={eRow.stok_masuk} onChange={e => setEditingPreviewRow(r => r ? { ...r, stok_masuk: +e.target.value } : r)} className="w-12 sm:w-14 border border-emerald-300 rounded px-1.5 py-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-emerald-400 bg-emerald-50" /></td>
                                   <td className="px-2 py-1 text-center"><input type="number" min="0" value={eRow.stok_keluar} onChange={e => setEditingPreviewRow(r => r ? { ...r, stok_keluar: +e.target.value } : r)} className="w-12 sm:w-14 border border-orange-300 rounded px-1.5 py-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-orange-400 bg-orange-50" /></td>
                                   <td className="px-2 py-1 text-center"><span className="w-12 sm:w-14 inline-block text-center px-2 py-1 bg-purple-100 text-purple-700 font-bold rounded">{eRow.stok_awal + eRow.stok_masuk - eRow.stok_keluar}</span></td>
+                                  <td className="px-2 py-1">
+                                    <select
+                                      value={eRow.keterangan || ''}
+                                      onChange={e => setEditingPreviewRow(r => r ? { ...r, keterangan: e.target.value } : r)}
+                                      className="w-32 sm:w-36 border border-amber-300 rounded px-1.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-amber-400 bg-white"
+                                    >
+                                      <option value="">-- Pilih --</option>
+                                      <option value="Digunakan">Digunakan</option>
+                                      <option value="Dicadangkan">Dicadangkan</option>
+                                      <option value="Digunakan & Dicadangkan">Digunakan & Dicadangkan</option>
+                                      {eRow.keterangan && !['Digunakan', 'Dicadangkan', 'Digunakan & Dicadangkan', ''].includes(eRow.keterangan) && (
+                                        <option value={eRow.keterangan}>{eRow.keterangan}</option>
+                                      )}
+                                    </select>
+                                  </td>
                                   <td className="px-2 py-1 sticky right-0 bg-amber-50 border-l border-slate-100">
                                     <div className="flex gap-1 justify-center">
                                       <button onClick={() => saveEditPreview(idx)} className="p-1 bg-emerald-500 text-white rounded hover:bg-emerald-600 transition-colors" title="Simpan"><Save className="h-3 w-3" /></button>
@@ -1764,6 +2315,11 @@ export default function InventarisGudangPage() {
                                   <td className="px-2 sm:px-3 py-2 text-center font-bold text-emerald-700">+{row.stok_masuk}</td>
                                   <td className="px-2 sm:px-3 py-2 text-center font-bold text-orange-700">-{row.stok_keluar}</td>
                                   <td className="px-2 sm:px-3 py-2 text-center font-bold text-purple-700">{row.stok_akhir}</td>
+                                  <td className="px-2 sm:px-3 py-2 text-center whitespace-nowrap">
+                                    <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold border ${getKeteranganBadgeStyle(row.keterangan)}`}>
+                                      {row.keterangan || '-'}
+                                    </span>
+                                  </td>
                                   <td className="px-2 sm:px-3 py-2 sticky right-0 bg-white border-l border-slate-100">
                                     <div className="flex gap-1 justify-center">
                                       <button onClick={() => startEditPreview(idx)} className="p-1 bg-indigo-100 text-indigo-600 rounded hover:bg-indigo-200 transition-colors" title="Edit baris ini">

@@ -479,4 +479,65 @@ class InventarisController extends Controller
             ],
         ]);
     }
+
+    /**
+     * Batch store multiple items (digunakan untuk import data yang sudah diverifikasi di preview frontend).
+     */
+    public function batchStore(Request $request)
+    {
+        $validated = $request->validate([
+            'items'     => 'required|array|min:1',
+            'items.*'   => 'required|array',
+            'id_folder' => 'nullable',
+        ]);
+
+        $defaultFolderId = $validated['id_folder'] ?? null;
+        if ($defaultFolderId === 'null' || $defaultFolderId === 'general' || empty($defaultFolderId)) {
+            $defaultFolderId = null;
+        }
+
+        $userId = $request->user()?->id;
+        $created = 0;
+
+        DB::beginTransaction();
+        try {
+            foreach ($validated['items'] as $item) {
+                $nama = trim(strval($item['nama_barang'] ?? $item['nama'] ?? ''));
+                if (empty($nama)) continue;
+
+                $folderId = !empty($item['id_folder']) ? $item['id_folder'] : $defaultFolderId;
+
+                $data = [
+                    'tanggal_pengambilan' => !empty($item['tanggal_pengambilan']) ? $item['tanggal_pengambilan'] : null,
+                    'kode'                => !empty($item['kode']) ? trim(strval($item['kode'])) : null,
+                    'nama_barang'         => $nama,
+                    'satuan'              => !empty($item['satuan']) ? trim(strval($item['satuan'])) : 'Unit',
+                    'stok_awal'           => isset($item['stok_awal']) ? (int) $item['stok_awal'] : 0,
+                    'stok_masuk'          => isset($item['stok_masuk']) ? (int) $item['stok_masuk'] : 0,
+                    'stok_keluar'         => isset($item['stok_keluar']) ? (int) $item['stok_keluar'] : 0,
+                    'keterangan'          => !empty($item['keterangan']) ? trim(strval($item['keterangan'])) : null,
+                    'id_user'             => $userId,
+                    'id_folder'           => $folderId,
+                ];
+
+                Inventaris::create($data);
+                $created++;
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'status'  => 'success',
+                'message' => "Berhasil meng-import {$created} data inventaris",
+                'created' => $created,
+            ], 201);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Gagal batch store: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
 }
+

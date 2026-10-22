@@ -113,6 +113,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Inventaris
     Route::post('inventaris/import', [InventarisController::class, 'importExcel']);
     Route::post('inventaris/import-barang', [InventarisBarangController::class, 'importExcel']); // Format Barang (Kode Rekening + Kode Program)
+    Route::post('inventaris/batch-store', [InventarisController::class, 'batchStore']);
     Route::get('inventaris/summary', [InventarisController::class, 'summary']);
     Route::apiResource('inventaris', InventarisController::class);
     // Folder Inventaris (Trash, Restore, Force Delete, CRUD)

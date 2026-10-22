@@ -138,6 +138,15 @@ const getCleanKeterangan = (item: InventarisItem): string => {
   return s.trim().replace(/^\||\|$/g, '').trim();
 };
 
+const getKeteranganBadgeStyle = (ket?: string | null) => {
+  if (!ket) return 'bg-slate-50 text-slate-700 border-slate-200';
+  const l = ket.toLowerCase().trim();
+  if (l === 'digunakan') return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+  if (l === 'dicadangkan') return 'bg-amber-50 text-amber-700 border-amber-200';
+  if (l.includes('digunakan') && l.includes('dicadangkan')) return 'bg-blue-50 text-blue-700 border-blue-200';
+  return 'bg-slate-50 text-slate-700 border-slate-200';
+};
+
 const parseDate = (cell: unknown): string => {
   if (!cell) return '';
   if (cell instanceof Date) return cell.toISOString().split('T')[0];
@@ -262,12 +271,9 @@ function parseExcelFile(file: File, activeFolderId: number | null): Promise<Prev
           const awal = colMap.stok_awal !== undefined ? parseNum(row[colMap.stok_awal]) : jumlahBarang;
           const akhir = awal + masuk - keluar;
 
-          let ketParts: string[] = [];
-          if (kKegiatan) ketParts.push(`Kegiatan: ${kKegiatan}`);
-          if (hargaSatuan > 0) ketParts.push(`Harga Satuan: Rp ${hargaSatuan.toLocaleString('id-ID')}`);
+          let userKet = '';
           if (colMap.keterangan !== undefined && row[colMap.keterangan]) {
-            const userKet = String(row[colMap.keterangan]).trim();
-            if (userKet) ketParts.push(userKet);
+            userKet = String(row[colMap.keterangan]).trim();
           }
 
           result.push({
@@ -283,7 +289,7 @@ function parseExcelFile(file: File, activeFolderId: number | null): Promise<Prev
             stok_akhir: akhir,
             harga_satuan: hargaSatuan,
             jumlah_total: totalVal,
-            keterangan: ketParts.join(' | '),
+            keterangan: userKet,
             id_folder: activeFolderId,
           });
           autoIdx++;
@@ -559,7 +565,7 @@ export default function CustomInventarisDrivePage() {
       stok_awal: item.stok_awal ?? 0,
       stok_masuk: item.stok_masuk ?? 0,
       stok_keluar: item.stok_keluar ?? 0,
-      keterangan: item.keterangan || '',
+      keterangan: getCleanKeterangan(item),
       id_folder: item.id_folder || null,
     });
     setShowFormModal(true);
@@ -569,7 +575,17 @@ export default function CustomInventarisDrivePage() {
     if (!formData.nama_barang.trim()) { showToast('Nama barang wajib diisi', 'error'); return; }
     try {
       setSaving(true);
-      const payload = { ...formData };
+      const kKegiatan = editTarget ? getKodeKegiatan(editTarget) : '';
+      const harga = editTarget ? getHargaSatuan(editTarget) : 0;
+      const ketParts: string[] = [];
+      if (kKegiatan && kKegiatan !== '-') ketParts.push(`Kegiatan: ${kKegiatan}`);
+      if (harga > 0) ketParts.push(`Harga Satuan: Rp ${harga.toLocaleString('id-ID')}`);
+      if (formData.keterangan?.trim()) ketParts.push(formData.keterangan.trim());
+
+      const payload = {
+        ...formData,
+        keterangan: ketParts.length > 0 ? ketParts.join(' | ') : null,
+      };
       if (editTarget) {
         await axios.put(`/api/inventaris/${editTarget.id}`, payload);
         showToast('Data inventaris berhasil diupdate', 'success');
@@ -651,8 +667,8 @@ export default function CustomInventarisDrivePage() {
 
   /* ── Import selected ── */
   const handleImportSelected = async () => {
-    if (!importFile && previewData.length === 0) {
-      showToast('Pilih file Excel terlebih dahulu', 'warning');
+    if (selectedRows.size === 0) {
+      showToast('Pilih setidaknya 1 baris untuk di-import', 'warning');
       return;
     }
 
@@ -660,48 +676,42 @@ export default function CustomInventarisDrivePage() {
     setImportState('importing');
 
     try {
-      if (importFile && selectedRows.size === previewData.length) {
-        // Fast direct bulk file upload (single request)
-        const fd = new FormData();
-        fd.append('file', importFile);
-        if (activeFolderId && activeFolderId > 0) {
-          fd.append('id_folder', String(activeFolderId));
-        }
+      const rowsToSave = Array.from(selectedRows).map(i => {
+        const r = previewData[i];
+        const ketParts: string[] = [];
+        if (r.kode_kegiatan) ketParts.push(`Kegiatan: ${r.kode_kegiatan}`);
+        if (r.harga_satuan && r.harga_satuan > 0) ketParts.push(`Harga Satuan: Rp ${r.harga_satuan.toLocaleString('id-ID')}`);
+        if (r.keterangan?.trim()) ketParts.push(r.keterangan.trim());
 
-        const res = await axios.post('/api/inventaris/import', fd, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
+        return {
+          tanggal_pengambilan: r.tanggal_pengambilan || null,
+          kode: r.kode_rekening || r.kode || null,
+          nama_barang: r.nama_barang,
+          satuan: r.satuan || 'Unit',
+          stok_awal: r.stok_awal ?? 0,
+          stok_masuk: r.stok_masuk ?? 0,
+          stok_keluar: r.stok_keluar ?? 0,
+          keterangan: ketParts.length > 0 ? ketParts.join(' | ') : null,
+          id_folder: activeFolderId && activeFolderId > 0 ? activeFolderId : (r.id_folder || null),
+        };
+      });
 
-        if (res.data.status === 'success') {
-          setImportState('completed');
-          setTimeout(() => {
-            showToast(res.data.message || 'Import data inventaris berhasil!', 'success');
-            closeImport();
-            fetchData();
-            fetchSummary();
-            fetchFolders();
-          }, 600);
-        } else {
-          showToast(res.data.message || 'Gagal import data inventaris', 'error');
-        }
-      } else {
-        // Fallback: only specific rows selected
-        const rows = Array.from(selectedRows).map(i => previewData[i]);
-        let ok = 0;
-        for (let i = 0; i < rows.length; i++) {
-          try {
-            await axios.post('/api/inventaris', rows[i]);
-            ok++;
-          } catch { /* ignore */ }
-        }
+      const res = await axios.post('/api/inventaris/batch-store', {
+        items: rowsToSave,
+        id_folder: activeFolderId && activeFolderId > 0 ? activeFolderId : null,
+      });
+
+      if (res.data.status === 'success') {
         setImportState('completed');
         setTimeout(() => {
-          showToast(`Berhasil meng-import ${ok} data inventaris`, 'success');
+          showToast(res.data.message || `Berhasil import ${rowsToSave.length} data inventaris!`, 'success');
           closeImport();
           fetchData();
           fetchSummary();
           fetchFolders();
         }, 600);
+      } else {
+        showToast(res.data.message || 'Gagal import data inventaris', 'error');
       }
     } catch (err: unknown) {
       showErrorAlert(err, 'Gagal Meng-Import File Excel');
@@ -726,7 +736,7 @@ export default function CustomInventarisDrivePage() {
       'Kode': it.kode, 'Nama Barang': it.nama_barang, 'Satuan': it.satuan,
       'Stok Awal': it.stok_awal, 'Stok Masuk (IN)': it.stok_masuk,
       'Stok Keluar (OUT)': it.stok_keluar, 'Stok Akhir': it.stok_akhir,
-      'Keterangan': it.keterangan || '-',
+      'Keterangan': getCleanKeterangan(it) || it.keterangan || '-',
     })));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Inventaris');
@@ -737,12 +747,12 @@ export default function CustomInventarisDrivePage() {
 
   const downloadTemplate = () => {
     const ws = XLSX.utils.aoa_to_sheet([
-      ['No.', 'Kode Kegiatan', 'Kode Rekening', 'Uraian', 'Jumlah Barang', 'Harga Satuan', 'Jumlah'],
-      [1, '5.01.01.2.01', '5.1.02.01.01.0001', 'Buku Tulis isi 38 Lembar', 10, 3500, 35000],
-      [2, '5.01.01.2.01', '5.1.02.01.01.0002', 'Pulpen Standard AE7 Black', 20, 2500, 50000],
-      [3, '5.01.01.2.02', '5.1.02.01.01.0005', 'Kertas HVS A4 80gr Sidu', 5, 48000, 240000],
+      ['No.', 'Kode Kegiatan', 'Kode Rekening', 'Uraian', 'Jumlah Barang', 'Harga Satuan', 'Jumlah', 'Keterangan'],
+      [1, '5.01.01.2.01', '5.1.02.01.01.0001', 'Buku Tulis isi 38 Lembar', 10, 3500, 35000, 'Digunakan'],
+      [2, '5.01.01.2.01', '5.1.02.01.01.0002', 'Pulpen Standard AE7 Black', 20, 2500, 50000, 'Dicadangkan'],
+      [3, '5.01.01.2.02', '5.1.02.01.01.0005', 'Kertas HVS A4 80gr Sidu', 5, 48000, 240000, 'Digunakan & Dicadangkan'],
     ]);
-    ws['!cols'] = [{ wch: 6 }, { wch: 18 }, { wch: 22 }, { wch: 35 }, { wch: 15 }, { wch: 16 }, { wch: 16 }];
+    ws['!cols'] = [{ wch: 6 }, { wch: 18 }, { wch: 22 }, { wch: 35 }, { wch: 15 }, { wch: 16 }, { wch: 16 }, { wch: 24 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Template Inventaris');
     XLSX.writeFile(wb, 'Template_Inventaris_Sekolah.xlsx');
@@ -1113,6 +1123,7 @@ export default function CustomInventarisDrivePage() {
                       <th className="px-4 py-3 text-xs font-bold text-blue-700 uppercase tracking-wide text-center">Jumlah Barang</th>
                       <th className="px-4 py-3 text-xs font-bold text-emerald-700 uppercase tracking-wide text-right">Harga Satuan</th>
                       <th className="px-4 py-3 text-xs font-bold text-indigo-700 uppercase tracking-wide text-right">Total (Jumlah)</th>
+                      <th className="px-4 py-3 text-xs font-bold text-slate-600 uppercase tracking-wide text-center">Keterangan</th>
                       <th className="px-4 py-3 text-xs font-bold text-slate-600 uppercase tracking-wide text-center">Aksi</th>
                     </tr>
                   </thead>
@@ -1145,7 +1156,6 @@ export default function CustomInventarisDrivePage() {
                           </td>
                           <td className="px-4 py-3">
                             <div className="font-semibold text-slate-900">{item.nama_barang}</div>
-                            {cleanKet && <div className="text-xs text-slate-400 truncate max-w-[250px]">{cleanKet}</div>}
                           </td>
                           <td className="px-4 py-3 text-center">
                             <span className="px-2.5 py-1 bg-blue-100 text-blue-700 text-xs font-bold rounded-lg border border-blue-200">
@@ -1157,6 +1167,11 @@ export default function CustomInventarisDrivePage() {
                           </td>
                           <td className="px-4 py-3 text-right font-bold text-indigo-700 text-xs whitespace-nowrap">
                             {totalHarga > 0 ? formatRupiah(totalHarga) : '-'}
+                          </td>
+                          <td className="px-4 py-3 text-center whitespace-nowrap">
+                            <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold border ${getKeteranganBadgeStyle(cleanKet)}`}>
+                              {cleanKet || '-'}
+                            </span>
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex items-center justify-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1702,8 +1717,22 @@ export default function CustomInventarisDrivePage() {
                 </div>
                 <div className="col-span-2">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Keterangan</label>
-                  <textarea value={formData.keterangan || ''} onChange={e => setFormData(f => ({ ...f, keterangan: e.target.value }))}
-                    rows={2} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none" placeholder="Opsional..." />
+                  <select
+                    value={formData.keterangan || ''}
+                    onChange={e => setFormData(f => ({ ...f, keterangan: e.target.value }))}
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                  >
+                    <option value="">-- Pilih Keterangan --</option>
+                    <option value="Digunakan">Digunakan</option>
+                    <option value="Dicadangkan">Dicadangkan</option>
+                    <option value="Digunakan & Dicadangkan">Digunakan & Dicadangkan</option>
+                    {formData.keterangan && !['Digunakan', 'Dicadangkan', 'Digunakan & Dicadangkan', ''].includes(formData.keterangan) && (
+                      <option value={formData.keterangan}>{formData.keterangan} (Kustom)</option>
+                    )}
+                  </select>
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Status pemanfaatan barang: Digunakan, Dicadangkan, atau Digunakan &amp; Dicadangkan.
+                  </p>
                 </div>
               </div>
             </div>
@@ -1781,6 +1810,7 @@ export default function CustomInventarisDrivePage() {
                             <th className="px-2 py-1 border border-blue-200">Jumlah Barang</th>
                             <th className="px-2 py-1 border border-blue-200">Harga Satuan</th>
                             <th className="px-2 py-1 border border-blue-200">Jumlah</th>
+                            <th className="px-2 py-1 border border-blue-200">Keterangan</th>
                           </tr>
                         </thead>
                         <tbody className="text-blue-700 bg-white">
@@ -1792,10 +1822,12 @@ export default function CustomInventarisDrivePage() {
                             <td className="px-2 py-1 border border-blue-200">10</td>
                             <td className="px-2 py-1 border border-blue-200">3.500</td>
                             <td className="px-2 py-1 border border-blue-200">35.000</td>
+                            <td className="px-2 py-1 border border-blue-200">Digunakan</td>
                           </tr>
                         </tbody>
                       </table>
                     </div>
+                    <p className="text-[11px] text-blue-600">✓ Kolom <strong>Keterangan</strong> mendukung: Digunakan, Dicadangkan, Digunakan &amp; Dicadangkan (bisa diedit di tabel preview)</p>
                     <p className="text-[11px] text-blue-600">✓ Target Folder: <strong className="text-blue-900">{activeFolderTitle}</strong></p>
                   </div>
 
@@ -1845,7 +1877,7 @@ export default function CustomInventarisDrivePage() {
                   {/* Scrollable table container */}
                   <div className="border border-slate-200 rounded-xl overflow-hidden">
                     <div className="overflow-x-auto overflow-y-auto max-h-[50vh] sm:max-h-[55vh]">
-                      <table className="w-full text-xs min-w-[900px]">
+                      <table className="w-full text-xs min-w-[950px]">
                         <thead className="bg-linear-to-r from-slate-100 to-slate-200 sticky top-0 z-10">
                           <tr>
                             <th className="px-2 sm:px-3 py-2 sm:py-2.5 w-10 sticky left-0 bg-slate-100 shadow-[2px_0_4px_rgba(0,0,0,0.05)]">
@@ -1858,6 +1890,7 @@ export default function CustomInventarisDrivePage() {
                             <th className="px-2 sm:px-3 py-2 sm:py-2.5 text-center font-bold text-blue-700">Jumlah Barang</th>
                             <th className="px-2 sm:px-3 py-2 sm:py-2.5 text-right font-bold text-emerald-700">Harga Satuan</th>
                             <th className="px-2 sm:px-3 py-2 sm:py-2.5 text-right font-bold text-indigo-700">Jumlah</th>
+                            <th className="px-2 sm:px-3 py-2 sm:py-2.5 text-center font-bold text-slate-600">Keterangan</th>
                             <th className="px-2 sm:px-3 py-2 sm:py-2.5 text-center font-bold text-slate-600 sticky right-0 bg-slate-100 shadow-[-2px_0_4px_rgba(0,0,0,0.05)]">Aksi</th>
                           </tr>
                       </thead>
@@ -1881,6 +1914,21 @@ export default function CustomInventarisDrivePage() {
                                   <td className="px-2 py-1 text-center"><input type="number" min="1" value={eRow.stok_awal} onChange={e => setEditingPreviewRow(r => r ? { ...r, stok_awal: +e.target.value } : r)} className="w-14 sm:w-16 border border-blue-300 rounded px-1.5 py-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-blue-400 bg-blue-50 font-bold" /></td>
                                   <td className="px-2 py-1 text-right"><input type="number" min="0" value={eRow.harga_satuan || 0} onChange={e => setEditingPreviewRow(r => r ? { ...r, harga_satuan: +e.target.value } : r)} className="w-24 sm:w-28 border border-emerald-300 rounded px-1.5 py-1 text-xs text-right focus:outline-none focus:ring-1 focus:ring-emerald-400 bg-emerald-50" /></td>
                                   <td className="px-2 py-1 text-right font-bold text-indigo-700">Rp {((eRow.stok_awal || 0) * (eRow.harga_satuan || 0)).toLocaleString('id-ID')}</td>
+                                  <td className="px-2 py-1">
+                                    <select
+                                      value={eRow.keterangan || ''}
+                                      onChange={e => setEditingPreviewRow(r => r ? { ...r, keterangan: e.target.value } : r)}
+                                      className="w-32 sm:w-36 border border-amber-300 rounded px-1.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-amber-400 bg-white"
+                                    >
+                                      <option value="">-- Pilih --</option>
+                                      <option value="Digunakan">Digunakan</option>
+                                      <option value="Dicadangkan">Dicadangkan</option>
+                                      <option value="Digunakan & Dicadangkan">Digunakan & Dicadangkan</option>
+                                      {eRow.keterangan && !['Digunakan', 'Dicadangkan', 'Digunakan & Dicadangkan', ''].includes(eRow.keterangan) && (
+                                        <option value={eRow.keterangan}>{eRow.keterangan}</option>
+                                      )}
+                                    </select>
+                                  </td>
                                   <td className="px-2 py-1 sticky right-0 bg-amber-50 border-l border-slate-100">
                                     <div className="flex gap-1 justify-center">
                                       <button onClick={() => saveEditPreview(idx)} className="p-1 bg-emerald-500 text-white rounded hover:bg-emerald-600 transition-colors" title="Simpan"><Save className="h-3 w-3" /></button>
@@ -1896,6 +1944,11 @@ export default function CustomInventarisDrivePage() {
                                   <td className="px-2 sm:px-3 py-2 text-center font-bold text-blue-700">{row.stok_awal} {row.satuan}</td>
                                   <td className="px-2 sm:px-3 py-2 text-right font-semibold text-emerald-700">{row.harga_satuan ? `Rp ${row.harga_satuan.toLocaleString('id-ID')}` : '-'}</td>
                                   <td className="px-2 sm:px-3 py-2 text-right font-bold text-indigo-700">{totalCalculated > 0 ? `Rp ${totalCalculated.toLocaleString('id-ID')}` : (row.jumlah_total ? `Rp ${row.jumlah_total.toLocaleString('id-ID')}` : '-')}</td>
+                                  <td className="px-2 sm:px-3 py-2 text-center whitespace-nowrap">
+                                    <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold border ${getKeteranganBadgeStyle(row.keterangan)}`}>
+                                      {row.keterangan || '-'}
+                                    </span>
+                                  </td>
                                   <td className="px-2 sm:px-3 py-2 sticky right-0 bg-white border-l border-slate-100">
                                     <div className="flex gap-1 justify-center">
                                       <button onClick={() => startEditPreview(idx)} className="p-1 bg-indigo-100 text-indigo-600 rounded hover:bg-indigo-200 transition-colors" title="Edit baris ini">
