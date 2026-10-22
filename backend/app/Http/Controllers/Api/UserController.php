@@ -15,7 +15,7 @@ class UserController extends Controller
      */
     public function index(Request $request)
     {
-        $query = User::with('ruangan');
+        $query = User::with(['ruangan', 'superAdmin', 'petugasInput', 'wakapro', 'wakasek']);
 
         if ($request->filled('search')) {
             $search = $request->search;
@@ -65,7 +65,7 @@ class UserController extends Controller
         }
 
         $user = User::create($validated);
-        $user->load('ruangan');
+        $user->load(['ruangan', 'superAdmin', 'petugasInput', 'wakapro', 'wakasek']);
 
         return response()->json([
             'message' => 'Pengguna berhasil ditambahkan.',
@@ -78,7 +78,7 @@ class UserController extends Controller
      */
     public function show(User $user)
     {
-        $user->load('ruangan');
+        $user->load(['ruangan', 'superAdmin', 'petugasInput', 'wakapro', 'wakasek']);
         return response()->json($user);
     }
 
@@ -115,7 +115,7 @@ class UserController extends Controller
         }
 
         $user->update($validated);
-        $user->load('ruangan');
+        $user->load(['ruangan', 'superAdmin', 'petugasInput', 'wakapro', 'wakasek']);
 
         return response()->json([
             'message' => 'Data pengguna berhasil diperbarui.',

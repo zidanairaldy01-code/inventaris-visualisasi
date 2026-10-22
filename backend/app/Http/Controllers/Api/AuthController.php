@@ -46,7 +46,7 @@ class AuthController extends Controller
     {
         $user = $request->user();
         if ($user) {
-            $user->load('ruangan.gedung');
+            $user->load(['ruangan.gedung', 'superAdmin', 'petugasInput', 'wakapro', 'wakasek']);
         }
         return response()->json($user);
     }
