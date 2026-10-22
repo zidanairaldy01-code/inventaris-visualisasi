@@ -5,18 +5,46 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Cookies from 'js-cookie';
 import axios from '@/lib/axios';
-import { Eye, EyeOff, AlertCircle, ArrowLeft, ShieldCheck, Lock, User, CheckCircle2 } from 'lucide-react';
+import { Eye, EyeOff, AlertCircle, ArrowLeft, ShieldCheck, Lock, User, CheckCircle2, RefreshCw } from 'lucide-react';
+
+interface LoginAlert {
+  title: string;
+  message: string;
+  field: 'username' | 'password' | 'captcha' | 'status' | 'general';
+}
 
 export default function LoginPage() {
   const router = useRouter();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
+  const [alertInfo, setAlertInfo] = useState<LoginAlert | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{
+    username?: string;
+    password?: string;
+    captcha?: string;
+  }>({});
   const [isExpired, setIsExpired] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Validasi Penjumlahan (Math Captcha)
+  const [num1, setNum1] = useState(0);
+  const [num2, setNum2] = useState(0);
+  const [captchaAnswer, setCaptchaAnswer] = useState('');
+  const [isRefreshingCaptcha, setIsRefreshingCaptcha] = useState(false);
+
+  const generateCaptcha = () => {
+    setIsRefreshingCaptcha(true);
+    const n1 = Math.floor(Math.random() * 9) + 1; // 1-9
+    const n2 = Math.floor(Math.random() * 9) + 1; // 1-9
+    setNum1(n1);
+    setNum2(n2);
+    setCaptchaAnswer('');
+    setTimeout(() => setIsRefreshingCaptcha(false), 250);
+  };
+
   useEffect(() => {
+    generateCaptcha();
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       if (params.get('expired') === '1') {
@@ -27,9 +55,55 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError('');
+    setAlertInfo(null);
     setIsExpired(false);
+    setFieldErrors({});
+
+    // 1. VALIDASI PENJUMLAHAN
+    if (!captchaAnswer.trim()) {
+      setAlertInfo({
+        title: 'Penjumlahan Belum Diisi',
+        message: 'Silakan isi hasil penjumlahan di bawah terlebih dahulu.',
+        field: 'captcha',
+      });
+      setFieldErrors({ captcha: 'Wajib diisi' });
+      return;
+    }
+
+    const expectedAnswer = num1 + num2;
+    if (parseInt(captchaAnswer.trim(), 10) !== expectedAnswer) {
+      setAlertInfo({
+        title: 'Penjumlahan Salah',
+        message: `Jawaban penjumlahan yang Anda masukkan salah (${num1} + ${num2} ≠ ${captchaAnswer}). Soal baru telah dibuat.`,
+        field: 'captcha',
+      });
+      setFieldErrors({ captcha: 'Jawaban salah' });
+      generateCaptcha();
+      return;
+    }
+
+    // 2. VALIDASI FORM INPUT
+    if (!username.trim()) {
+      setAlertInfo({
+        title: 'Username Kosong',
+        message: 'Silakan masukkan username akun Anda.',
+        field: 'username',
+      });
+      setFieldErrors({ username: 'Username wajib diisi' });
+      return;
+    }
+
+    if (!password) {
+      setAlertInfo({
+        title: 'Password Kosong',
+        message: 'Silakan masukkan password akun Anda.',
+        field: 'password',
+      });
+      setFieldErrors({ password: 'Password wajib diisi' });
+      return;
+    }
+
+    setIsLoading(true);
 
     try {
       const response = await axios.post('/api/login', { username, password });
@@ -57,7 +131,41 @@ export default function LoginPage() {
         router.push(redirectPath);
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Username atau password salah.');
+      const serverField = err.response?.data?.field;
+      const serverTitle = err.response?.data?.title;
+      const serverMessage = err.response?.data?.message || 'Terjadi kesalahan saat masuk.';
+
+      // Deteksi spesifik berdasarkan response backend
+      if (serverField === 'username' || serverMessage.toLowerCase().includes('username')) {
+        setAlertInfo({
+          title: serverTitle || 'Username Salah',
+          message: serverMessage || 'Username tidak terdaftar dalam sistem.',
+          field: 'username',
+        });
+        setFieldErrors({ username: 'Username tidak terdaftar' });
+      } else if (serverField === 'password' || serverMessage.toLowerCase().includes('password')) {
+        setAlertInfo({
+          title: serverTitle || 'Password Salah',
+          message: serverMessage || 'Password yang Anda masukkan salah.',
+          field: 'password',
+        });
+        setFieldErrors({ password: 'Password salah' });
+      } else if (serverField === 'status' || serverMessage.toLowerCase().includes('dinonaktifkan')) {
+        setAlertInfo({
+          title: serverTitle || 'Akun Dinonaktifkan',
+          message: serverMessage || 'Akun Anda dinonaktifkan oleh Administrator.',
+          field: 'status',
+        });
+        setFieldErrors({ username: 'Akun dinonaktifkan' });
+      } else {
+        setAlertInfo({
+          title: 'Login Gagal',
+          message: serverMessage,
+          field: 'general',
+        });
+      }
+
+      generateCaptcha(); // Ganti soal baru jika login gagal
     } finally {
       setIsLoading(false);
     }
@@ -202,7 +310,7 @@ export default function LoginPage() {
           </div>
 
           {/* Expired Session Alert */}
-          {isExpired && !error && (
+          {isExpired && !alertInfo && (
             <div className="mb-5 p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs sm:text-sm flex items-start gap-3 animate-fadeInUp">
               <AlertCircle size={18} className="shrink-0 text-amber-600 mt-0.5" />
               <div className="leading-relaxed">
@@ -212,11 +320,22 @@ export default function LoginPage() {
             </div>
           )}
 
-          {/* Error Alert */}
-          {error && (
-            <div className="mb-5 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs sm:text-sm flex items-start gap-3 animate-fadeInUp">
-              <AlertCircle size={18} className="shrink-0 text-rose-600 mt-0.5" />
-              <div className="leading-relaxed">{error}</div>
+          {/* Error Alert — Sangat Jelas & Spesifik */}
+          {alertInfo && (
+            <div className="mb-5 p-4 rounded-2xl bg-rose-50/95 border-2 border-rose-300 text-rose-900 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-xl bg-rose-100 text-rose-700 shrink-0">
+                  <AlertCircle size={20} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-sm font-bold text-rose-900 leading-tight">
+                    {alertInfo.title}
+                  </h3>
+                  <p className="text-xs sm:text-sm text-rose-700 mt-1 leading-relaxed">
+                    {alertInfo.message}
+                  </p>
+                </div>
+              </div>
             </div>
           )}
 
@@ -237,13 +356,29 @@ export default function LoginPage() {
                   id="login-username"
                   type="text"
                   value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  onChange={(e) => {
+                    setUsername(e.target.value);
+                    if (fieldErrors.username) {
+                      setFieldErrors((prev) => ({ ...prev, username: undefined }));
+                    }
+                    if (alertInfo?.field === 'username') setAlertInfo(null);
+                  }}
                   required
                   autoComplete="username"
                   placeholder="Masukkan username"
-                  className="w-full h-11 sm:h-12 pl-10 pr-3.5 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-white focus:bg-white text-slate-900 text-sm focus:border-blue-600 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none"
+                  className={`w-full h-11 sm:h-12 pl-10 pr-3.5 rounded-xl border ${
+                    fieldErrors.username
+                      ? 'border-rose-400 bg-rose-50/40 ring-4 ring-rose-500/10 text-rose-950 font-medium'
+                      : 'border-slate-200 bg-slate-50/50 hover:bg-white focus:bg-white text-slate-900'
+                  } text-sm focus:border-blue-600 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none`}
                 />
               </div>
+              {fieldErrors.username && (
+                <p className="text-xs text-rose-600 font-semibold flex items-center gap-1 mt-1.5 animate-fadeIn">
+                  <AlertCircle size={13} className="shrink-0" />
+                  <span>{fieldErrors.username}</span>
+                </p>
+              )}
             </div>
 
             {/* Password Field */}
@@ -262,11 +397,21 @@ export default function LoginPage() {
                   id="login-password"
                   type={showPassword ? 'text' : 'password'}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (fieldErrors.password) {
+                      setFieldErrors((prev) => ({ ...prev, password: undefined }));
+                    }
+                    if (alertInfo?.field === 'password') setAlertInfo(null);
+                  }}
                   required
                   autoComplete="current-password"
                   placeholder="Masukkan password"
-                  className="w-full h-11 sm:h-12 pl-10 pr-11 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-white focus:bg-white text-slate-900 text-sm focus:border-blue-600 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none"
+                  className={`w-full h-11 sm:h-12 pl-10 pr-11 rounded-xl border ${
+                    fieldErrors.password
+                      ? 'border-rose-400 bg-rose-50/40 ring-4 ring-rose-500/10 text-rose-950 font-medium'
+                      : 'border-slate-200 bg-slate-50/50 hover:bg-white focus:bg-white text-slate-900'
+                  } text-sm focus:border-blue-600 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none`}
                 />
                 <button
                   type="button"
@@ -278,6 +423,79 @@ export default function LoginPage() {
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
+              {fieldErrors.password && (
+                <p className="text-xs text-rose-600 font-semibold flex items-center gap-1 mt-1.5 animate-fadeIn">
+                  <AlertCircle size={13} className="shrink-0" />
+                  <span>{fieldErrors.password}</span>
+                </p>
+              )}
+            </div>
+
+            {/* Validasi Penjumlahan (Math Captcha Sederhana) */}
+            <div className="space-y-1.5 pt-1">
+              <div className="flex items-center justify-between">
+                <label
+                  htmlFor="login-captcha"
+                  className="block text-xs sm:text-sm font-semibold text-slate-700"
+                >
+                  Validasi Penjumlahan
+                </label>
+                <button
+                  type="button"
+                  onClick={generateCaptcha}
+                  title="Ganti Soal Penjumlahan"
+                  className="text-[11px] text-blue-600 hover:text-blue-800 flex items-center gap-1 font-semibold transition-colors cursor-pointer"
+                >
+                  <RefreshCw size={12} className={isRefreshingCaptcha ? 'animate-spin' : ''} />
+                  <span>Ganti Soal</span>
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {/* Kotak Soal Penjumlahan */}
+                <div className={`flex-1 h-11 sm:h-12 px-3.5 rounded-xl border ${
+                  fieldErrors.captcha ? 'border-rose-300 bg-rose-50/60' : 'border-blue-200/90 bg-blue-50/70'
+                } flex items-center justify-center font-mono font-bold text-base sm:text-lg text-blue-900 tracking-wider select-none shadow-xs`}>
+                  <span>{num1}</span>
+                  <span className="mx-2.5 text-blue-600 font-extrabold">+</span>
+                  <span>{num2}</span>
+                  <span className="mx-2.5 text-slate-400">=</span>
+                  <span className="text-slate-400 font-normal text-sm">?</span>
+                </div>
+
+                {/* Input Jawaban */}
+                <div className="w-28 sm:w-32 relative">
+                  <input
+                    id="login-captcha"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    value={captchaAnswer}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/[^0-9]/g, '');
+                      setCaptchaAnswer(val);
+                      if (fieldErrors.captcha) {
+                        setFieldErrors((prev) => ({ ...prev, captcha: undefined }));
+                      }
+                      if (alertInfo?.field === 'captcha') setAlertInfo(null);
+                    }}
+                    required
+                    placeholder="Jawaban"
+                    className={`w-full h-11 sm:h-12 px-3 text-center rounded-xl border ${
+                      fieldErrors.captcha
+                        ? 'border-rose-400 bg-rose-50/40 ring-4 ring-rose-500/10 text-rose-700 font-bold'
+                        : 'border-slate-200 bg-slate-50/50 hover:bg-white focus:bg-white text-slate-900 font-bold'
+                    } text-sm sm:text-base focus:border-blue-600 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none`}
+                  />
+                </div>
+              </div>
+
+              {fieldErrors.captcha && (
+                <p className="text-xs text-rose-600 font-semibold flex items-center gap-1 mt-1.5 animate-fadeIn">
+                  <AlertCircle size={13} className="shrink-0" />
+                  <span>{fieldErrors.captcha}</span>
+                </p>
+              )}
             </div>
 
             {/* Submit Button */}

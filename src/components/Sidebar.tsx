@@ -165,6 +165,19 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     axios.get('/api/user')
       .then(res => setUser(res.data))
       .catch(() => {});
+
+    const handleProfileUpdated = (e: any) => {
+      if (e.detail) {
+        setUser(e.detail);
+      } else {
+        axios.get('/api/user').then(res => setUser(res.data)).catch(() => {});
+      }
+    };
+    window.addEventListener('user-profile-updated', handleProfileUpdated);
+
+    return () => {
+      window.removeEventListener('user-profile-updated', handleProfileUpdated);
+    };
   }, []);
 
   const handleLogout = async () => {
@@ -440,8 +453,20 @@ function SidebarContent({
               onClick={onLinkClick}
               className="flex items-center gap-2.5 p-2 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/5 hover:border-white/10 transition-all group"
             >
-              <div className="w-8 h-8 rounded-lg bg-linear-to-br from-indigo-500 to-blue-600 flex items-center justify-center text-white text-xs font-bold shadow-md shrink-0 ring-1 ring-white/20">
-                {user?.nama_lengkap ? user.nama_lengkap.charAt(0).toUpperCase() : (user?.name ? user.name.charAt(0).toUpperCase() : <User className="h-4 w-4" />)}
+              <div className="w-8 h-8 rounded-lg bg-linear-to-br from-indigo-500 to-blue-600 flex items-center justify-center text-white text-xs font-bold shadow-md shrink-0 ring-1 ring-white/20 overflow-hidden">
+                {user?.foto_url || user?.foto ? (
+                  <img
+                    src={user.foto_url || user.foto}
+                    alt={user.nama_lengkap || 'Avatar'}
+                    className="w-full h-full object-cover"
+                  />
+                ) : user?.nama_lengkap ? (
+                  user.nama_lengkap.charAt(0).toUpperCase()
+                ) : user?.name ? (
+                  user.name.charAt(0).toUpperCase()
+                ) : (
+                  <User className="h-4 w-4" />
+                )}
               </div>
               <div className="truncate flex-1">
                 <p className="text-xs font-semibold text-slate-200 group-hover:text-white truncate">

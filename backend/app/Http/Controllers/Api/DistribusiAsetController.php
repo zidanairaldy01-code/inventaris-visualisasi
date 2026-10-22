@@ -349,18 +349,22 @@ class DistribusiAsetController extends Controller
         $distribusi = DistribusiAset::findOrFail($id);
         $user = $request->user();
 
-        // Validasi hak akses: wakapro hanya boleh konfirmasi distribusi ke ruangannya sendiri
-        if ($user->role === 'wakapro') {
-            if (!$user->ruangan_id) {
-                return response()->json([
-                    'message' => 'Akun Anda belum terhubung ke ruangan manapun. Hubungi administrator.',
-                ], 403);
-            }
-            if ($distribusi->ruangan_tujuan_id != $user->ruangan_id) {
-                return response()->json([
-                    'message' => 'Anda tidak memiliki hak untuk mengonfirmasi barang ruangan lain.',
-                ], 403);
-            }
+        // Validasi hak akses: Hanya Waka Program workshop penerima yang berhak mengonfirmasi
+        if ($user->role !== 'wakapro') {
+            return response()->json([
+                'message' => 'Hanya Waka Program / Workshop penerima yang berhak mengonfirmasi penerimaan barang. Admin hanya memiliki akses monitoring.',
+            ], 403);
+        }
+
+        if (!$user->ruangan_id) {
+            return response()->json([
+                'message' => 'Akun Anda belum terhubung ke ruangan manapun. Hubungi administrator.',
+            ], 403);
+        }
+        if ($distribusi->ruangan_tujuan_id != $user->ruangan_id) {
+            return response()->json([
+                'message' => 'Anda tidak memiliki hak untuk mengonfirmasi barang ruangan lain.',
+            ], 403);
         }
 
         $validated = $request->validate([

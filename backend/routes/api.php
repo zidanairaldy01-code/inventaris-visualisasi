@@ -69,6 +69,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [AuthController::class, 'me']);
     Route::put('/profile', [AuthController::class, 'updateProfile']);
+    Route::post('/profile/photo', [AuthController::class, 'updatePhoto']);
+    Route::delete('/profile/photo', [AuthController::class, 'deletePhoto']);
     Route::put('/profile/password', [AuthController::class, 'updatePassword']);
 
     // Site Settings (Super Admin only)

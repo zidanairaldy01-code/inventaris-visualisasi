@@ -23,6 +23,8 @@ class RuanganController extends Controller
             $query->where('id_gedung', $request->query('id_gedung'));
         }
 
+        $query->orderBy('nama_ruangan', 'asc');
+
         return response()->json($query->get());
     }
 

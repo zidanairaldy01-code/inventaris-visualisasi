@@ -79,7 +79,20 @@ export default function Header({ onMenuClick }: HeaderProps) {
     };
     tick();
     const interval = setInterval(tick, 30000);
-    return () => clearInterval(interval);
+
+    const handleProfileUpdated = (e: any) => {
+      if (e.detail) {
+        setUser(e.detail);
+      } else {
+        axios.get('/api/user').then(res => setUser(res.data)).catch(() => { });
+      }
+    };
+    window.addEventListener('user-profile-updated', handleProfileUpdated);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('user-profile-updated', handleProfileUpdated);
+    };
   }, []);
 
   // Keyboard shortcut Ctrl+K / Cmd+K
@@ -613,10 +626,18 @@ export default function Header({ onMenuClick }: HeaderProps) {
               userMenuOpen ? 'bg-slate-100 ring-2 ring-blue-500/20 border-blue-300' : ''
             }`}
           >
-            <div className="w-7 h-7 rounded-lg bg-linear-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-sm shrink-0">
-              <span className="text-xs font-bold text-white">
-                {user?.nama_lengkap?.[0]?.toUpperCase() || 'A'}
-              </span>
+            <div className="w-7 h-7 rounded-lg bg-linear-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-sm shrink-0 overflow-hidden">
+              {user?.foto_url || user?.foto ? (
+                <img
+                  src={user.foto_url || user.foto}
+                  alt={user.nama_lengkap || 'Avatar'}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span className="text-xs font-bold text-white">
+                  {user?.nama_lengkap?.[0]?.toUpperCase() || 'A'}
+                </span>
+              )}
             </div>
             <div className="hidden md:block text-sm text-left">
               <div className="font-semibold text-slate-800 text-xs leading-tight">{user?.nama_lengkap || 'Memuat...'}</div>
@@ -633,8 +654,16 @@ export default function Header({ onMenuClick }: HeaderProps) {
               {/* User Summary Header */}
               <div className="p-4 bg-slate-50/90 border-b border-slate-100">
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 rounded-xl bg-linear-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold text-base shadow-md">
-                    {user?.nama_lengkap?.[0]?.toUpperCase() || 'A'}
+                  <div className="w-10 h-10 rounded-xl bg-linear-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold text-base shadow-md overflow-hidden shrink-0">
+                    {user?.foto_url || user?.foto ? (
+                      <img
+                        src={user.foto_url || user.foto}
+                        alt={user.nama_lengkap || 'Avatar'}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      user?.nama_lengkap?.[0]?.toUpperCase() || 'A'
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-bold text-slate-800 truncate">{user?.nama_lengkap || 'Pengguna'}</p>
