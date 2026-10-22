@@ -23,15 +23,13 @@ class FotoSaranaPrasarana extends Model
 
     public function getUrlFotoAttribute(): string
     {
-        // Jika path_file sudah berupa URL lengkap (Supabase), return as-is
+        // Jika path_file sudah berupa URL lengkap (Supabase/external), return as-is
         if (filter_var($this->path_file, FILTER_VALIDATE_URL)) {
             return $this->path_file;
         }
         
-        // Fallback untuk foto lama yang masih di local storage
-        $baseUrl = config('app.env') === 'production' 
-            ? rtrim(config('app.url'), '/')
-            : 'https://inventaris-visualisasi-production.up.railway.app';
+        // Gunakan APP_URL dari config untuk semua environment (local maupun production)
+        $baseUrl = rtrim(config('app.url'), '/');
         
         $storagePath = Storage::url($this->path_file);
         
