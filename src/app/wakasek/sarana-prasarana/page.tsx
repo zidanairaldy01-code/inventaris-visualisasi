@@ -13,6 +13,7 @@ import {
 import * as XLSX from 'xlsx';
 import Toast from '@/components/Toast';
 import AsetFotoModal from '@/components/AsetFotoModal';
+import SaranaPrasaranaDetailModal from '@/components/SaranaPrasaranaDetailModal';
 
 /* ─────────────────────── Types ─────────────────────── */
 interface MasterItem {
@@ -356,6 +357,9 @@ export default function SaranaPrasaranaPage() {
 
   // Foto modal
   const [selectedAset, setSelectedAset] = useState<SaranaPrasaranaItem | null>(null);
+
+  // Detail modal (bottom-sheet)
+  const [detailItem, setDetailItem] = useState<SaranaPrasaranaItem | null>(null);
 
   // Edit/Add modal
   const [showFormModal, setShowFormModal] = useState(false);
@@ -1129,7 +1133,11 @@ export default function SaranaPrasaranaPage() {
                   {paged.map((aset, i) => {
                     const isSelected = selectedItemIds.has(aset.id);
                     return (
-                      <tr key={aset.id} className={`transition-colors group ${isSelected ? 'bg-indigo-50/50' : 'hover:bg-slate-50/80'}`}>
+                      <tr
+                        key={aset.id}
+                        className={`transition-colors group cursor-pointer ${isSelected ? 'bg-indigo-50/50' : 'hover:bg-blue-50/60'}`}
+                        onClick={() => !isSelectMode && setDetailItem(aset)}
+                      >
                         {isSelectMode && (
                           <td className="px-4 py-3">
                             <input
@@ -1176,11 +1184,11 @@ export default function SaranaPrasaranaPage() {
                         </td>
                         <td className="px-4 py-3 text-center">
                           <div className="flex items-center justify-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={() => openEditModal(aset)} className="p-1.5 hover:bg-amber-50 text-amber-600 rounded-lg transition-colors" title="Edit">
+                            <button onClick={e => { e.stopPropagation(); openEditModal(aset); }} className="p-1.5 hover:bg-amber-50 text-amber-600 rounded-lg transition-colors" title="Edit">
                               <Edit2 className="h-4 w-4" />
                             </button>
                             {isSuperAdmin && (
-                              <button onClick={() => setDeleteTarget(aset)} className="p-1.5 hover:bg-rose-50 text-rose-600 rounded-lg transition-colors" title="Hapus">
+                              <button onClick={e => { e.stopPropagation(); setDeleteTarget(aset); }} className="p-1.5 hover:bg-rose-50 text-rose-600 rounded-lg transition-colors" title="Hapus">
                                 <Trash2 className="h-4 w-4" />
                               </button>
                             )}
@@ -1303,7 +1311,14 @@ export default function SaranaPrasaranaPage() {
         document.body
       )}
 
-      {/* Modal Foto — tidak digunakan di sarana & prasarana */}
+      {/* ════════ DETAIL MODAL (Bottom Sheet) ════════ */}
+      {detailItem && (
+        <SaranaPrasaranaDetailModal
+          item={detailItem}
+          folderName={detailItem.id_folder ? folderMap[detailItem.id_folder] : undefined}
+          onClose={() => setDetailItem(null)}
+        />
+      )}
 
       {/* ════════ SINGLE DELETE CONFIRM MODAL ════════ */}
       {deleteTarget && createPortal(
