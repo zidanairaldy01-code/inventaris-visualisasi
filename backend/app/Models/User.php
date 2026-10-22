@@ -12,12 +12,27 @@ class User extends Authenticatable
     use HasApiTokens, HasFactory, Notifiable;
 
     protected $fillable = [
-        'nama_lengkap', 'username', 'email', 'password', 'role', 'status', 'ruangan_id',
+        'nama_lengkap', 'username', 'email', 'foto', 'password', 'role', 'status', 'ruangan_id',
     ];
 
     protected $hidden = [
         'password', 'remember_token',
     ];
+
+    protected $appends = [
+        'foto_url',
+    ];
+
+    public function getFotoUrlAttribute(): ?string
+    {
+        if (!$this->foto) {
+            return null;
+        }
+        if (filter_var($this->foto, FILTER_VALIDATE_URL) || str_starts_with($this->foto, 'http://') || str_starts_with($this->foto, 'https://')) {
+            return $this->foto;
+        }
+        return url('storage/' . ltrim(str_replace('/storage/', '', $this->foto), '/'));
+    }
 
     protected function casts(): array
     {

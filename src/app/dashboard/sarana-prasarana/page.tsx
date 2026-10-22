@@ -937,9 +937,6 @@ export default function SaranaPrasaranaPage() {
             </div>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <button onClick={() => { fetchFolders(); fetchAsets(true); }} className="p-2.5 bg-white/10 backdrop-blur-sm border border-white/20 text-white rounded-xl hover:bg-white/20 transition-colors" title="Refresh">
-              <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-            </button>
             <button onClick={openAddFolder}
               className="flex items-center gap-2 px-3.5 py-2.5 bg-white/15 backdrop-blur-md border border-white/30 text-white rounded-xl hover:bg-white/25 text-sm font-semibold transition-all shadow-sm">
               <FolderPlus className="h-4 w-4" /> Buat Folder

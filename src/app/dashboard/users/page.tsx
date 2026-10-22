@@ -22,6 +22,8 @@ interface UserItem {
   nama_lengkap: string;
   username: string;
   email: string;
+  foto?: string | null;
+  foto_url?: string | null;
   role: 'super_admin' | 'petugas' | 'wakasek' | 'wakapro';
   ruangan_id: number | null;
   status: boolean;
@@ -293,8 +295,12 @@ export default function UsersPage() {
                       </span>
                     }
                     icon={
-                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs shadow-sm text-white ${roleInfo.color}`}>
-                        {u.nama_lengkap.charAt(0).toUpperCase()}
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs shadow-sm text-white overflow-hidden ${roleInfo.color}`}>
+                        {u.foto_url || u.foto ? (
+                          <img src={(u.foto_url || u.foto) as string} alt={u.nama_lengkap} className="w-full h-full object-cover" />
+                        ) : (
+                          u.nama_lengkap.charAt(0).toUpperCase()
+                        )}
                       </div>
                     }
                   />
@@ -400,8 +406,12 @@ export default function UsersPage() {
                       <tr key={u.id} className="hover:bg-slate-50/80 transition-colors">
                         <td className="py-3.5 px-4">
                           <div className="flex items-center gap-3">
-                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs shadow-sm ${isSuper ? 'bg-purple-600 text-white' : isPetugas ? 'bg-blue-600 text-white' : isWakasek ? 'bg-emerald-600 text-white' : 'bg-amber-600 text-white'}`}>
-                              {u.nama_lengkap.charAt(0).toUpperCase()}
+                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs shadow-sm overflow-hidden shrink-0 ${isSuper ? 'bg-purple-600 text-white' : isPetugas ? 'bg-blue-600 text-white' : isWakasek ? 'bg-emerald-600 text-white' : 'bg-amber-600 text-white'}`}>
+                              {u.foto_url || u.foto ? (
+                                <img src={(u.foto_url || u.foto) as string} alt={u.nama_lengkap} className="w-full h-full object-cover" />
+                              ) : (
+                                u.nama_lengkap.charAt(0).toUpperCase()
+                              )}
                             </div>
                             <div>
                               <p className="font-bold text-slate-900">{u.nama_lengkap}</p>

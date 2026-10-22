@@ -46,6 +46,7 @@ class UserController extends Controller
             'email'        => 'required|string|email|max:255|unique:users,email',
             'password'     => 'required|string|min:6',
             'role'         => ['required', Rule::in(['super_admin', 'petugas', 'wakasek', 'wakapro'])],
+            'foto'         => 'nullable|string',
             'ruangan_id'   => [
                 'nullable',
                 'exists:ruangans,id',
@@ -93,6 +94,7 @@ class UserController extends Controller
             'email'        => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
             'password'     => 'nullable|string|min:6',
             'role'         => ['required', Rule::in(['super_admin', 'petugas', 'wakasek', 'wakapro'])],
+            'foto'         => 'nullable|string',
             'ruangan_id'   => [
                 'nullable',
                 'exists:ruangans,id',
