@@ -9,5 +9,10 @@
     "tailwindCSS.lint.invalidVariant": "ignore",
     "tailwindCSS.lint.invalidConfigPath": "ignore",
     "tailwindCSS.lint.invalidTailwindDirective": "ignore",
-    "tailwindCSS.lint.recommendedVariantOrder": "ignore"
+    "tailwindCSS.lint.recommendedVariantOrder": "ignore",
+    "intelephense.environment.phpVersion": "8.2.0",
+    "intelephense.environment.includePaths": [
+        "backend",
+        "backend/vendor"
+    ]
 }
