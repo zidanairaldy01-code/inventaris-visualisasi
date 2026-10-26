@@ -75,6 +75,8 @@ export default function PenerimaanPage() {
   const [processing, setProcessing] = useState(false)
   const [fotoFile, setFotoFile] = useState<File | null>(null)
   const [fotoPreview, setFotoPreview] = useState<string | null>(null)
+  const [fotoKondisiFile, setFotoKondisiFile] = useState<File | null>(null)
+  const [fotoKondisiPreview, setFotoKondisiPreview] = useState<string | null>(null)
 
   // Modal detail BAST / Pengiriman
   const [detailItem, setDetailItem] = useState<Distribusi | null>(null)
@@ -84,6 +86,7 @@ export default function PenerimaanPage() {
   const [printingId, setPrintingId] = useState<number | null>(null)
   const [printingBastId, setPrintingBastId] = useState<number | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const fotoKondisiInputRef = useRef<HTMLInputElement>(null)
 
   const isKondisiRusak = (k: string) =>
     k === 'Rusak Ringan' || k === 'Rusak Berat'
@@ -144,6 +147,8 @@ export default function PenerimaanPage() {
     setKondisiDiterima(item.sarana_prasarana.kondisi || 'Baik')
     setFotoFile(null)
     setFotoPreview(null)
+    setFotoKondisiFile(null)
+    setFotoKondisiPreview(null)
     setCatatanPenerimaan(
       action === 'terima'
         ? 'Barang telah diperiksa fisik dan diterima dalam kondisi baik.'
@@ -165,6 +170,19 @@ export default function PenerimaanPage() {
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
+  const handleFotoKondisiChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setFotoKondisiFile(file)
+    setFotoKondisiPreview(URL.createObjectURL(file))
+  }
+
+  const removeFotoKondisi = () => {
+    setFotoKondisiFile(null)
+    setFotoKondisiPreview(null)
+    if (fotoKondisiInputRef.current) fotoKondisiInputRef.current.value = ''
+  }
+
   const handleKonfirmasi = async () => {
     if (!selectedItem) return
 
@@ -181,6 +199,7 @@ export default function PenerimaanPage() {
       if (aksi === 'terima') {
         fd.append('kondisi_diterima', kondisiDiterima)
         if (fotoFile) fd.append('foto_kerusakan', fotoFile)
+        if (fotoKondisiFile) fd.append('foto_kondisi_wakapro', fotoKondisiFile)
       }
 
       await axios.post(
@@ -860,6 +879,45 @@ export default function PenerimaanPage() {
                         type="file"
                         accept="image/*"
                         onChange={handleFotoChange}
+                        className="hidden"
+                      />
+                    </label>
+                  )}
+                </div>
+              )}
+
+              {/* Upload Foto Kondisi Wakapro (opsional, semua kondisi) */}
+              {aksi === 'terima' && (
+                <div>
+                  <label className="block text-xs font-bold text-indigo-600 mb-1.5 flex items-center gap-1.5">
+                    <Camera className="h-3.5 w-3.5" />
+                    Foto Kondisi Barang saat Diterima
+                    <span className="text-[10px] font-normal text-slate-400 ml-1">(Opsional — Digunakan sebagai dokumentasi Wakasek)</span>
+                  </label>
+                  {fotoKondisiPreview ? (
+                    <div className="relative rounded-xl overflow-hidden border border-indigo-200 bg-indigo-50/30">
+                      <img src={fotoKondisiPreview} alt="Preview Kondisi" className="w-full h-36 object-cover" />
+                      <button
+                        type="button"
+                        onClick={removeFotoKondisi}
+                        className="absolute top-2 right-2 p-1.5 bg-indigo-600 text-white rounded-lg shadow"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                      <div className="absolute bottom-0 inset-x-0 bg-indigo-900/70 text-white text-[10px] px-2 py-1 font-semibold">
+                        📸 Foto Kondisi Terima — akan tampil di monitoring Wakasek
+                      </div>
+                    </div>
+                  ) : (
+                    <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-indigo-300 bg-indigo-50/50 hover:bg-indigo-50 rounded-xl cursor-pointer transition-colors">
+                      <Camera className="h-5 w-5 text-indigo-400 mb-1" />
+                      <span className="text-xs text-indigo-600 font-semibold">Upload Foto Kondisi</span>
+                      <span className="text-[10px] text-indigo-400">JPG, PNG (Maks 5MB)</span>
+                      <input
+                        ref={fotoKondisiInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFotoKondisiChange}
                         className="hidden"
                       />
                     </label>

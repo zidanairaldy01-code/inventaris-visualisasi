@@ -24,7 +24,7 @@ class DistribusiAsetController extends Controller
     {
         $user = $request->user();
         $query = DistribusiAset::with([
-            'saranaPrasarana',
+            'saranaPrasarana.fotos',
             'ruanganTujuan.gedung',
             'petugasPengirim',
             'wakaproPenerima',
@@ -368,10 +368,11 @@ class DistribusiAsetController extends Controller
         }
 
         $validated = $request->validate([
-            'aksi'                => 'required|in:terima,tolak',
-            'catatan_penerimaan'  => 'nullable|string',
-            'kondisi_diterima'    => 'nullable|in:Baik,Rusak Ringan,Rusak Berat',
-            'foto_kerusakan'      => 'nullable|file|image|mimes:jpeg,png,jpg,webp|max:5120',
+            'aksi'                 => 'required|in:terima,tolak',
+            'catatan_penerimaan'   => 'nullable|string',
+            'kondisi_diterima'     => 'nullable|in:Baik,Rusak Ringan,Rusak Berat',
+            'foto_kerusakan'       => 'nullable|file|image|mimes:jpeg,png,jpg,webp|max:5120',
+            'foto_kondisi_wakapro' => 'nullable|file|image|mimes:jpeg,png,jpg,webp|max:5120',
         ]);
 
         if ($validated['aksi'] === 'terima') {
@@ -397,6 +398,22 @@ class DistribusiAsetController extends Controller
                 $fotoKerusakanPath = $this->uploadFotoKerusakan($request->file('foto_kerusakan'));
             }
 
+            // Upload foto kondisi wakapro (opsional, bisa untuk barang kondisi apapun)
+            $fotoKondisiWakaproPath = $distribusi->foto_kondisi_wakapro;
+            if ($request->hasFile('foto_kondisi_wakapro')) {
+                try {
+                    $supabase = app(\App\Services\SupabaseStorageService::class);
+                    $result = $supabase->uploadWithHash($request->file('foto_kondisi_wakapro'), 'kondisi-wakapro');
+                    $fotoKondisiWakaproPath = $result['url'];
+                } catch (\Exception $e) {
+                    // Fallback ke local storage jika Supabase gagal
+                    $file = $request->file('foto_kondisi_wakapro');
+                    $filename = 'kondisi_' . $distribusi->id . '_' . time() . '.' . $file->getClientOriginalExtension();
+                    $fotoKondisiWakaproPath = $file->storeAs('kondisi-wakapro', $filename, 'public');
+                    \Log::warning('Supabase upload foto kondisi wakapro failed, using local: ' . $e->getMessage());
+                }
+            }
+
             // Generate Nomor BAST: BAST-YYYYMM-XXXX
             $prefix = 'BAST-' . date('Ym') . '-';
             $countThisMonth = DistribusiAset::where('nomor_bast', 'like', "{$prefix}%")->count();
@@ -407,12 +424,13 @@ class DistribusiAsetController extends Controller
             } while (DistribusiAset::where('nomor_bast', $nomorBast)->exists());
 
             $distribusi->update([
-                'status'              => 'diterima',
-                'nomor_bast'          => $nomorBast,
-                'tanggal_terima'      => Carbon::now(),
-                'wakapro_penerima_id' => $user->id,
-                'catatan_penerimaan'  => $validated['catatan_penerimaan'] ?? ($kondisi === 'Baik' ? 'Barang telah diperiksa fisik dan diterima dalam kondisi baik.' : "Barang diterima dalam kondisi {$kondisi}."),
-                'foto_kerusakan'      => $fotoKerusakanPath,
+                'status'                 => 'diterima',
+                'nomor_bast'             => $nomorBast,
+                'tanggal_terima'         => Carbon::now(),
+                'wakapro_penerima_id'    => $user->id,
+                'catatan_penerimaan'     => $validated['catatan_penerimaan'] ?? ($kondisi === 'Baik' ? 'Barang telah diperiksa fisik dan diterima dalam kondisi baik.' : "Barang diterima dalam kondisi {$kondisi}."),
+                'foto_kerusakan'         => $fotoKerusakanPath,
+                'foto_kondisi_wakapro'   => $fotoKondisiWakaproPath,
             ]);
 
             // Jika ada perubahan kondisi saat diterima
@@ -694,23 +712,28 @@ class DistribusiAsetController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->ruangan_id) {
+        $ruanganId = $request->query('ruangan_id');
+        if (!$ruanganId || !in_array($user->role, ['super_admin', 'petugas', 'wakasek'])) {
+            $ruanganId = $user->ruangan_id;
+        }
+
+        if (!$ruanganId) {
             return response()->json([
                 'ruangan'  => null,
                 'items'    => [],
                 'summary'  => ['total_unit' => 0, 'total_jenis' => 0, 'total_nilai' => 0, 'kondisi_baik' => 0, 'kondisi_rusak' => 0],
-                'warning'  => 'Akun Anda belum terhubung ke ruangan manapun. Hubungi administrator.',
+                'warning'  => 'Ruangan belum dipilih atau akun Anda belum terhubung ke ruangan manapun.',
             ]);
         }
 
-        $ruangan = Ruangan::with('gedung')->find($user->ruangan_id);
+        $ruangan = Ruangan::with('gedung')->find($ruanganId);
 
         $query = DistribusiAset::with([
             'saranaPrasarana',
             'petugasPengirim',
             'wakaproPenerima',
         ])
-        ->where('ruangan_tujuan_id', $user->ruangan_id)
+        ->where('ruangan_tujuan_id', $ruanganId)
         ->where('status', 'diterima'); // Hanya yang sudah diterima via BAST
 
         // Sembunyikan aset yang sedang aktif dalam proses servis (Menunggu Persetujuan atau Proses).

@@ -28,6 +28,7 @@ class DistribusiAset extends Model
         'catatan_pengiriman',
         'catatan_penerimaan',
         'foto_kerusakan',
+        'foto_kondisi_wakapro',
     ];
 
     protected $casts = [
@@ -38,7 +39,7 @@ class DistribusiAset extends Model
         'total_harga' => 'float',
     ];
 
-    protected $appends = ['foto_kerusakan_url'];
+    protected $appends = ['foto_kerusakan_url', 'foto_kondisi_wakapro_url'];
 
     public function getFotoKerusakanUrlAttribute(): ?string
     {
@@ -46,6 +47,18 @@ class DistribusiAset extends Model
             return null;
         }
         return \Illuminate\Support\Facades\Storage::disk('public')->url($this->foto_kerusakan);
+    }
+
+    public function getFotoKondisiWakaproUrlAttribute(): ?string
+    {
+        if (!$this->foto_kondisi_wakapro) {
+            return null;
+        }
+        // Jika sudah URL lengkap (Supabase atau external)
+        if (filter_var($this->foto_kondisi_wakapro, FILTER_VALIDATE_URL)) {
+            return $this->foto_kondisi_wakapro;
+        }
+        return \Illuminate\Support\Facades\Storage::disk('public')->url($this->foto_kondisi_wakapro);
     }
 
     public function saranaPrasarana()
