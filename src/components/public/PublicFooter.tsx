@@ -44,24 +44,6 @@ export default function PublicFooter() {
             </ul>
           </div>
 
-          {/* Contact Info */}
-          <div>
-            <h3 className="font-bold text-white mb-4">Hubungi Kami</h3>
-            <ul className="space-y-3 text-sm">
-              <li className="flex items-start gap-2">
-                <MapPin className="w-4 h-4 shrink-0 mt-0.5 text-blue-400" />
-                <span>Jl. Raya Telagasari No. 123<br />Telagasari, Karawang 41383</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <Phone className="w-4 h-4 shrink-0 text-blue-400" />
-                <span>(0267) 123-4567</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <Mail className="w-4 h-4 shrink-0 text-blue-400" />
-                <span>info@smkpgritelagasari.sch.id</span>
-              </li>
-            </ul>
-          </div>
 
           {/* Social Media */}
           <div>
@@ -86,7 +68,7 @@ export default function PublicFooter() {
 
               {/* Instagram */}
               <a 
-                href="https://instagram.com/smkpgritelagasari" 
+                href="https://www.instagram.com/smk.pgritelagasari?utm_source=ig_web_button_share_sheet&rpxt=ZDNlZDc0MzIxNw==" 
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-10 h-10 bg-gray-800 hover:bg-linear-to-tr hover:from-amber-500 hover:via-pink-500 hover:to-purple-600 text-gray-300 hover:text-white rounded-xl flex items-center justify-center transition-all duration-300 hover:scale-110 hover:shadow-lg hover:shadow-pink-500/25 border border-gray-700/60"
@@ -100,7 +82,7 @@ export default function PublicFooter() {
 
               {/* Facebook */}
               <a 
-                href="https://facebook.com/smkpgritelagasari" 
+                href="https://www.facebook.com/profile.php?id=100057499147753&locale=id_ID" 
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-10 h-10 bg-gray-800 hover:bg-[#1877F2] text-gray-300 hover:text-white rounded-xl flex items-center justify-center transition-all duration-300 hover:scale-110 hover:shadow-lg hover:shadow-blue-500/25 border border-gray-700/60"
@@ -114,7 +96,7 @@ export default function PublicFooter() {
 
               {/* YouTube */}
               <a 
-                href="https://youtube.com/@smkpgritelagasari" 
+                href="https://www.youtube.com/@smk.pgritelagasari" 
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-10 h-10 bg-gray-800 hover:bg-[#FF0000] text-gray-300 hover:text-white rounded-xl flex items-center justify-center transition-all duration-300 hover:scale-110 hover:shadow-lg hover:shadow-red-500/25 border border-gray-700/60"

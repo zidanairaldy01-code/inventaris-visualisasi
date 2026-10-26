@@ -186,7 +186,7 @@ export default function AboutSection() {
                   <div>
                     <p className="font-semibold mb-1">Alamat</p>
                     <p className="text-blue-100 text-sm whitespace-pre-line">
-                      {s.kontak_alamat || 'Jl. Raya Telagasari No. 123\nTelagasari, Karawang, Jawa Barat 41383'}
+                      {s.kontak_alamat || 'Jl. Raya Syeh Quro\nTalagasari, Kec. Talagasari, Karawang, Jawa Barat 41381'}
                     </p>
                   </div>
                 </div>
@@ -195,7 +195,7 @@ export default function AboutSection() {
                   <Phone className="w-5 h-5 shrink-0 mt-0.5" />
                   <div>
                     <p className="font-semibold mb-1">Telepon</p>
-                    <p className="text-blue-100 text-sm">{s.kontak_telepon || '(0267) 123-4567'}</p>
+                    <p className="text-blue-100 text-sm">{s.kontak_telepon || '#'}</p>
                   </div>
                 </div>
 
@@ -203,7 +203,7 @@ export default function AboutSection() {
                   <Mail className="w-5 h-5 shrink-0 mt-0.5" />
                   <div>
                     <p className="font-semibold mb-1">Email</p>
-                    <p className="text-blue-100 text-sm">{s.kontak_email || 'info@smkpgritelagasari.sch.id'}</p>
+                    <p className="text-blue-100 text-sm">{s.kontak_email || 'smkpgritelagasari.01@gmail.com'}</p>
                   </div>
                 </div>
               </div>
