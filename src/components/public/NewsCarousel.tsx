@@ -74,6 +74,8 @@ export default function NewsCarousel() {
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const [direction, setDirection] = useState<'left' | 'right'>('right');
   const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null);
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const [touchEndX, setTouchEndX] = useState<number | null>(null);
 
   useEffect(() => {
     // Ambil berita langsung dari API backend publik
@@ -128,6 +130,29 @@ export default function NewsCarousel() {
     setCurrentIndex(index);
   };
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setIsAutoPlaying(false);
+    setTouchEndX(null);
+    setTouchStartX(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    setTouchEndX(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchEnd = () => {
+    if (touchStartX === null || touchEndX === null) return;
+    const distance = touchStartX - touchEndX;
+    const minSwipeDistance = 45;
+    if (distance > minSwipeDistance) {
+      goToNext();
+    } else if (distance < -minSwipeDistance) {
+      goToPrevious();
+    }
+    setTouchStartX(null);
+    setTouchEndX(null);
+  };
+
   if (newsList.length === 0) {
     return null;
   }
@@ -152,6 +177,9 @@ export default function NewsCarousel() {
             <div
               className="flex transition-transform duration-700 ease-in-out" 
               style={{ transform: `translateX(-${currentIndex * 100}%)` }}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
             >
               {newsList.map((news) => (
                 <div key={news.id} className="min-w-full grid md:grid-cols-2 gap-0">
@@ -169,7 +197,7 @@ export default function NewsCarousel() {
                   </div>
 
                   {/* Content Side */}
-                  <div className="p-8 md:p-12 flex flex-col justify-center">
+                  <div className="p-6 sm:p-8 md:p-12 flex flex-col justify-center">
                     <div className="flex items-center gap-4 text-xs font-semibold text-gray-500 mb-4 flex-wrap">
                       <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-600 border border-blue-100">
                         <Calendar className="w-3.5 h-3.5" />
@@ -192,7 +220,7 @@ export default function NewsCarousel() {
                     <div>
                       <button
                         onClick={() => setSelectedNews(news)}
-                        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm transition-all shadow-md hover:shadow-lg shadow-blue-500/20"
+                        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm transition-all shadow-md hover:shadow-lg shadow-blue-500/20 active:scale-95"
                       >
                         Baca Selengkapnya
                         <ChevronRight className="w-4 h-4" />
@@ -208,38 +236,40 @@ export default function NewsCarousel() {
               <>
                 <button
                   onClick={goToPrevious}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 z-10 w-11 h-11 bg-white/90 hover:bg-white text-gray-700 rounded-full flex items-center justify-center shadow-lg transition-all hover:scale-110"
+                  className="absolute left-3 top-32 -translate-y-1/2 md:left-4 md:top-1/2 z-10 w-9 h-9 md:w-11 md:h-11 bg-white/90 hover:bg-white text-gray-700 rounded-full flex items-center justify-center shadow-lg transition-all hover:scale-110 active:scale-95"
                   aria-label="Sebelumnya"
                 >
-                  <ChevronLeft className="w-6 h-6" />
+                  <ChevronLeft className="w-5 h-5 md:w-6 md:h-6" />
                 </button>
                 <button
                   onClick={goToNext}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 z-10 w-11 h-11 bg-white/90 hover:bg-white text-gray-700 rounded-full flex items-center justify-center shadow-lg transition-all hover:scale-110"
+                  className="absolute right-3 top-32 -translate-y-1/2 md:right-4 md:top-1/2 z-10 w-9 h-9 md:w-11 md:h-11 bg-white/90 hover:bg-white text-gray-700 rounded-full flex items-center justify-center shadow-lg transition-all hover:scale-110 active:scale-95"
                   aria-label="Berikutnya"
                 >
-                  <ChevronRight className="w-6 h-6" />
+                  <ChevronRight className="w-5 h-5 md:w-6 md:h-6" />
                 </button>
-
-                {/* Slide Indicators */}
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10 bg-slate-900/30 backdrop-blur-sm px-3 py-1.5 rounded-full">
-                  {newsList.map((_, index) => (
-                    <button
-                      key={index}
-                      onClick={() => goToSlide(index)}
-                      className={`h-2.5 rounded-full transition-all ${
-                        index === currentIndex 
-                          ? 'w-8 bg-blue-500' 
-                          : 'w-2.5 bg-white/60 hover:bg-white'
-                      }`}
-                      aria-label={`Slide ${index + 1}`}
-                    />
-                  ))}
-                </div>
               </>
             )}
           </div>
         </div>
+
+        {/* Slide Indicators - diletakkan di luar card agar tidak menutupi tombol atau teks */}
+        {newsList.length > 1 && (
+          <div className="flex justify-center items-center gap-2 mt-5">
+            {newsList.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => goToSlide(index)}
+                className={`h-2 rounded-full transition-all duration-300 ${
+                  index === currentIndex 
+                    ? 'w-7 bg-blue-600' 
+                    : 'w-2 bg-slate-300 hover:bg-slate-400'
+                }`}
+                aria-label={`Slide ${index + 1}`}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Modal Baca Selengkapnya */}
