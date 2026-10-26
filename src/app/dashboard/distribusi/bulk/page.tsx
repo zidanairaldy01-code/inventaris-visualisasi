@@ -13,6 +13,7 @@ interface Ruangan {
   id: number
   nama_ruangan: string
   kode_ruangan: string
+  jenis?: string
   gedung: {
     nama_gedung: string
   }
@@ -88,11 +89,18 @@ export default function BulkDistribusiPage() {
   const fetchRuangans = async () => {
     setLoadingRuangan(true)
     try {
-      const response = await axios.get('/api/ruangans')
+      const response = await axios.get('/api/ruangans?jenis=workshop')
       const all: Ruangan[] = Array.isArray(response.data)
         ? response.data
         : (response.data?.data ?? [])
-      setRuangans(all)
+      // Filter ganda: pastikan hanya ruangan workshop/bengkel dan tidak ada kelas
+      const workshopsOnly = all.filter(r => {
+        if (r.jenis && r.jenis !== 'workshop' && r.jenis !== 'bengkel') return false
+        const name = (r.nama_ruangan || '').toLowerCase().trim()
+        if (name.startsWith('kelas') || name.startsWith('ruang kelas')) return false
+        return true
+      })
+      setRuangans(workshopsOnly)
     } catch (error) {
       console.error('Error fetching ruangans:', error)
     } finally {
@@ -297,7 +305,7 @@ export default function BulkDistribusiPage() {
                   className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all"
                   required
                 >
-                  <option value="">-- Pilih Ruangan Tujuan --</option>
+                  <option value="">-- Pilih Ruangan Workshop --</option>
                   {ruangans.map(r => (
                     <option key={r.id} value={r.id}>
                       {r.nama_ruangan} ({r.kode_ruangan})

@@ -100,10 +100,17 @@ export default function MonitoringPenerimaanPage() {
     try {
       const [distRes, ruangRes] = await Promise.all([
         axios.get('/api/distribusi-asets'),
-        axios.get('/api/ruangans').catch(() => ({ data: [] })),
+        axios.get('/api/ruangans?jenis=workshop').catch(() => ({ data: [] })),
       ])
       setDistribusiList(Array.isArray(distRes.data) ? distRes.data : [])
-      setRuanganList(Array.isArray(ruangRes.data) ? ruangRes.data : [])
+      const rawRuang = Array.isArray(ruangRes.data) ? ruangRes.data : (ruangRes.data?.data ?? [])
+      const workshopsOnly = rawRuang.filter((r: { jenis?: string; nama_ruangan?: string }) => {
+        if (r.jenis && r.jenis !== 'workshop' && r.jenis !== 'bengkel') return false
+        const name = (r.nama_ruangan || '').toLowerCase().trim()
+        if (name.startsWith('kelas') || name.startsWith('ruang kelas')) return false
+        return true
+      })
+      setRuanganList(workshopsOnly)
     } catch (error) {
       console.error('Error fetching data penerimaan:', error)
       showErrorAlert(error, 'Gagal Memuat Data Monitoring')

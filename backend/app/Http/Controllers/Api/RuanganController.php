@@ -16,7 +16,16 @@ class RuanganController extends Controller
             ->withSum('asets as total_harga_aset', \DB::raw('jumlah * COALESCE(harga_perolehan, 0)'));
 
         if ($request->filled('jenis')) {
-            $query->where('jenis', $request->query('jenis'));
+            $jenis = $request->query('jenis');
+            if ($jenis === 'workshop') {
+                $query->where(function ($q) {
+                    $q->whereIn('jenis', ['workshop', 'bengkel'])
+                      ->where('nama_ruangan', 'not like', 'Kelas%')
+                      ->whereNull('id_kelas');
+                });
+            } else {
+                $query->where('jenis', $jenis);
+            }
         }
 
         if ($request->filled('id_gedung')) {

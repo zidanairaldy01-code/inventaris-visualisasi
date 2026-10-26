@@ -18,6 +18,7 @@ interface Ruangan {
   id: number
   nama_ruangan: string
   kode_ruangan?: string
+  jenis?: string
   gedung?: { nama_gedung: string }
   wakapro?: { nama_lengkap: string }
 }
@@ -104,8 +105,15 @@ export default function PetugasDistribusiPage() {
 
   const fetchRuangan = async () => {
     try {
-      const res = await axios.get('/api/ruangans')
-      setRuanganList(res.data)
+      const res = await axios.get('/api/ruangans?jenis=workshop')
+      const data: Ruangan[] = Array.isArray(res.data) ? res.data : (res.data?.data ?? [])
+      const workshopsOnly = data.filter(r => {
+        if (r.jenis && r.jenis !== 'workshop' && r.jenis !== 'bengkel') return false
+        const name = (r.nama_ruangan || '').toLowerCase().trim()
+        if (name.startsWith('kelas') || name.startsWith('ruang kelas')) return false
+        return true
+      })
+      setRuanganList(workshopsOnly)
     } catch (e) {
       console.error('Gagal memuat ruangan', e)
     }
