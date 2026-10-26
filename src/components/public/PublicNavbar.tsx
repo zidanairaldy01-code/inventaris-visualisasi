@@ -1,7 +1,5 @@
 'use client';
 
-import Link from 'next/link';
-import { LogIn } from 'lucide-react';
 import { useState } from 'react';
 
 export default function PublicNavbar() {
@@ -32,15 +30,6 @@ export default function PublicNavbar() {
             <a href="#tentang" className="hover:text-blue-600 transition-colors">Tentang</a>
             <a href="#katalog" className="hover:text-blue-600 transition-colors">Katalog Aset</a>
           </nav>
-
-          {/* Login Button */}
-          <Link
-            href="/login"
-            className="flex items-center gap-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg transition-colors shadow-sm"
-          >
-            <LogIn className="w-4 h-4" />
-            <span className="hidden sm:inline">Login</span>
-          </Link>
 
           {/* Mobile Menu Button */}
           <button

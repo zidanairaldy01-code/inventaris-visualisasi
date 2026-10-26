@@ -197,7 +197,7 @@ export default function NewsCarousel() {
                   </div>
 
                   {/* Content Side */}
-                  <div className="p-6 sm:p-8 md:p-12 flex flex-col justify-center">
+                  <div className="p-6 sm:p-8 md:p-12 pb-16 sm:pb-16 md:pb-12 flex flex-col justify-center">
                     <div className="flex items-center gap-4 text-xs font-semibold text-gray-500 mb-4 flex-wrap">
                       <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-600 border border-blue-100">
                         <Calendar className="w-3.5 h-3.5" />
@@ -248,28 +248,35 @@ export default function NewsCarousel() {
                 >
                   <ChevronRight className="w-5 h-5 md:w-6 md:h-6" />
                 </button>
+
+                {/* Slide Indicators - tetap di dalam card dengan ukuran kecil & ramping persis seperti referensi */}
+                <div className="absolute bottom-3 md:bottom-4 left-1/2 -translate-x-1/2 flex items-center justify-center gap-1.5 z-20 bg-slate-900/40 backdrop-blur-xs px-2.5 py-1 rounded-full shadow-xs">
+                  {newsList.map((_, index) => (
+                    <button
+                      key={index}
+                      type="button"
+                      onClick={() => goToSlide(index)}
+                      className={`block p-0 m-0 border-0 rounded-full transition-all duration-300 cursor-pointer ${
+                        index === currentIndex 
+                          ? 'bg-blue-500' 
+                          : 'bg-white/70 hover:bg-white'
+                      }`}
+                      style={{
+                        width: index === currentIndex ? '16px' : '6px',
+                        height: '6px',
+                        minWidth: index === currentIndex ? '16px' : '6px',
+                        maxWidth: index === currentIndex ? '16px' : '6px',
+                        minHeight: '6px',
+                        maxHeight: '6px',
+                      }}
+                      aria-label={`Slide ${index + 1}`}
+                    />
+                  ))}
+                </div>
               </>
             )}
           </div>
         </div>
-
-        {/* Slide Indicators - diletakkan di luar card agar tidak menutupi tombol atau teks */}
-        {newsList.length > 1 && (
-          <div className="flex justify-center items-center gap-2 mt-5">
-            {newsList.map((_, index) => (
-              <button
-                key={index}
-                onClick={() => goToSlide(index)}
-                className={`h-2 rounded-full transition-all duration-300 ${
-                  index === currentIndex 
-                    ? 'w-7 bg-blue-600' 
-                    : 'w-2 bg-slate-300 hover:bg-slate-400'
-                }`}
-                aria-label={`Slide ${index + 1}`}
-              />
-            ))}
-          </div>
-        )}
       </div>
 
       {/* Modal Baca Selengkapnya */}
