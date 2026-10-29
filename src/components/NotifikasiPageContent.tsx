@@ -353,8 +353,8 @@ export default function NotifikasiPageContent() {
                   </div>
                 </div>
 
-                {/* Actions (visible on hover) */}
-                <div className="flex flex-col items-center gap-2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                {/* Actions (always visible on mobile touch, hover on desktop) */}
+                <div className="flex flex-col items-center gap-2 shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                   {!notif.is_read && (
                     <button
                       onClick={() => handleMarkRead(notif.id)}

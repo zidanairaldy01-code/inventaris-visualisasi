@@ -9,6 +9,13 @@ import {
   Clock, X, Trash2, Edit2, Loader2, Camera, ImageOff, ZoomIn,
   ShieldCheck, AlertTriangle, Ban, FileWarning, SendHorizonal
 } from 'lucide-react';
+import { useIsMobile } from '@/hooks/useMediaQuery';
+import { 
+  MobileCard, 
+  MobileCardHeader, 
+  MobileCardRow, 
+  MobileCardActions 
+} from '@/components/MobileCard';
 
 interface ServisItem {
   id: number;
@@ -51,6 +58,7 @@ const STATUS_CONFIG: Record<string, { label: string; cls: string; icon: React.Re
 };
 
 export default function AdminServisPage() {
+  const isMobile = useIsMobile();
   const [servises, setServises] = useState<ServisItem[]>([]);
   const [saranas, setSaranas] = useState<SaranaPrasarana[]>([]);
   const [loading, setLoading] = useState(true);
@@ -407,143 +415,281 @@ export default function AdminServisPage() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="bg-slate-50/80 border-b border-slate-100 text-slate-400 text-[11px] uppercase tracking-widest">
-                <th className="px-4 py-3.5 font-semibold">#</th>
-                <th className="px-4 py-3.5 font-semibold">Barang / Aset</th>
-                <th className="px-4 py-3.5 font-semibold">Kerusakan & Tindakan</th>
-                <th className="px-4 py-3.5 font-semibold text-center">Foto</th>
-                <th className="px-4 py-3.5 font-semibold">Pelapor → Wakasek</th>
-                <th className="px-4 py-3.5 font-semibold text-right">Biaya Servis</th>
-                <th className="px-4 py-3.5 font-semibold">Status</th>
-                <th className="px-4 py-3.5 font-semibold text-center">Aksi Admin</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              {loading ? (
-                Array.from({ length: 4 }).map((_, i) => (
-                  <tr key={i}><td className="px-4 py-4" colSpan={8}><div className="h-5 bg-slate-100 rounded-lg animate-pulse w-full" /></td></tr>
-                ))
-              ) : filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="py-16 text-center">
-                    <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-3">
-                      <FileWarning className="h-7 w-7 text-slate-300" />
-                    </div>
-                    <p className="font-semibold text-slate-500 text-sm">Belum ada data servis</p>
-                    <p className="text-slate-400 text-xs mt-1">Laporan dari Wakapro akan muncul di sini setelah dikirim.</p>
-                  </td>
-                </tr>
-              ) : (
-                filtered.map((item, idx) => {
-                  const namaBarang = item.sarana_prasarana?.nama_barang || item.aset?.nama_aset || '—';
-                  const kodeBarang = item.sarana_prasarana?.kode || item.aset?.kode_aset || '-';
-                  const statusCfg = STATUS_CONFIG[item.status] || { label: item.status, cls: 'bg-slate-100 text-slate-500 border-slate-200', icon: null };
-                  const canVerify = item.status === 'Proses';
+        {/* Table / Mobile Cards */}
+        {isMobile ? (
+          <div className="p-3 space-y-3">
+            {loading ? (
+              Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="h-40 bg-slate-100 rounded-2xl animate-pulse w-full" />
+              ))
+            ) : filtered.length === 0 ? (
+              <div className="py-12 text-center">
+                <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-3">
+                  <FileWarning className="h-6 w-6 text-slate-300" />
+                </div>
+                <p className="font-semibold text-slate-500 text-sm">Belum ada data servis</p>
+                <p className="text-slate-400 text-xs mt-1">Laporan dari Wakapro akan muncul di sini setelah dikirim.</p>
+              </div>
+            ) : (
+              filtered.map((item) => {
+                const namaBarang = item.sarana_prasarana?.nama_barang || item.aset?.nama_aset || '—';
+                const kodeBarang = item.sarana_prasarana?.kode || item.aset?.kode_aset || '-';
+                const statusCfg = STATUS_CONFIG[item.status] || { label: item.status, cls: 'bg-slate-100 text-slate-500 border-slate-200', icon: null };
+                const canVerify = item.status === 'Proses';
 
-                  return (
-                    <tr key={item.id} className={`hover:bg-slate-50/80 transition-colors group ${canVerify ? 'bg-blue-50/10' : ''}`}>
-                      <td className="px-4 py-3.5 text-xs text-slate-400 font-medium">{idx + 1}</td>
-                      <td className="px-4 py-3.5">
-                        <p className="text-sm font-semibold text-slate-800">{namaBarang}</p>
-                        <p className="text-[11px] text-slate-400 font-mono">{kodeBarang}</p>
-                        {item.ruangan && <p className="text-[11px] text-slate-400 mt-0.5">{item.ruangan.nama_ruangan}</p>}
-                        <p className="text-[11px] text-slate-400 font-mono mt-0.5">{item.tanggal_servis}</p>
-                      </td>
-                      <td className="px-4 py-3.5">
-                        <p className="text-sm font-medium text-slate-700">{item.jenis_perbaikan}</p>
-                        {item.deskripsi_kerusakan && (
-                          <p className="text-xs text-slate-400 italic mt-0.5 line-clamp-2">{item.deskripsi_kerusakan}</p>
-                        )}
-                        {item.teknisi_bengkel && (
-                          <p className="text-[11px] text-blue-600 mt-0.5 font-medium">Teknisi: {item.teknisi_bengkel}</p>
-                        )}
-                      </td>
-                      <td className="px-4 py-3.5 text-center">
-                        {item.foto_kerusakan_url ? (
-                          <button onClick={() => setLightboxUrl(item.foto_kerusakan_url!)} className="relative w-10 h-10 rounded-lg overflow-hidden border border-slate-200 hover:border-amber-400 transition group/img mx-auto block">
-                            <img src={item.foto_kerusakan_url} alt="Foto" className="w-full h-full object-cover" />
-                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition flex items-center justify-center">
-                              <ZoomIn className="h-3.5 w-3.5 text-white" />
-                            </div>
-                          </button>
-                        ) : (
-                          <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center mx-auto">
-                            <ImageOff className="h-3.5 w-3.5 text-slate-300" />
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-4 py-3.5">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <p className="text-xs font-semibold text-slate-800">{item.pelapor?.nama_lengkap || '—'}</p>
-                          {item.pelapor?.role && (
-                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                              item.pelapor.role === 'super_admin' ? 'bg-amber-100 text-amber-800' :
-                              item.pelapor.role === 'admin' ? 'bg-blue-100 text-blue-800' :
-                              'bg-purple-100 text-purple-800'
-                            }`}>
-                              {item.pelapor.role === 'super_admin' ? 'Super Admin' : item.pelapor.role === 'admin' ? 'Admin' : 'Wakapro'}
-                            </span>
-                          )}
+                return (
+                  <MobileCard key={item.id} className="p-3.5 border border-slate-100 shadow-sm">
+                    <MobileCardHeader
+                      title={
+                        <div>
+                          <p className="font-bold text-slate-900 text-sm">{namaBarang}</p>
+                          <p className="text-[11px] text-slate-400 font-mono">{kodeBarang}</p>
                         </div>
-                        {item.approved_by_wakasek && (
-                          <p className="text-[11px] text-violet-600 mt-0.5 font-medium">
-                            ✓ Wakasek: {item.approved_by_wakasek.nama_lengkap}
-                          </p>
-                        )}
-                        {item.verified_by_admin && (
-                          <p className="text-[11px] text-emerald-600 mt-0.5 font-medium">
-                            ✓ Admin: {item.verified_by_admin.nama_lengkap}
-                          </p>
-                        )}
-                        {item.catatan_wakasek && (
-                          <p className="text-[11px] text-slate-400 italic mt-0.5 line-clamp-1">"{item.catatan_wakasek}"</p>
-                        )}
-                      </td>
-                      <td className="px-4 py-3.5 text-right">
-                        {item.status === 'Menunggu Persetujuan' ? (
-                          <span className="text-xs text-amber-500 italic">Belum ditentukan</span>
-                        ) : (
-                          <span className="font-bold text-amber-700 text-sm">{formatRupiah(Number(item.biaya_servis))}</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3.5">
+                      }
+                      badge={
                         <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold border ${statusCfg.cls}`}>
                           {statusCfg.icon}{statusCfg.label}
                         </span>
-                      </td>
-                      <td className="px-4 py-3.5">
-                        <div className="flex items-center justify-center gap-1.5">
-                          {canVerify && (
-                            <button
-                              onClick={() => { setSelesaiModal({ item }); setSelesaiForm({ catatan_admin: '', biaya_realisasi: String(item.biaya_servis || '') }); }}
-                              className="flex items-center gap-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-colors shadow-sm whitespace-nowrap"
-                            >
-                              <ShieldCheck className="h-3.5 w-3.5" />
-                              Verifikasi Selesai
-                            </button>
-                          )}
-                          {!canVerify && (
-                            <>
-                              <button onClick={() => openEditModal(item)} className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors" title="Edit">
-                                <Edit2 className="h-3.5 w-3.5" />
-                              </button>
-                              <button onClick={() => handleDelete(item.id)} className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors" title="Hapus">
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </button>
-                            </>
-                          )}
+                      }
+                    />
+                    <div className="space-y-1.5 mt-2">
+                      <MobileCardRow
+                        label="Perbaikan"
+                        value={<span className="font-medium text-slate-800">{item.jenis_perbaikan}</span>}
+                      />
+                      {item.deskripsi_kerusakan && (
+                        <MobileCardRow
+                          label="Kerusakan"
+                          value={<span className="italic text-slate-600 line-clamp-2">{item.deskripsi_kerusakan}</span>}
+                        />
+                      )}
+                      <MobileCardRow
+                        label="Biaya"
+                        value={
+                          item.status === 'Menunggu Persetujuan' ? (
+                            <span className="text-xs text-amber-500 italic">Belum ditentukan</span>
+                          ) : (
+                            <span className="font-bold text-amber-700">{formatRupiah(Number(item.biaya_servis))}</span>
+                          )
+                        }
+                      />
+                      <MobileCardRow
+                        label="Tgl Servis"
+                        value={<span className="font-mono text-xs">{item.tanggal_servis}</span>}
+                      />
+                      {item.ruangan && (
+                        <MobileCardRow
+                          label="Lokasi"
+                          value={item.ruangan.nama_ruangan}
+                        />
+                      )}
+                      {item.teknisi_bengkel && (
+                        <MobileCardRow
+                          label="Teknisi"
+                          value={<span className="text-blue-600 font-medium">{item.teknisi_bengkel}</span>}
+                        />
+                      )}
+                      {item.pelapor?.nama_lengkap && (
+                        <MobileCardRow
+                          label="Pelapor"
+                          value={
+                            <span className="inline-flex items-center gap-1">
+                              <span>{item.pelapor.nama_lengkap}</span>
+                              {item.pelapor.role && (
+                                <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-slate-100 text-slate-600">
+                                  {item.pelapor.role}
+                                </span>
+                              )}
+                            </span>
+                          }
+                        />
+                      )}
+                      {item.foto_kerusakan_url && (
+                        <div className="pt-1 flex items-center justify-between">
+                          <span className="text-xs text-slate-400">Foto Bukti</span>
+                          <button
+                            onClick={() => setLightboxUrl(item.foto_kerusakan_url!)}
+                            className="inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 font-medium"
+                          >
+                            <ZoomIn className="h-3.5 w-3.5" />
+                            Lihat Foto
+                          </button>
                         </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                      )}
+                    </div>
+                    <MobileCardActions className="pt-2 mt-2 border-t border-slate-100 flex flex-wrap gap-2">
+                      {canVerify && (
+                        <button
+                          onClick={() => { setSelesaiModal({ item }); setSelesaiForm({ catatan_admin: '', biaya_realisasi: String(item.biaya_servis || '') }); }}
+                          className="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-colors shadow-sm"
+                        >
+                          <ShieldCheck className="h-4 w-4" />
+                          Verifikasi Selesai
+                        </button>
+                      )}
+                      {!canVerify && (
+                        <>
+                          <button
+                            onClick={() => openEditModal(item)}
+                            className="inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors"
+                          >
+                            <Edit2 className="h-3.5 w-3.5 mr-1" />
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDelete(item.id)}
+                            className="inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
+                          >
+                            <Trash2 className="h-3.5 w-3.5 mr-1" />
+                            Hapus
+                          </button>
+                        </>
+                      )}
+                    </MobileCardActions>
+                  </MobileCard>
+                );
+              })
+            )}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="bg-slate-50/80 border-b border-slate-100 text-slate-400 text-[11px] uppercase tracking-widest">
+                  <th className="px-4 py-3.5 font-semibold">#</th>
+                  <th className="px-4 py-3.5 font-semibold">Barang / Aset</th>
+                  <th className="px-4 py-3.5 font-semibold">Kerusakan & Tindakan</th>
+                  <th className="px-4 py-3.5 font-semibold text-center">Foto</th>
+                  <th className="px-4 py-3.5 font-semibold">Pelapor → Wakasek</th>
+                  <th className="px-4 py-3.5 font-semibold text-right">Biaya Servis</th>
+                  <th className="px-4 py-3.5 font-semibold">Status</th>
+                  <th className="px-4 py-3.5 font-semibold text-center">Aksi Admin</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {loading ? (
+                  Array.from({ length: 4 }).map((_, i) => (
+                    <tr key={i}><td className="px-4 py-4" colSpan={8}><div className="h-5 bg-slate-100 rounded-lg animate-pulse w-full" /></td></tr>
+                  ))
+                ) : filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="py-16 text-center">
+                      <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-3">
+                        <FileWarning className="h-7 w-7 text-slate-300" />
+                      </div>
+                      <p className="font-semibold text-slate-500 text-sm">Belum ada data servis</p>
+                      <p className="text-slate-400 text-xs mt-1">Laporan dari Wakapro akan muncul di sini setelah dikirim.</p>
+                    </td>
+                  </tr>
+                ) : (
+                  filtered.map((item, idx) => {
+                    const namaBarang = item.sarana_prasarana?.nama_barang || item.aset?.nama_aset || '—';
+                    const kodeBarang = item.sarana_prasarana?.kode || item.aset?.kode_aset || '-';
+                    const statusCfg = STATUS_CONFIG[item.status] || { label: item.status, cls: 'bg-slate-100 text-slate-500 border-slate-200', icon: null };
+                    const canVerify = item.status === 'Proses';
+
+                    return (
+                      <tr key={item.id} className={`hover:bg-slate-50/80 transition-colors group ${canVerify ? 'bg-blue-50/10' : ''}`}>
+                        <td className="px-4 py-3.5 text-xs text-slate-400 font-medium">{idx + 1}</td>
+                        <td className="px-4 py-3.5">
+                          <p className="text-sm font-semibold text-slate-800">{namaBarang}</p>
+                          <p className="text-[11px] text-slate-400 font-mono">{kodeBarang}</p>
+                          {item.ruangan && <p className="text-[11px] text-slate-400 mt-0.5">{item.ruangan.nama_ruangan}</p>}
+                          <p className="text-[11px] text-slate-400 font-mono mt-0.5">{item.tanggal_servis}</p>
+                        </td>
+                        <td className="px-4 py-3.5">
+                          <p className="text-sm font-medium text-slate-700">{item.jenis_perbaikan}</p>
+                          {item.deskripsi_kerusakan && (
+                            <p className="text-xs text-slate-400 italic mt-0.5 line-clamp-2">{item.deskripsi_kerusakan}</p>
+                          )}
+                          {item.teknisi_bengkel && (
+                            <p className="text-[11px] text-blue-600 mt-0.5 font-medium">Teknisi: {item.teknisi_bengkel}</p>
+                          )}
+                        </td>
+                        <td className="px-4 py-3.5 text-center">
+                          {item.foto_kerusakan_url ? (
+                            <button onClick={() => setLightboxUrl(item.foto_kerusakan_url!)} className="relative w-10 h-10 rounded-lg overflow-hidden border border-slate-200 hover:border-amber-400 transition group/img mx-auto block">
+                              <img src={item.foto_kerusakan_url} alt="Foto" className="w-full h-full object-cover" />
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition flex items-center justify-center">
+                                <ZoomIn className="h-3.5 w-3.5 text-white" />
+                              </div>
+                            </button>
+                          ) : (
+                            <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center mx-auto">
+                              <ImageOff className="h-3.5 w-3.5 text-slate-300" />
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-4 py-3.5">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <p className="text-xs font-semibold text-slate-800">{item.pelapor?.nama_lengkap || '—'}</p>
+                            {item.pelapor?.role && (
+                              <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                item.pelapor.role === 'super_admin' ? 'bg-amber-100 text-amber-800' :
+                                item.pelapor.role === 'admin' ? 'bg-blue-100 text-blue-800' :
+                                'bg-purple-100 text-purple-800'
+                              }`}>
+                                {item.pelapor.role === 'super_admin' ? 'Super Admin' : item.pelapor.role === 'admin' ? 'Admin' : 'Wakapro'}
+                              </span>
+                            )}
+                          </div>
+                          {item.approved_by_wakasek && (
+                            <p className="text-[11px] text-violet-600 mt-0.5 font-medium">
+                              ✓ Wakasek: {item.approved_by_wakasek.nama_lengkap}
+                            </p>
+                          )}
+                          {item.verified_by_admin && (
+                            <p className="text-[11px] text-emerald-600 mt-0.5 font-medium">
+                              ✓ Admin: {item.verified_by_admin.nama_lengkap}
+                            </p>
+                          )}
+                          {item.catatan_wakasek && (
+                            <p className="text-[11px] text-slate-400 italic mt-0.5 line-clamp-1">&quot;{item.catatan_wakasek}&quot;</p>
+                          )}
+                        </td>
+                        <td className="px-4 py-3.5 text-right">
+                          {item.status === 'Menunggu Persetujuan' ? (
+                            <span className="text-xs text-amber-500 italic">Belum ditentukan</span>
+                          ) : (
+                            <span className="font-bold text-amber-700 text-sm">{formatRupiah(Number(item.biaya_servis))}</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3.5">
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold border ${statusCfg.cls}`}>
+                            {statusCfg.icon}{statusCfg.label}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3.5">
+                          <div className="flex items-center justify-center gap-1.5">
+                            {canVerify && (
+                              <button
+                                onClick={() => { setSelesaiModal({ item }); setSelesaiForm({ catatan_admin: '', biaya_realisasi: String(item.biaya_servis || '') }); }}
+                                className="flex items-center gap-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-colors shadow-sm whitespace-nowrap"
+                              >
+                                <ShieldCheck className="h-3.5 w-3.5" />
+                                Verifikasi Selesai
+                              </button>
+                            )}
+                            {!canVerify && (
+                              <>
+                                <button onClick={() => openEditModal(item)} className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors" title="Edit">
+                                  <Edit2 className="h-3.5 w-3.5" />
+                                </button>
+                                <button onClick={() => handleDelete(item.id)} className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors" title="Hapus">
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Modal Verifikasi Selesai */}

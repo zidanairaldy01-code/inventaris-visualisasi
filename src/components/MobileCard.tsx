@@ -47,8 +47,8 @@ export function MobileCardRow({ label, value, className = '' }: MobileCardRowPro
 }
 
 interface MobileCardHeaderProps {
-  title: string;
-  subtitle?: string;
+  title: React.ReactNode;
+  subtitle?: React.ReactNode;
   badge?: React.ReactNode;
   icon?: React.ReactNode;
 }
@@ -62,8 +62,8 @@ export function MobileCardHeader({ title, subtitle, badge, icon }: MobileCardHea
       <div className="flex items-start gap-2 flex-1 min-w-0">
         {icon && <div className="shrink-0 mt-0.5">{icon}</div>}
         <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-semibold text-slate-900 truncate">{title}</h3>
-          {subtitle && <p className="text-xs text-slate-500 truncate mt-0.5">{subtitle}</p>}
+          <div className="text-sm font-semibold text-slate-900 truncate">{title}</div>
+          {subtitle && <div className="text-xs text-slate-500 truncate mt-0.5">{subtitle}</div>}
         </div>
       </div>
       {badge && <div className="shrink-0">{badge}</div>}

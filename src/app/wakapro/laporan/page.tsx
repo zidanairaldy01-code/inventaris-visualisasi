@@ -308,7 +308,7 @@ export default function LaporanPage() {
         {/* Pilih Tipe Laporan */}
         <div>
           <p className="text-xs font-semibold text-slate-500 mb-2.5 uppercase tracking-wider">Jenis Laporan</p>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-2.5">
             {(Object.entries(TIPE_CONFIG) as [TipeLaporan, typeof cfg][]).map(([key, c]) => {
               const Icon = c.icon;
               const active = tipe === key;
@@ -316,14 +316,14 @@ export default function LaporanPage() {
                 <button
                   key={key}
                   onClick={() => { setTipe(key); setResult(null); setError(''); }}
-                  className={`flex items-center gap-2.5 px-4 py-3 rounded-xl border text-sm font-semibold transition-all ${
+                  className={`flex items-center gap-3 px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-xl border text-xs sm:text-sm font-semibold transition-all active:scale-[0.98] ${
                     active
-                      ? `bg-linear-to-r ${c.gradient} text-white border-transparent shadow-sm`
+                      ? `bg-linear-to-r ${c.gradient} text-white border-transparent shadow-sm shadow-blue-500/20`
                       : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
                   }`}
                 >
-                  <Icon className={`h-4 w-4 shrink-0 ${active ? 'text-white/80' : 'text-slate-400'}`} />
-                  <span className="truncate">{c.label}</span>
+                  <Icon className={`h-4 w-4 shrink-0 ${active ? 'text-white' : 'text-slate-400'}`} />
+                  <span className="font-semibold">{c.label}</span>
                 </button>
               );
             })}

@@ -65,6 +65,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
   const [isSearching, setIsSearching] = useState(false);
   const [results, setResults] = useState<SearchResult>({ asets: [], ruangans: [], gedungs: [] });
   const [showDropdown, setShowDropdown] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -446,6 +447,16 @@ export default function Header({ onMenuClick }: HeaderProps) {
 
       {/* Right: Actions */}
       <div className="flex items-center space-x-1 sm:space-x-2">
+        {/* Mobile Search Button */}
+        <button
+          onClick={() => setMobileSearchOpen(true)}
+          className="sm:hidden p-2 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors"
+          title="Cari"
+          aria-label="Buka pencarian"
+        >
+          <Search className="h-4.5 w-4.5" style={{ width: '18px', height: '18px' }} />
+        </button>
+
         {/* Live indicator - Hide on mobile */}
         <div className="hidden lg:flex items-center space-x-1.5 px-2.5 py-1 bg-emerald-50 rounded-lg border border-emerald-100 mr-2">
           <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
@@ -474,7 +485,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
 
           {/* Notification Dropdown Panel */}
           {notifOpen && (
-            <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white rounded-2xl border border-slate-200/90 shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="absolute -right-14 sm:right-0 top-full mt-2 w-[calc(100vw-1.5rem)] max-w-sm sm:w-96 bg-white rounded-2xl border border-slate-200/90 shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
               {/* Header */}
               <div className="p-3.5 bg-linear-to-r from-slate-900 to-indigo-950 text-white flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -724,6 +735,141 @@ export default function Header({ onMenuClick }: HeaderProps) {
           )}
         </div>
       </div>
+
+      {/* Mobile Search Overlay Modal */}
+      {mobileSearchOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm sm:hidden flex flex-col p-3 animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl shadow-2xl p-3 border border-slate-200">
+            <div className="flex items-center gap-2 border-b border-slate-100 pb-2 mb-2">
+              <Search className="h-4 w-4 text-slate-400 shrink-0 ml-1" />
+              <input
+                autoFocus
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Cari sarana, ruangan, gedung..."
+                className="w-full text-sm py-1.5 px-1 focus:outline-none text-slate-800 bg-transparent placeholder:text-slate-400"
+              />
+              {query && (
+                <button
+                  onClick={() => setQuery('')}
+                  className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+              <button
+                onClick={() => { setMobileSearchOpen(false); setQuery(''); }}
+                className="p-1.5 rounded-xl bg-slate-100 text-slate-600 font-semibold text-xs ml-1"
+              >
+                Tutup
+              </button>
+            </div>
+
+            {/* Mobile Results Container */}
+            <div className="max-h-[70vh] overflow-y-auto">
+              {isSearching ? (
+                <div className="p-6 text-center text-slate-400 text-xs flex items-center justify-center space-x-2">
+                  <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+                  <span>Mencari data inventaris...</span>
+                </div>
+              ) : !query.trim() ? (
+                <div className="p-6 text-center text-slate-400 text-xs">
+                  Ketik nama aset, ruangan, atau gedung untuk mencari
+                </div>
+              ) : !hasResults ? (
+                <div className="p-6 text-center text-slate-400 text-xs">
+                  Tidak ada hasil ditemukan untuk &ldquo;{query}&rdquo;
+                </div>
+              ) : (
+                <div className="space-y-3 py-1">
+                  {results.asets.length > 0 && (
+                    <div>
+                      <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center">
+                        <Package className="h-3 w-3 mr-1.5 text-blue-500" />
+                        Sarana &amp; Prasarana ({results.asets.length})
+                      </div>
+                      <div className="space-y-1 mt-1">
+                        {results.asets.map((aset) => (
+                          <div
+                            key={aset.id}
+                            onClick={() => {
+                              setMobileSearchOpen(false);
+                              handleSelectResult('/dashboard/sarana-prasarana');
+                            }}
+                            className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 hover:bg-blue-50 transition-colors"
+                          >
+                            <div className="min-w-0 pr-2">
+                              <p className="text-xs font-bold text-slate-800 truncate">{aset.nama_aset}</p>
+                              <p className="text-[10px] text-slate-400 truncate">{aset.kode_aset || 'Tanpa Kode'} · {aset.ruangan?.nama_ruangan || 'Tanpa Ruang'}</p>
+                            </div>
+                            <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded shrink-0">
+                              {aset.jumlah} {aset.satuan}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {results.ruangans.length > 0 && (
+                    <div>
+                      <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center">
+                        <MapPin className="h-3 w-3 mr-1.5 text-emerald-500" />
+                        Ruangan ({results.ruangans.length})
+                      </div>
+                      <div className="space-y-1 mt-1">
+                        {results.ruangans.map((ruangan) => (
+                          <div
+                            key={ruangan.id}
+                            onClick={() => {
+                              setMobileSearchOpen(false);
+                              handleSelectResult(ruangan.jenis === 'workshop' ? '/dashboard/ruangan' : '/dashboard/gedung');
+                            }}
+                            className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 hover:bg-emerald-50 transition-colors"
+                          >
+                            <div className="min-w-0 pr-2">
+                              <p className="text-xs font-bold text-slate-800 truncate">{ruangan.nama_ruangan}</p>
+                              <p className="text-[10px] text-slate-400 truncate">{ruangan.gedung?.nama_gedung || 'Gedung'} · Lt. {ruangan.lantai || '1'}</p>
+                            </div>
+                            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0 ${ruangan.jenis === 'workshop' ? 'bg-emerald-100 text-emerald-700' : 'bg-indigo-100 text-indigo-700'}`}>
+                              {ruangan.jenis === 'workshop' ? 'Workshop' : 'Gedung'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {results.gedungs.length > 0 && (
+                    <div>
+                      <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center">
+                        <Building2 className="h-3 w-3 mr-1.5 text-violet-500" />
+                        Gedung ({results.gedungs.length})
+                      </div>
+                      <div className="space-y-1 mt-1">
+                        {results.gedungs.map((gedung) => (
+                          <div
+                            key={gedung.id}
+                            onClick={() => {
+                              setMobileSearchOpen(false);
+                              handleSelectResult('/dashboard/gedung');
+                            }}
+                            className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 hover:bg-violet-50 transition-colors"
+                          >
+                            <p className="text-xs font-bold text-slate-800 truncate">{gedung.nama_gedung}</p>
+                            <span className="text-[10px] text-slate-400 shrink-0">{gedung.jumlah_lantai} Lantai</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 }

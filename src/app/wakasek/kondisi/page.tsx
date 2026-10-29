@@ -683,14 +683,6 @@ export default function MasterKondisiPage() {
             <RefreshCw className={`h-4 w-4 ${(loadingKondisi || loadingRusak) ? 'animate-spin' : ''}`} />
             <span className="hidden sm:inline">Refresh Data</span>
           </button>
-          {activeTab === 'master' && (
-            <button
-              onClick={openCreateModal}
-              className="px-5 py-3 bg-white text-indigo-600 font-bold rounded-2xl shadow-lg hover:bg-indigo-50 transition-all flex items-center gap-2 text-sm"
-            >
-              <Plus className="h-4 w-4 stroke-3" /> Tambah Kondisi
-            </button>
-          )}
         </div>
       </div>
 
@@ -1026,15 +1018,9 @@ export default function MasterKondisiPage() {
                               )}
                             </span>
                           ) : (
-                            <button
-                              type="button"
-                              onClick={() => openServisModal(item)}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 hover:text-amber-800 border border-amber-300 rounded-xl transition-all shadow-sm hover:shadow active:scale-95"
-                              title="Teruskan aset rusak ini ke bagian servis untuk perbaikan & buat SPK"
-                            >
-                              <Wrench className="h-3.5 w-3.5 text-amber-600" />
-                              <span>Teruskan ke Servis</span>
-                            </button>
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-slate-500 bg-slate-100 rounded-xl border border-slate-200">
+                              Belum Diservis
+                            </span>
                           )}
                         </td>
                       </tr>
@@ -1114,7 +1100,6 @@ export default function MasterKondisiPage() {
                       <th className="px-6 py-4">Nama Kondisi</th>
                       <th className="px-6 py-4">Tipe Kondisi</th>
                       <th className="px-6 py-4">Keterangan</th>
-                      <th className="px-6 py-4 text-center w-28">Aksi</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -1143,29 +1128,6 @@ export default function MasterKondisiPage() {
                           </td>
                           <td className="px-6 py-4 text-slate-600 text-xs max-w-md">
                             {k.keterangan || <span className="text-slate-400 italic">Tidak ada keterangan</span>}
-                          </td>
-                          <td className="px-6 py-4 text-center">
-                            <div className="flex items-center justify-center gap-1.5">
-                              <button
-                                onClick={() => openEditModal(k)}
-                                className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors"
-                                title="Edit Kondisi"
-                              >
-                                <Edit2 className="h-4 w-4" />
-                              </button>
-                              <button
-                                onClick={() => !isDefault && setDeleteTarget(k)}
-                                disabled={isDefault}
-                                className={`p-2 rounded-xl transition-colors ${
-                                  isDefault
-                                    ? 'text-slate-300 cursor-not-allowed'
-                                    : 'text-rose-600 hover:bg-rose-50'
-                                }`}
-                                title={isDefault ? 'Kondisi bawaan sistem tidak dapat dihapus' : 'Hapus Kondisi'}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            </div>
                           </td>
                         </tr>
                       );

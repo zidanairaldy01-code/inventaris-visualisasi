@@ -504,7 +504,7 @@ export default function SumberDanaPage() {
 
   /* ═══════════ RENDER ═══════════ */
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-3.5 sm:p-6 space-y-4 sm:space-y-6">
       {toast.show && (
         <Toast
           message={toast.message}
@@ -514,51 +514,47 @@ export default function SumberDanaPage() {
       )}
 
       {/* Header Banner */}
-      <div className="bg-linear-to-r from-emerald-600 via-teal-600 to-cyan-600 rounded-2xl p-6 shadow-xl relative overflow-hidden">
+      <div className="bg-linear-to-r from-emerald-600 via-teal-600 to-cyan-600 rounded-2xl p-4 sm:p-6 shadow-xl relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl pointer-events-none -translate-y-12 translate-x-12" />
-        <div className="flex items-center justify-between relative z-10 flex-wrap gap-4">
-          <div className="flex items-center gap-4">
-            <div className="p-3.5 bg-white/20 backdrop-blur-md rounded-2xl ring-1 ring-white/30">
-              <Briefcase className="h-8 w-8 text-white" />
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between relative z-10 gap-4">
+          <div className="flex items-start sm:items-center gap-3 sm:gap-4">
+            <div className="p-2.5 sm:p-3.5 bg-white/20 backdrop-blur-md rounded-2xl ring-1 ring-white/30 shrink-0">
+              <Briefcase className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-3xl font-extrabold text-white tracking-tight">Sumber Dana Drive</h1>
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-white/20 text-white backdrop-blur-sm border border-white/20">
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">Sumber Dana Drive</h1>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-semibold bg-white/20 text-white backdrop-blur-sm border border-white/20 whitespace-nowrap">
                   Modul Terintegrasi
                 </span>
               </div>
-              <p className="text-emerald-100 text-sm mt-1">
+              <p className="text-emerald-100 text-xs sm:text-sm mt-1 leading-relaxed">
                 Jelajahi folder &amp; barang inventaris dari <strong>Rekap Belanja</strong>, <strong>Daftar Belanja</strong>, dan <strong>Inventaris Gudang</strong> berdasarkan Sumber Dana
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 w-full lg:w-auto">
             <button
               onClick={() => { setActiveSumberDanaId(null); setActiveFolderId(null); setViewMode('drive'); }}
-              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+              className={`flex-1 sm:flex-initial px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 sm:gap-2 text-center ${
                 activeSumberDanaId === null && viewMode === 'drive'
                   ? 'bg-white text-emerald-800 shadow-md'
                   : 'bg-white/10 text-white hover:bg-white/20 backdrop-blur-sm'
               }`}
             >
-              <Grid className="h-4 w-4" /> Drive Folders
+              <Grid className="h-4 w-4 shrink-0" />
+              <span className="truncate">Drive Folders</span>
             </button>
             <button
               onClick={() => { setActiveSumberDanaId(null); setActiveFolderId(null); setViewMode('table'); }}
-              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+              className={`flex-1 sm:flex-initial px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 sm:gap-2 text-center ${
                 viewMode === 'table'
                   ? 'bg-white text-emerald-800 shadow-md'
                   : 'bg-white/10 text-white hover:bg-white/20 backdrop-blur-sm'
               }`}
             >
-              <ListIcon className="h-4 w-4" /> Data Master Tabel
-            </button>
-            <button
-              onClick={openAdd}
-              className="px-4 py-2.5 bg-white text-emerald-800 hover:bg-emerald-50 rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-2"
-            >
-              <Plus className="h-4 w-4" /> + Tambah Sumber Dana
+              <ListIcon className="h-4 w-4 shrink-0" />
+              <span className="truncate">Data Master Tabel</span>
             </button>
           </div>
         </div>
@@ -691,17 +687,11 @@ export default function SumberDanaPage() {
             </div>
           ) : filtered.length === 0 ? (
             <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-12 text-center">
-              <FolderPlus className="h-12 w-12 text-slate-300 mx-auto mb-3" />
+              <Briefcase className="h-12 w-12 text-slate-300 mx-auto mb-3" />
               <h3 className="text-base font-bold text-slate-700 mb-1">Belum Ada Folder Sumber Dana</h3>
-              <p className="text-xs text-slate-500 max-w-sm mx-auto mb-4">
-                Tambahkan sumber dana seperti BOS, APBD, Dana Sekolah untuk mulai mengelompokkan belanja dan inventaris.
+              <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                Sumber dana belum dibuat oleh Administrator.
               </p>
-              <button
-                onClick={openAdd}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 text-xs font-semibold shadow-sm transition-colors"
-              >
-                <Plus className="h-4 w-4" /> Tambah Sumber Dana Baru
-              </button>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -725,22 +715,6 @@ export default function SumberDanaPage() {
                             {sumber.jenis_sumber}
                           </span>
                         )}
-                        <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 ml-1">
-                          <button
-                            onClick={(e) => openEdit(sumber, e)}
-                            className="p-1.5 bg-white/80 hover:bg-white text-slate-600 rounded-lg shadow-sm"
-                            title="Edit Sumber Dana"
-                          >
-                            <Edit2 className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setDeleteTarget(sumber); }}
-                            className="p-1.5 bg-white/80 hover:bg-white text-rose-600 rounded-lg shadow-sm"
-                            title="Hapus Sumber Dana"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
                       </div>
                     </div>
 
@@ -1364,19 +1338,11 @@ export default function SumberDanaPage() {
                 <h3 className="text-base font-bold text-slate-700 mb-1">
                   {searchQuery ? 'Tidak Ada Hasil' : 'Belum Ada Sumber Dana'}
                 </h3>
-                <p className="text-xs text-slate-500 mb-4">
+                <p className="text-xs text-slate-500">
                   {searchQuery
                     ? `Tidak ditemukan hasil untuk "${searchQuery}"`
-                    : 'Tambahkan sumber dana pertama untuk mulai mengelola pendanaan.'}
+                    : 'Belum ada data sumber dana yang dibuat oleh Administrator.'}
                 </p>
-                {!searchQuery && (
-                  <button
-                    onClick={openAdd}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 text-xs font-semibold shadow-sm transition-colors"
-                  >
-                    <Plus className="h-4 w-4" /> Tambah Sekarang
-                  </button>
-                )}
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -1390,7 +1356,6 @@ export default function SumberDanaPage() {
                       <th className="text-center px-4 py-3 text-xs font-semibold text-indigo-700 uppercase tracking-wider">Folder Terhubung</th>
                       <th className="text-center px-4 py-3 text-xs font-semibold text-blue-700 uppercase tracking-wider">Jumlah Unit</th>
                       <th className="text-center px-4 py-3 text-xs font-semibold text-teal-700 uppercase tracking-wider">Total Belanja</th>
-                      <th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Aksi</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -1440,24 +1405,6 @@ export default function SumberDanaPage() {
                           <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-lg text-xs font-bold bg-teal-100 text-teal-800 border border-teal-200">
                             {formatRupiahShort(Number(item.total_belanja ?? 0))}
                           </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center justify-center gap-1.5">
-                            <button
-                              onClick={() => openEdit(item)}
-                              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                              title="Edit"
-                            >
-                              <Edit2 className="h-3.5 w-3.5" />
-                            </button>
-                            <button
-                              onClick={() => setDeleteTarget(item)}
-                              className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
-                              title="Hapus"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
                         </td>
                       </tr>
                     ))}

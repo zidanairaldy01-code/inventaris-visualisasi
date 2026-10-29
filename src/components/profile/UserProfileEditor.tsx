@@ -397,45 +397,45 @@ export default function UserProfileEditor({ baseRolePath }: UserProfileEditorPro
       {/* Main Content Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Sidebar Tabs */}
-        <div className="lg:col-span-1 space-y-2">
+        <div className="lg:col-span-1 flex flex-row lg:flex-col gap-2 overflow-x-auto pb-1 lg:pb-0">
           <button
             onClick={() => { setActiveTab('info'); setErrors({}); }}
-            className={`w-full flex items-center space-x-3 px-4 py-3.5 rounded-2xl font-medium text-sm transition-all duration-200 text-left cursor-pointer ${
+            className={`flex items-center space-x-2.5 sm:space-x-3 px-4 py-3 sm:py-3.5 rounded-2xl font-medium text-xs sm:text-sm transition-all duration-200 whitespace-nowrap cursor-pointer shrink-0 lg:w-full ${
               activeTab === 'info'
                 ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25 font-semibold'
                 : 'bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200/80'
             }`}
           >
-            <User className="h-5 w-5 shrink-0" />
+            <User className="h-4 sm:h-5 w-4 sm:w-5 shrink-0" />
             <span>Informasi Akun</span>
           </button>
 
           <button
             onClick={() => { setActiveTab('photo'); setErrors({}); }}
-            className={`w-full flex items-center space-x-3 px-4 py-3.5 rounded-2xl font-medium text-sm transition-all duration-200 text-left cursor-pointer ${
+            className={`flex items-center space-x-2.5 sm:space-x-3 px-4 py-3 sm:py-3.5 rounded-2xl font-medium text-xs sm:text-sm transition-all duration-200 whitespace-nowrap cursor-pointer shrink-0 lg:w-full ${
               activeTab === 'photo'
                 ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25 font-semibold'
                 : 'bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200/80'
             }`}
           >
-            <Camera className="h-5 w-5 shrink-0" />
+            <Camera className="h-4 sm:h-5 w-4 sm:w-5 shrink-0" />
             <span>Foto Profil</span>
           </button>
 
           <button
             onClick={() => { setActiveTab('password'); setErrors({}); }}
-            className={`w-full flex items-center space-x-3 px-4 py-3.5 rounded-2xl font-medium text-sm transition-all duration-200 text-left cursor-pointer ${
+            className={`flex items-center space-x-2.5 sm:space-x-3 px-4 py-3 sm:py-3.5 rounded-2xl font-medium text-xs sm:text-sm transition-all duration-200 whitespace-nowrap cursor-pointer shrink-0 lg:w-full ${
               activeTab === 'password'
                 ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25 font-semibold'
                 : 'bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200/80'
             }`}
           >
-            <KeyRound className="h-5 w-5 shrink-0" />
+            <KeyRound className="h-4 sm:h-5 w-4 sm:w-5 shrink-0" />
             <span>Ubah Password</span>
           </button>
 
           {/* Quick Info Card */}
-          <div className="bg-linear-to-br from-slate-50 to-blue-50/50 rounded-2xl p-4 border border-blue-100 space-y-3 mt-6">
+          <div className="hidden lg:block bg-linear-to-br from-slate-50 to-blue-50/50 rounded-2xl p-4 border border-blue-100 space-y-3 mt-4">
             <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
               <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
               Catatan Keamanan

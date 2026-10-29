@@ -862,10 +862,12 @@ export default function SaranaPrasaranaPage() {
             <button onClick={() => { fetchFolders(); fetchAsets(true); }} className="p-2.5 bg-white/10 backdrop-blur-sm border border-white/20 text-white rounded-xl hover:bg-white/20 transition-colors" title="Refresh">
               <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
             </button>
-            <button onClick={openAddFolder}
-              className="flex items-center gap-2 px-3.5 py-2.5 bg-white/15 backdrop-blur-md border border-white/30 text-white rounded-xl hover:bg-white/25 text-sm font-semibold transition-all shadow-sm">
-              <FolderPlus className="h-4 w-4" /> Buat Folder
-            </button>
+            {isSuperAdmin && (
+              <button onClick={openAddFolder}
+                className="flex items-center gap-2 px-3.5 py-2.5 bg-white/15 backdrop-blur-md border border-white/30 text-white rounded-xl hover:bg-white/25 text-sm font-semibold transition-all shadow-sm">
+                <FolderPlus className="h-4 w-4" /> Buat Folder
+              </button>
+            )}
             {isSuperAdmin && (
               <button
                 onClick={() => {
@@ -886,14 +888,18 @@ export default function SaranaPrasaranaPage() {
               className="flex items-center gap-2 px-3.5 py-2.5 bg-white/10 backdrop-blur-sm border border-white/20 text-white rounded-xl hover:bg-white/20 text-sm font-semibold transition-colors disabled:opacity-40">
               <Download className="h-4 w-4" /> Export
             </button>
-            <button onClick={openImport}
-              className="flex items-center gap-2 px-3.5 py-2.5 bg-white text-indigo-700 hover:bg-blue-50 rounded-xl text-sm font-bold transition-all shadow-md">
-              <FileSpreadsheet className="h-4 w-4 text-emerald-600" /> Import Excel
-            </button>
-            <button onClick={openAddModal}
-              className="flex items-center gap-2 px-4 py-2.5 bg-white text-indigo-700 hover:bg-blue-50 rounded-xl text-sm font-bold transition-all shadow-md">
-              <Plus className="h-4 w-4" /> Tambah Data
-            </button>
+            {isSuperAdmin && (
+              <button onClick={openImport}
+                className="flex items-center gap-2 px-3.5 py-2.5 bg-white text-indigo-700 hover:bg-blue-50 rounded-xl text-sm font-bold transition-all shadow-md">
+                <FileSpreadsheet className="h-4 w-4 text-emerald-600" /> Import Excel
+              </button>
+            )}
+            {isSuperAdmin && (
+              <button onClick={openAddModal}
+                className="flex items-center gap-2 px-4 py-2.5 bg-white text-indigo-700 hover:bg-blue-50 rounded-xl text-sm font-bold transition-all shadow-md">
+                <Plus className="h-4 w-4" /> Tambah Data
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -1021,9 +1027,11 @@ export default function SaranaPrasaranaPage() {
             <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
               <Folder className="h-5 w-5 text-indigo-600" /> Daftar Folder Sarana &amp; Prasarana
             </h2>
-            <button onClick={openAddFolder} className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1">
-              <Plus className="h-3.5 w-3.5" /> Buat Folder
-            </button>
+            {isSuperAdmin && (
+              <button onClick={openAddFolder} className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1">
+                <Plus className="h-3.5 w-3.5" /> Buat Folder
+              </button>
+            )}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -1038,16 +1046,16 @@ export default function SaranaPrasaranaPage() {
                     <div className="p-3 rounded-2xl bg-indigo-50 text-indigo-600 group-hover:scale-110 transition-transform">
                       <Folder className="h-7 w-7" />
                     </div>
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={(e) => openEditFolder(f, e)} className="p-1.5 hover:bg-slate-100 text-slate-500 rounded-lg transition-colors" title="Edit Folder">
-                        <Edit2 className="h-3.5 w-3.5" />
-                      </button>
-                      {isSuperAdmin && (
+                    {isSuperAdmin && (
+                      <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                        <button onClick={(e) => openEditFolder(f, e)} className="p-1.5 hover:bg-slate-100 text-slate-500 rounded-lg transition-colors" title="Edit Folder">
+                          <Edit2 className="h-3.5 w-3.5" />
+                        </button>
                         <button onClick={(e) => { e.stopPropagation(); setDeleteFolderTarget(f); }} className="p-1.5 hover:bg-rose-50 text-rose-600 rounded-lg transition-colors" title="Hapus Folder">
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
                   <div>
                     <h3 className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors truncate">{f.nama_folder}</h3>
@@ -1182,18 +1190,18 @@ export default function SaranaPrasaranaPage() {
                             <div className="truncate max-w-[160px]" title={aset.keterangan}>{aset.keterangan}</div>
                           ) : '-'}
                         </td>
-                        <td className="px-4 py-3 text-center">
-                          <div className="flex items-center justify-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={e => { e.stopPropagation(); openEditModal(aset); }} className="p-1.5 hover:bg-amber-50 text-amber-600 rounded-lg transition-colors" title="Edit">
-                              <Edit2 className="h-4 w-4" />
-                            </button>
-                            {isSuperAdmin && (
+                        {isSuperAdmin && (
+                          <td className="px-4 py-3 text-center">
+                            <div className="flex items-center justify-center space-x-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                              <button onClick={e => { e.stopPropagation(); openEditModal(aset); }} className="p-1.5 hover:bg-amber-50 text-amber-600 rounded-lg transition-colors" title="Edit">
+                                <Edit2 className="h-4 w-4" />
+                              </button>
                               <button onClick={e => { e.stopPropagation(); setDeleteTarget(aset); }} className="p-1.5 hover:bg-rose-50 text-rose-600 rounded-lg transition-colors" title="Hapus">
                                 <Trash2 className="h-4 w-4" />
                               </button>
-                            )}
-                          </div>
-                        </td>
+                            </div>
+                          </td>
+                        )}
                       </tr>
                     );
                   })}

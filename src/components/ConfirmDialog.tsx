@@ -82,10 +82,10 @@ export default function ConfirmDialog({
         </div>
 
         {/* Actions */}
-        <div className="px-6 pb-6 flex items-center gap-3 justify-end">
+        <div className="px-6 pb-6 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2.5 sm:gap-3">
           <button
             onClick={onCancel}
-            className="px-4 py-2 text-sm font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+            className="w-full sm:w-auto px-4 py-2.5 text-sm font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors text-center"
           >
             {cancelText}
           </button>
@@ -94,7 +94,7 @@ export default function ConfirmDialog({
               onConfirm();
               onCancel();
             }}
-            className={`px-4 py-2 text-sm font-semibold text-white rounded-lg transition-all shadow-sm ${style.confirmBtn} focus:outline-none focus:ring-2 focus:ring-offset-2`}
+            className={`w-full sm:w-auto px-4 py-2.5 text-sm font-semibold text-white rounded-xl transition-all shadow-sm ${style.confirmBtn} focus:outline-none focus:ring-2 focus:ring-offset-2 text-center`}
           >
             {confirmText}
           </button>

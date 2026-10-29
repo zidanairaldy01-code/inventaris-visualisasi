@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Search, Package, ChevronDown, Building2 } from 'lucide-react';
+import { Search, Package, ChevronDown, Building2, ArrowLeft, Tag } from 'lucide-react';
 import Link from 'next/link';
+import { useIsMobile } from '@/hooks/useMediaQuery';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -35,6 +36,7 @@ interface Aset {
 }
 
 export default function PublicAsetKelasPage() {
+  const isMobile = useIsMobile();
   const [jurusans, setJurusans] = useState<Jurusan[]>([]);
   const [selectedJurusan, setSelectedJurusan] = useState<number | ''>('');
   const [selectedTingkat, setSelectedTingkat] = useState<'X' | 'XI' | 'XII' | ''>('');
@@ -107,25 +109,25 @@ export default function PublicAsetKelasPage() {
     <div className="min-h-screen bg-linear-to-br from-slate-900 via-slate-800 to-slate-900">
       {/* Header */}
       <div className="bg-slate-800/50 backdrop-blur-sm border-b border-slate-700/50 sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
+        <div className="container mx-auto px-4 py-3 sm:py-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center space-x-2.5 sm:space-x-3 min-w-0">
               <img 
                 src="/img/pgri-telagasari.jpg" 
                 alt="Logo"
-                className="w-10 h-10 rounded-xl object-cover shadow-lg"
+                className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl object-cover shadow-lg shrink-0"
               />
-              <div>
-                <h1 className="text-xl font-bold text-white">Data Aset Per Kelas</h1>
-                <p className="text-xs text-slate-400">SMK PGRI Telagasari</p>
+              <div className="min-w-0">
+                <h1 className="text-base sm:text-xl font-bold text-white truncate">Data Aset Per Kelas</h1>
+                <p className="text-[11px] sm:text-xs text-slate-400">SMK PGRI Telagasari</p>
               </div>
             </div>
             <Link
-              href="/public"
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium flex items-center gap-2"
+              href="/"
+              className="px-3 sm:px-4 py-1.5 sm:py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-xs sm:text-sm font-medium flex items-center gap-1.5 shrink-0 shadow-sm shadow-blue-500/20"
             >
-              <Building2 className="h-4 w-4" />
-              Kembali ke Beranda
+              <ArrowLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span>Beranda</span>
             </Link>
           </div>
         </div>
@@ -260,6 +262,46 @@ export default function PublicAsetKelasPage() {
                     ? 'Belum ada aset untuk kelas ini' 
                     : 'Tidak ada aset yang sesuai dengan pencarian'}
                 </p>
+              </div>
+            ) : isMobile ? (
+              <div className="p-3 space-y-3">
+                {filteredAsets.map((aset) => (
+                  <div key={aset.id} className="bg-slate-800/80 border border-slate-700/60 rounded-xl p-3.5 space-y-2.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <h4 className="text-white font-semibold text-sm leading-snug">{aset.nama_aset}</h4>
+                        <p className="text-[11px] font-mono text-blue-400 mt-0.5">{aset.kode_aset}</p>
+                        {aset.merek && <p className="text-xs text-slate-400 mt-0.5">Merek: {aset.merek}</p>}
+                      </div>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium shrink-0 ${
+                        aset.kondisi?.nama_kondisi === 'Baik' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
+                        aset.kondisi?.nama_kondisi === 'Rusak Ringan' ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30' :
+                        'bg-red-500/20 text-red-300 border border-red-500/30'
+                      }`}>
+                        {aset.kondisi?.nama_kondisi || '-'}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-700/50 text-xs">
+                      <div>
+                        <span className="text-slate-400 block text-[11px]">Kategori</span>
+                        <span className="text-slate-200 font-medium">{aset.kategori?.nama_kategori || '-'}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block text-[11px]">Jumlah</span>
+                        <span className="text-slate-200 font-medium">{aset.jumlah} {aset.satuan || 'unit'}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block text-[11px]">Harga</span>
+                        <span className="text-emerald-400 font-medium">{formatRupiah(aset.harga_perolehan)}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block text-[11px]">Ruangan</span>
+                        <span className="text-slate-200 font-medium">{aset.ruangan?.nama_ruangan || '-'}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : (
               <div className="overflow-x-auto">

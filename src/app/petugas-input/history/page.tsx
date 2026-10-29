@@ -125,71 +125,71 @@ export default function HistoryPage() {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-3.5 sm:p-6 space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="bg-linear-to-r from-indigo-600 to-indigo-500 rounded-lg p-5 shadow-lg">
-        <div className="flex items-center gap-3">
-          <div className="p-3 bg-white/20 rounded-lg">
-            <HistoryIcon className="h-8 w-8 text-white" />
+      <div className="bg-linear-to-r from-indigo-600 to-indigo-500 rounded-2xl p-4 sm:p-5 shadow-lg">
+        <div className="flex items-start sm:items-center gap-3">
+          <div className="p-2.5 sm:p-3 bg-white/20 rounded-xl shrink-0">
+            <HistoryIcon className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
           </div>
-          <div>
-            <h1 className="text-3xl font-bold text-white">Riwayat/History Aset</h1>
-            <p className="text-indigo-100 text-sm mt-1">Lacak semua pergerakan dan perubahan aset</p>
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xl sm:text-3xl font-bold text-white tracking-tight">Riwayat/History Aset</h1>
+            <p className="text-indigo-100 text-xs sm:text-sm mt-0.5 sm:mt-1">Lacak semua pergerakan dan perubahan aset</p>
           </div>
         </div>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-md">
-          <div className="flex items-center justify-between mb-3">
-            <div className="p-3 bg-indigo-100 rounded-lg">
-              <HistoryIcon className="h-6 w-6 text-indigo-600" />
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+        <div className="bg-white border border-slate-200 rounded-xl p-3.5 sm:p-5 shadow-sm">
+          <div className="flex items-center justify-between mb-2 sm:mb-3">
+            <div className="p-2 sm:p-3 bg-indigo-100 rounded-lg">
+              <HistoryIcon className="h-5 w-5 sm:h-6 sm:w-6 text-indigo-600" />
             </div>
           </div>
-          <p className="text-3xl font-bold text-slate-900 mb-1">{histories.length}</p>
-          <p className="text-sm text-slate-600">Total Riwayat</p>
+          <p className="text-2xl sm:text-3xl font-bold text-slate-900 mb-0.5 sm:mb-1">{histories.length}</p>
+          <p className="text-xs sm:text-sm text-slate-600">Total Riwayat</p>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-md">
-          <div className="flex items-center justify-between mb-3">
-            <div className="p-3 bg-emerald-100 rounded-lg">
-              <TrendingUp className="h-6 w-6 text-emerald-600" />
+        <div className="bg-white border border-slate-200 rounded-xl p-3.5 sm:p-5 shadow-sm">
+          <div className="flex items-center justify-between mb-2 sm:mb-3">
+            <div className="p-2 sm:p-3 bg-emerald-100 rounded-lg">
+              <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6 text-emerald-600" />
             </div>
           </div>
-          <p className="text-3xl font-bold text-slate-900 mb-1">
+          <p className="text-2xl sm:text-3xl font-bold text-slate-900 mb-0.5 sm:mb-1">
             {(countByAksi['PENAMBAHAN'] || 0) + (countByAksi['PENGEMBALIAN'] || 0) + (countByAksi['SELESAI SERVIS'] || 0)}
           </p>
-          <p className="text-sm text-slate-600">Barang Masuk</p>
+          <p className="text-xs sm:text-sm text-slate-600">Barang Masuk</p>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-md">
-          <div className="flex items-center justify-between mb-3">
-            <div className="p-3 bg-orange-100 rounded-lg">
-              <TrendingDown className="h-6 w-6 text-orange-600" />
+        <div className="bg-white border border-slate-200 rounded-xl p-3.5 sm:p-5 shadow-sm">
+          <div className="flex items-center justify-between mb-2 sm:mb-3">
+            <div className="p-2 sm:p-3 bg-orange-100 rounded-lg">
+              <TrendingDown className="h-5 w-5 sm:h-6 sm:w-6 text-orange-600" />
             </div>
           </div>
-          <p className="text-3xl font-bold text-slate-900 mb-1">
+          <p className="text-2xl sm:text-3xl font-bold text-slate-900 mb-0.5 sm:mb-1">
             {(countByAksi['PEMINJAMAN'] || 0) + (countByAksi['SERVIS'] || 0)}
           </p>
-          <p className="text-sm text-slate-600">Barang Keluar</p>
+          <p className="text-xs sm:text-sm text-slate-600">Barang Keluar</p>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-md">
-          <div className="flex items-center justify-between mb-3">
-            <div className="p-3 bg-blue-100 rounded-lg">
-              <Package className="h-6 w-6 text-blue-600" />
+        <div className="bg-white border border-slate-200 rounded-xl p-3.5 sm:p-5 shadow-sm">
+          <div className="flex items-center justify-between mb-2 sm:mb-3">
+            <div className="p-2 sm:p-3 bg-blue-100 rounded-lg">
+              <Package className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
             </div>
           </div>
-          <p className="text-3xl font-bold text-slate-900 mb-1">
+          <p className="text-2xl sm:text-3xl font-bold text-slate-900 mb-0.5 sm:mb-1">
             {(countByAksi['MUTASI'] || 0) + (countByAksi['UBAH KONDISI'] || 0)}
           </p>
-          <p className="text-sm text-slate-600">Perubahan</p>
+          <p className="text-xs sm:text-sm text-slate-600">Perubahan</p>
         </div>
       </div>
 
       {/* Filter & Search */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-md">
+      <div className="bg-white rounded-xl border border-slate-200 p-3.5 sm:p-6 shadow-sm">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Search */}
           <div className="relative">

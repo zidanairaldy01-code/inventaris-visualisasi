@@ -765,70 +765,52 @@ export default function CustomInventarisDrivePage() {
 
   /* ═══════════ RENDER ═══════════ */
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-3.5 sm:p-6 space-y-4 sm:space-y-6">
       {toast.show && (
         <Toast message={toast.message} type={toast.type} onClose={() => setToast(t => ({ ...t, show: false }))} />
       )}
 
       {/* Header Banner */}
-      <div className="bg-linear-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-2xl p-6 shadow-xl relative overflow-hidden">
+      <div className="bg-linear-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-2xl p-4 sm:p-6 shadow-xl relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl pointer-events-none -translate-y-12 translate-x-12" />
-        <div className="flex items-center justify-between relative z-10 flex-wrap gap-4">
-          <div className="flex items-center gap-4">
-            <div className="p-3.5 bg-white/20 backdrop-blur-md rounded-2xl ring-1 ring-white/30">
-              <HardDrive className="h-8 w-8 text-white" />
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between relative z-10 gap-4">
+          <div className="flex items-start sm:items-center gap-3 sm:gap-4">
+            <div className="p-2.5 sm:p-3.5 bg-white/20 backdrop-blur-md rounded-2xl ring-1 ring-white/30 shrink-0">
+              <HardDrive className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-3xl font-extrabold text-white tracking-tight"> Rekap Belanja</h1>
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-white/20 text-white backdrop-blur-sm border border-white/20">
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight"> Rekap Belanja</h1>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-semibold bg-white/20 text-white backdrop-blur-sm border border-white/20 whitespace-nowrap">
                   Modul Belanja & Pengadaan
                 </span>
               </div>
-              <p className="text-blue-100 text-sm mt-1">Kelola data pembelanjaan barang inventaris dengan format Kode Kegiatan & Kode Rekening</p>
+              <p className="text-blue-100 text-xs sm:text-sm mt-1 leading-relaxed">Kelola data pembelanjaan barang inventaris dengan format Kode Kegiatan & Kode Rekening</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            {activeFolderId === null && (
-              <button
-                onClick={openCreateFolder}
-                className="px-4 py-2.5 bg-white text-indigo-700 hover:bg-blue-50 rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-2"
-              >
-                <FolderPlus className="h-4 w-4 text-indigo-600" /> + Buat Folder Baru
-              </button>
-            )}
+          <div className="flex items-center gap-2 w-full lg:w-auto">
             <button
               onClick={() => { setActiveFolderId(null); setViewMode('folders'); }}
-              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+              className={`flex-1 sm:flex-initial px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 sm:gap-2 text-center ${
                 activeFolderId === null && viewMode === 'folders'
                   ? 'bg-white text-indigo-700 shadow-md'
                   : 'bg-white/10 text-white hover:bg-white/20 backdrop-blur-sm'
               }`}
             >
-              <Grid className="h-4 w-4" /> Daftar Folder
+              <Grid className="h-4 w-4 shrink-0" />
+              <span className="truncate">Daftar Folder</span>
             </button>
             <button
               onClick={() => { setActiveFolderId(null); setViewMode('all'); }}
-              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+              className={`flex-1 sm:flex-initial px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 sm:gap-2 text-center ${
                 activeFolderId === null && viewMode === 'all'
                   ? 'bg-white text-indigo-700 shadow-md'
                   : 'bg-white/10 text-white hover:bg-white/20 backdrop-blur-sm'
               }`}
             >
-              <ListIcon className="h-4 w-4" /> Semua Barang
-            </button>
-            <button
-              onClick={() => { setShowTrashModal(true); fetchTrashFolders(); }}
-              className="px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 bg-rose-500/25 hover:bg-rose-500/35 text-white backdrop-blur-sm border border-rose-300/30 shadow-sm"
-            >
-              <Trash2 className="h-4 w-4 text-rose-200" />
-              <span>Tempat Sampah</span>
-              {trashFolders.length > 0 && (
-                <span className="px-1.5 py-0.5 text-[10px] font-black bg-rose-600 text-white rounded-full leading-none">
-                  {trashFolders.length}
-                </span>
-              )}
+              <ListIcon className="h-4 w-4 shrink-0" />
+              <span className="truncate">Semua Barang</span>
             </button>
           </div>
         </div>
@@ -920,29 +902,17 @@ export default function CustomInventarisDrivePage() {
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
               <Folder className="h-5 w-5 text-amber-500 fill-amber-500/20" />
-              Folder Saya ({folders.length})
+              Daftar Folder Rekap Belanja ({folders.length})
             </h2>
-            <button
-              onClick={openCreateFolder}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors"
-            >
-              <FolderPlus className="h-3.5 w-3.5" /> + Buat Folder Baru
-            </button>
           </div>
 
           {folders.length === 0 ? (
             <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-12 text-center">
-              <FolderPlus className="h-12 w-12 text-slate-300 mx-auto mb-3" />
-              <h3 className="text-base font-bold text-slate-700 mb-1">Belum Ada Folder Custom</h3>
-              <p className="text-xs text-slate-500 max-w-sm mx-auto mb-4">
-                Buat folder khusus pertama Anda untuk mengelompokkan barang inventaris.
+              <Folder className="h-12 w-12 text-slate-300 mx-auto mb-3" />
+              <h3 className="text-base font-bold text-slate-700 mb-1">Belum Ada Folder Rekap Belanja</h3>
+              <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                Folder inventaris belum dibuat oleh Administrator.
               </p>
-              <button
-                onClick={openCreateFolder}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 text-xs font-semibold shadow-sm transition-colors"
-              >
-                <FolderPlus className="h-4 w-4" /> Buat Folder Sekarang
-              </button>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -962,22 +932,6 @@ export default function CustomInventarisDrivePage() {
                     <div className="flex items-start justify-between mb-3">
                       <div className={`p-3 ${color.iconBg} rounded-xl text-white shadow-md group-hover:scale-110 transition-transform`}>
                         <FolderOpen className="h-6 w-6" />
-                      </div>
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          onClick={(e) => openEditFolder(f, e)}
-                          className="p-1.5 bg-white/80 hover:bg-white text-slate-600 rounded-lg shadow-sm"
-                          title="Edit Folder"
-                        >
-                          <Edit2 className="h-3.5 w-3.5" />
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setDeleteFolderTarget(f); }}
-                          className="p-1.5 bg-white/80 hover:bg-white text-red-600 rounded-lg shadow-sm"
-                          title="Hapus Folder"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
                       </div>
                     </div>
 
@@ -1070,14 +1024,6 @@ export default function CustomInventarisDrivePage() {
                   className="flex items-center gap-2 px-3 py-2.5 bg-emerald-600 text-white text-sm rounded-lg hover:bg-emerald-700 disabled:opacity-40 transition-colors font-medium">
                   <Download className="h-4 w-4" /><span className="hidden sm:inline">Export</span>
                 </button>
-                <button onClick={() => setShowImportModal(true)}
-                  className="flex items-center gap-2 px-3 py-2.5 bg-violet-600 text-white text-sm rounded-lg hover:bg-violet-700 transition-colors font-medium">
-                  <FileSpreadsheet className="h-4 w-4" /><span className="hidden sm:inline">Import Excel</span>
-                </button>
-                <button onClick={openAdd}
-                  className="flex items-center gap-2 px-3 py-2.5 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition-colors font-medium shadow-sm">
-                  <Plus className="h-4 w-4" /><span className="hidden sm:inline">Tambah Data</span>
-                </button>
               </div>
             </div>
           </div>
@@ -1104,12 +1050,6 @@ export default function CustomInventarisDrivePage() {
                 <div className="text-center py-16">
                   <ClipboardList className="h-12 w-12 text-slate-300 mx-auto mb-3" />
                   <h3 className="text-slate-600 font-medium">{searchQuery ? 'Tidak ada data inventaris sesuai pencarian' : `Belum ada data di ${activeFolderTitle}`}</h3>
-                  {!searchQuery && (
-                    <button onClick={() => setShowImportModal(true)}
-                      className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium">
-                      <FileSpreadsheet className="h-4 w-4" /> Import Excel ke Folder Ini
-                    </button>
-                  )}
                 </div>
               ) : (
                 <table className="w-full text-sm">
@@ -1124,7 +1064,6 @@ export default function CustomInventarisDrivePage() {
                       <th className="px-4 py-3 text-xs font-bold text-emerald-700 uppercase tracking-wide text-right">Harga Satuan</th>
                       <th className="px-4 py-3 text-xs font-bold text-indigo-700 uppercase tracking-wide text-right">Total (Jumlah)</th>
                       <th className="px-4 py-3 text-xs font-bold text-slate-600 uppercase tracking-wide text-center">Keterangan</th>
-                      <th className="px-4 py-3 text-xs font-bold text-slate-600 uppercase tracking-wide text-center">Aksi</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
@@ -1172,16 +1111,6 @@ export default function CustomInventarisDrivePage() {
                             <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold border ${getKeteranganBadgeStyle(cleanKet)}`}>
                               {cleanKet || '-'}
                             </span>
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center justify-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button onClick={() => openEdit(item)} className="p-1.5 bg-indigo-100 text-indigo-600 rounded-lg hover:bg-indigo-200 transition-colors" title="Edit">
-                                <Edit2 className="h-3.5 w-3.5" />
-                              </button>
-                              <button onClick={() => setDeleteTarget(item)} className="p-1.5 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors" title="Hapus">
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
                           </td>
                         </tr>
                       );

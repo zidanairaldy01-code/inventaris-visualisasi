@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import axios from '@/lib/axios';
 import {
   Globe, School, Target, Eye, Image as ImageIcon, MapPin,
-  Upload, Trash2, Plus, ExternalLink, Save, RefreshCw,
+  Upload, Trash2, Plus, ExternalLink, Save, RefreshCw, RotateCcw,
   Phone, Mail, CheckCircle2, AlertCircle, Info, Sparkles,
   Layers, Map, ArrowRight, X
 } from 'lucide-react';
@@ -262,7 +262,7 @@ export default function PengaturanPublikPage() {
   ];
 
   return (
-    <div className="space-y-6 pb-12 max-w-7xl mx-auto">
+    <div className="p-3.5 sm:p-6 space-y-4 sm:space-y-6 pb-16 max-w-7xl mx-auto">
       {/* Toast Notification */}
       {toast.show && (
         <Toast
@@ -273,36 +273,36 @@ export default function PengaturanPublikPage() {
       )}
 
       {/* Header Banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-linear-to-r from-blue-900 via-indigo-900 to-slate-900 p-6 md:p-8 text-white shadow-xl">
+      <div className="relative overflow-hidden rounded-2xl bg-linear-to-r from-blue-900 via-indigo-900 to-slate-900 p-4 sm:p-6 md:p-8 text-white shadow-xl">
         <div className="absolute top-0 right-0 -mt-6 -mr-6 w-56 h-56 bg-blue-500/20 rounded-full blur-3xl pointer-events-none" />
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 text-xs font-semibold uppercase tracking-wider mb-3">
-              <Globe className="w-3.5 h-3.5" />
-              Portal Publik Management
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6">
+          <div className="min-w-0 flex-1">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 text-xs font-semibold uppercase tracking-wider mb-2 sm:mb-3">
+              <Globe className="w-3.5 h-3.5 shrink-0" />
+              <span>Portal Publik Management</span>
             </div>
-            <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight">
               Pengaturan Halaman Publik
             </h1>
-            <p className="mt-1 text-sm md:text-base text-blue-100/80 max-w-2xl leading-relaxed">
+            <p className="mt-1 text-xs sm:text-sm md:text-base text-blue-100/80 max-w-2xl leading-relaxed">
               Ubah foto gedung, visi misi, galeri fasilitas lingkungan, dan peta lokasi yang ditampilkan kepada masyarakat di halaman beranda depan.
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
             <a
               href="/#tentang"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 text-sm font-semibold transition backdrop-blur-sm shadow-sm"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 text-xs sm:text-sm font-semibold transition backdrop-blur-sm shadow-sm text-center"
             >
-              <ExternalLink className="w-4 h-4" />
-              Lihat Halaman Publik
+              <ExternalLink className="w-4 h-4 shrink-0" />
+              <span className="truncate">Lihat Halaman Publik</span>
             </a>
             <button
               onClick={handleSave}
               disabled={saving || loading}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-linear-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white text-sm font-bold shadow-lg shadow-blue-500/30 transition disabled:opacity-50"
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-linear-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white text-xs sm:text-sm font-bold shadow-lg shadow-blue-500/30 transition disabled:opacity-50 text-center"
             >
               {saving ? (
                 <>
@@ -881,36 +881,37 @@ export default function PengaturanPublikPage() {
           )}
 
           {/* Bottom Save Bar */}
-          <div className="sticky bottom-4 z-20 bg-white/90 backdrop-blur-md p-4 rounded-2xl border border-slate-200 shadow-xl flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2 text-xs text-slate-600">
-              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-              <span>Semua perubahan disimpan ke database dan langsung aktif di halaman depan publik.</span>
+          <div className="sticky bottom-3 sm:bottom-4 z-20 bg-white/95 backdrop-blur-md p-3.5 sm:p-4 rounded-2xl border border-slate-200/90 shadow-xl shadow-slate-200/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+            <div className="flex items-center gap-2.5 text-xs text-slate-600">
+              <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+              <span className="leading-relaxed">Semua perubahan disimpan ke database dan langsung aktif di halaman depan publik.</span>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="grid grid-cols-2 sm:flex sm:items-center gap-2.5 sm:gap-3 w-full sm:w-auto">
               <button
                 type="button"
                 onClick={fetchSettings}
                 disabled={loading || saving}
-                className="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold transition disabled:opacity-50"
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs sm:text-sm font-semibold transition active:scale-95 disabled:opacity-50 text-center"
               >
-                Reset / Muat Ulang
+                <RotateCcw className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                <span>Reset</span>
               </button>
               <button
                 type="button"
                 onClick={handleSave}
                 disabled={saving || loading}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition shadow-md shadow-blue-500/20 disabled:opacity-50"
+                className="inline-flex items-center justify-center gap-1.5 px-4 sm:px-5 py-2.5 rounded-xl bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs sm:text-sm font-bold shadow-md shadow-indigo-500/20 transition active:scale-95 disabled:opacity-50 text-center"
               >
                 {saving ? (
                   <>
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                    Menyimpan...
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin shrink-0" />
+                    <span>Menyimpan...</span>
                   </>
                 ) : (
                   <>
-                    <Save className="w-4 h-4" />
-                    Simpan Semua Perubahan
+                    <Save className="w-3.5 h-3.5 shrink-0" />
+                    <span>Simpan</span>
                   </>
                 )}
               </button>

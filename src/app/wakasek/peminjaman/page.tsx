@@ -5,6 +5,13 @@ import { createPortal } from 'react-dom';
 import axios from '@/lib/axios';
 import { showErrorAlert } from '@/utils/errorHandler';
 import { Handshake, Plus, Search, RefreshCw, CheckCircle2, Clock, X, Trash2, Edit2, Loader2, RotateCcw, User, Package } from 'lucide-react';
+import { useIsMobile } from '@/hooks/useMediaQuery';
+import { 
+  MobileCard, 
+  MobileCardHeader, 
+  MobileCardRow, 
+  MobileCardActions 
+} from '@/components/MobileCard';
 
 interface SaranaPrasarana {
   id: number;
@@ -45,6 +52,7 @@ interface PeminjamanItem {
 }
 
 export default function WakasekPeminjamanPage() {
+  const isMobile = useIsMobile();
   const [peminjamans, setPeminjamans] = useState<PeminjamanItem[]>([]);
   const [saranas, setSaranas] = useState<SaranaPrasarana[]>([]);
   const [loading, setLoading] = useState(true);
@@ -224,13 +232,6 @@ export default function WakasekPeminjamanPage() {
           >
             <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
           </button>
-          <button
-            onClick={openAddModal}
-            className="flex items-center px-4 py-2.5 bg-linear-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 rounded-xl font-semibold text-sm transition-all shadow-sm shadow-indigo-500/20"
-          >
-            <Plus className="h-4 w-4 mr-1.5" />
-            Catat Peminjaman
-          </button>
         </div>
       </div>
 
@@ -295,116 +296,169 @@ export default function WakasekPeminjamanPage() {
           </div>
         </div>
 
-        {/* Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="bg-slate-50/80 border-b border-slate-100 text-slate-400 text-[11px] uppercase tracking-widest">
-                <th className="px-4 py-3.5 font-semibold">#</th>
-                <th className="px-4 py-3.5 font-semibold">Nama Peminjam</th>
-                <th className="px-4 py-3.5 font-semibold">Barang yang Dipinjam</th>
-                <th className="px-4 py-3.5 font-semibold">Keperluan</th>
-                <th className="px-4 py-3.5 font-semibold">Tgl Pinjam</th>
-                <th className="px-4 py-3.5 font-semibold">Rencana Kembali</th>
-                <th className="px-4 py-3.5 font-semibold">Status</th>
-                <th className="px-4 py-3.5 font-semibold text-right">Aksi</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              {loading ? (
-                Array.from({ length: 4 }).map((_, i) => (
-                  <tr key={i}><td className="px-4 py-4" colSpan={8}><div className="skeleton h-5 rounded-lg w-full" /></td></tr>
-                ))
-              ) : filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="py-16 text-center">
-                    <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-3">
-                      <Handshake className="h-7 w-7 text-slate-300" />
-                    </div>
-                    <p className="font-semibold text-slate-500 text-sm">Belum ada catatan peminjaman</p>
-                    <p className="text-slate-400 text-xs mt-1">Klik &quot;+ Catat Peminjaman&quot; untuk mencatat peminjaman barang.</p>
-                  </td>
-                </tr>
-              ) : (
-                filtered.map((item, idx) => {
-                  const namaBarang = item.sarana_prasarana?.nama_barang || item.aset?.nama_aset || 'Barang Dihapus';
-                  const kodeBarang = item.sarana_prasarana?.kode || item.aset?.kode_aset || null;
-                  const satuan = item.sarana_prasarana?.satuan || item.aset?.satuan || 'Unit';
-                  const lokasi = item.sarana_prasarana?.folder?.nama_folder || item.aset?.ruangan?.nama_ruangan || 'Sarana & Prasarana';
+        {/* Table / Mobile Cards */}
+        {isMobile ? (
+          <div className="p-3 space-y-3">
+            {loading ? (
+              Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="skeleton h-36 rounded-xl w-full" />
+              ))
+            ) : filtered.length === 0 ? (
+              <div className="py-12 text-center">
+                <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-3">
+                  <Handshake className="h-6 w-6 text-slate-300" />
+                </div>
+                <p className="font-semibold text-slate-500 text-sm">Belum ada catatan peminjaman</p>
+                <p className="text-slate-400 text-xs mt-1">Klik &quot;+ Catat Peminjaman&quot; untuk mencatat peminjaman barang.</p>
+              </div>
+            ) : (
+              filtered.map((item) => {
+                const namaBarang = item.sarana_prasarana?.nama_barang || item.aset?.nama_aset || 'Barang Dihapus';
+                const kodeBarang = item.sarana_prasarana?.kode || item.aset?.kode_aset || null;
+                const satuan = item.sarana_prasarana?.satuan || item.aset?.satuan || 'Unit';
+                const lokasi = item.sarana_prasarana?.folder?.nama_folder || item.aset?.ruangan?.nama_ruangan || 'Sarana & Prasarana';
 
-                  return (
-                    <tr key={item.id} className="hover:bg-slate-50/80 transition-colors group">
-                      <td className="px-4 py-3.5 text-xs text-slate-400 font-medium">{idx + 1}</td>
-                      <td className="px-4 py-3.5">
-                        <p className="text-sm font-semibold text-slate-800 flex items-center">
-                          <User className="h-3.5 w-3.5 text-slate-400 mr-1.5" />
-                          {item.nama_peminjam}
-                        </p>
-                        <span className="inline-block mt-0.5 text-[10px] font-semibold px-2 py-0.5 bg-slate-100 text-slate-600 rounded">
-                          {item.role_peminjam}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3.5">
-                        <p className="text-sm font-semibold text-indigo-900">{namaBarang}</p>
-                        <p className="text-[11px] text-slate-400">
-                          {item.jumlah} {satuan} {kodeBarang ? `· ${kodeBarang}` : ''} · {lokasi}
-                        </p>
-                      </td>
-                      <td className="px-4 py-3.5 text-xs text-slate-600 max-w-xs truncate">
-                        {item.keperluan || '—'}
-                      </td>
-                      <td className="px-4 py-3.5 text-xs text-slate-600 font-mono">{item.tanggal_pinjam}</td>
-                      <td className="px-4 py-3.5 text-xs text-slate-600 font-mono">
-                        {item.tanggal_kembali_rencana || '—'}
-                      </td>
-                      <td className="px-4 py-3.5">
-                        <span className={`px-2.5 py-1 rounded-lg text-xs font-semibold ${
+                return (
+                  <MobileCard key={item.id} className="p-3.5 border border-slate-100 shadow-sm">
+                    <MobileCardHeader
+                      title={
+                        <div className="flex items-center space-x-2">
+                          <User className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                          <span className="font-bold text-slate-900">{item.nama_peminjam}</span>
+                          <span className="text-[10px] font-semibold px-2 py-0.5 bg-slate-100 text-slate-600 rounded">
+                            {item.role_peminjam}
+                          </span>
+                        </div>
+                      }
+                      badge={
+                        <span className={`px-2 py-0.5 rounded-md text-[11px] font-semibold ${
                           item.status === 'Dikembalikan'
                             ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                             : 'bg-amber-50 text-amber-700 border border-amber-200'
                         }`}>
                           {item.status}
                         </span>
-                      </td>
-                      <td className="px-4 py-3.5 text-right">
-                        <div className="flex items-center justify-end space-x-1">
-                          {item.status === 'Dipinjam' && (
-                            <button
-                              onClick={() => handleReturn(item.id)}
-                              disabled={returningId === item.id}
-                              className="inline-flex items-center px-2.5 py-1 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-all disabled:opacity-50"
-                            >
-                              {returningId === item.id ? (
-                                <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                              ) : (
-                                <RotateCcw className="h-3 w-3 mr-1" />
-                              )}
-                              Kembalikan
-                            </button>
-                          )}
-                          <button
-                            onClick={() => openEditModal(item)}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
-                            title="Edit"
-                          >
-                            <Edit2 className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(item.id)}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                            title="Hapus"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                      }
+                    />
+                    <div className="space-y-1.5 mt-2">
+                      <MobileCardRow
+                        label="Barang"
+                        value={
+                          <span className="font-medium text-indigo-900">
+                            {namaBarang}
+                            <span className="text-xs text-slate-400 ml-1 font-normal">
+                              ({item.jumlah} {satuan})
+                            </span>
+                          </span>
+                        }
+                      />
+                      {kodeBarang && (
+                        <MobileCardRow
+                          label="Kode"
+                          value={<span className="font-mono text-xs">{kodeBarang}</span>}
+                        />
+                      )}
+                      <MobileCardRow
+                        label="Lokasi"
+                        value={lokasi}
+                      />
+                      <MobileCardRow
+                        label="Keperluan"
+                        value={item.keperluan || '—'}
+                      />
+                      <MobileCardRow
+                        label="Tgl Pinjam"
+                        value={<span className="font-mono text-xs">{item.tanggal_pinjam}</span>}
+                      />
+                      <MobileCardRow
+                        label="Rencana Kembali"
+                        value={<span className="font-mono text-xs">{item.tanggal_kembali_rencana || '—'}</span>}
+                      />
+                    </div>
+                  </MobileCard>
+                );
+              })
+            )}
+          </div>
+        ) : (
+          /* Table */
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="bg-slate-50/80 border-b border-slate-100 text-slate-400 text-[11px] uppercase tracking-widest">
+                  <th className="px-4 py-3.5 font-semibold">#</th>
+                  <th className="px-4 py-3.5 font-semibold">Nama Peminjam</th>
+                  <th className="px-4 py-3.5 font-semibold">Barang yang Dipinjam</th>
+                  <th className="px-4 py-3.5 font-semibold">Keperluan</th>
+                  <th className="px-4 py-3.5 font-semibold">Tgl Pinjam</th>
+                  <th className="px-4 py-3.5 font-semibold">Rencana Kembali</th>
+                  <th className="px-4 py-3.5 font-semibold">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {loading ? (
+                  Array.from({ length: 4 }).map((_, i) => (
+                    <tr key={i}><td className="px-4 py-4" colSpan={7}><div className="skeleton h-5 rounded-lg w-full" /></td></tr>
+                  ))
+                ) : filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-16 text-center">
+                      <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-3">
+                        <Handshake className="h-7 w-7 text-slate-300" />
+                      </div>
+                      <p className="font-semibold text-slate-500 text-sm">Belum ada catatan peminjaman</p>
+                      <p className="text-slate-400 text-xs mt-1">Belum ada data peminjaman yang dicatat.</p>
+                    </td>
+                  </tr>
+                ) : (
+                  filtered.map((item, idx) => {
+                    const namaBarang = item.sarana_prasarana?.nama_barang || item.aset?.nama_aset || 'Barang Dihapus';
+                    const kodeBarang = item.sarana_prasarana?.kode || item.aset?.kode_aset || null;
+                    const satuan = item.sarana_prasarana?.satuan || item.aset?.satuan || 'Unit';
+                    const lokasi = item.sarana_prasarana?.folder?.nama_folder || item.aset?.ruangan?.nama_ruangan || 'Sarana & Prasarana';
+
+                    return (
+                      <tr key={item.id} className="hover:bg-slate-50/80 transition-colors group">
+                        <td className="px-4 py-3.5 text-xs text-slate-400 font-medium">{idx + 1}</td>
+                        <td className="px-4 py-3.5">
+                          <p className="text-sm font-semibold text-slate-800 flex items-center">
+                            <User className="h-3.5 w-3.5 text-slate-400 mr-1.5" />
+                            {item.nama_peminjam}
+                          </p>
+                          <span className="inline-block mt-0.5 text-[10px] font-semibold px-2 py-0.5 bg-slate-100 text-slate-600 rounded">
+                            {item.role_peminjam}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3.5">
+                          <p className="text-sm font-semibold text-indigo-900">{namaBarang}</p>
+                          <p className="text-[11px] text-slate-400">
+                            {item.jumlah} {satuan} {kodeBarang ? `· ${kodeBarang}` : ''} · {lokasi}
+                          </p>
+                        </td>
+                        <td className="px-4 py-3.5 text-xs text-slate-600 max-w-xs truncate">
+                          {item.keperluan || '—'}
+                        </td>
+                        <td className="px-4 py-3.5 text-xs text-slate-600 font-mono">{item.tanggal_pinjam}</td>
+                        <td className="px-4 py-3.5 text-xs text-slate-600 font-mono">
+                          {item.tanggal_kembali_rencana || '—'}
+                        </td>
+                        <td className="px-4 py-3.5">
+                          <span className={`px-2.5 py-1 rounded-lg text-xs font-semibold ${
+                            item.status === 'Dikembalikan'
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              : 'bg-amber-50 text-amber-700 border border-amber-200'
+                          }`}>
+                            {item.status}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Modal Form */}

@@ -50,11 +50,11 @@ export default function PublicNavbar() {
         {mobileMenuOpen && (
           <div className="md:hidden py-4 border-t border-gray-200">
             <nav className="flex flex-col gap-3 text-sm font-medium text-gray-600">
-              <a href="#beranda" className="hover:text-blue-600 transition-colors py-2">Beranda</a>
-              <a href="#berita" className="hover:text-blue-600 transition-colors py-2">Berita</a>
-              <a href="#workshop" className="hover:text-blue-600 transition-colors py-2">Workshop</a>
-              <a href="#tentang" className="hover:text-blue-600 transition-colors py-2">Tentang</a>
-              <a href="#katalog" className="hover:text-blue-600 transition-colors py-2">Katalog Aset</a>
+              <a href="#beranda" onClick={() => setMobileMenuOpen(false)} className="hover:text-blue-600 transition-colors py-2">Beranda</a>
+              <a href="#berita" onClick={() => setMobileMenuOpen(false)} className="hover:text-blue-600 transition-colors py-2">Berita</a>
+              <a href="#workshop" onClick={() => setMobileMenuOpen(false)} className="hover:text-blue-600 transition-colors py-2">Workshop</a>
+              <a href="#tentang" onClick={() => setMobileMenuOpen(false)} className="hover:text-blue-600 transition-colors py-2">Tentang</a>
+              <a href="#katalog" onClick={() => setMobileMenuOpen(false)} className="hover:text-blue-600 transition-colors py-2">Katalog Aset</a>
             </nav>
           </div>
         )}

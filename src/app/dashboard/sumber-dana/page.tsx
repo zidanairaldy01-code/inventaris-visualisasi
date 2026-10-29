@@ -504,7 +504,7 @@ export default function SumberDanaPage() {
 
   /* ═══════════ RENDER ═══════════ */
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-3.5 sm:p-6 space-y-4 sm:space-y-6">
       {toast.show && (
         <Toast
           message={toast.message}
@@ -514,51 +514,54 @@ export default function SumberDanaPage() {
       )}
 
       {/* Header Banner */}
-      <div className="bg-linear-to-r from-emerald-600 via-teal-600 to-cyan-600 rounded-2xl p-6 shadow-xl relative overflow-hidden">
+      <div className="bg-linear-to-r from-emerald-600 via-teal-600 to-cyan-600 rounded-2xl p-4 sm:p-6 shadow-xl relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl pointer-events-none -translate-y-12 translate-x-12" />
-        <div className="flex items-center justify-between relative z-10 flex-wrap gap-4">
-          <div className="flex items-center gap-4">
-            <div className="p-3.5 bg-white/20 backdrop-blur-md rounded-2xl ring-1 ring-white/30">
-              <Briefcase className="h-8 w-8 text-white" />
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between relative z-10 gap-4">
+          <div className="flex items-start sm:items-center gap-3 sm:gap-4">
+            <div className="p-2.5 sm:p-3.5 bg-white/20 backdrop-blur-md rounded-2xl ring-1 ring-white/30 shrink-0">
+              <Briefcase className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-3xl font-extrabold text-white tracking-tight">Sumber Dana Drive</h1>
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-white/20 text-white backdrop-blur-sm border border-white/20">
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">Sumber Dana Drive</h1>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-semibold bg-white/20 text-white backdrop-blur-sm border border-white/20 whitespace-nowrap">
                   Modul Terintegrasi
                 </span>
               </div>
-              <p className="text-emerald-100 text-sm mt-1">
+              <p className="text-emerald-100 text-xs sm:text-sm mt-1 leading-relaxed">
                 Jelajahi folder &amp; barang inventaris dari <strong>Rekap Belanja</strong>, <strong>Daftar Belanja</strong>, dan <strong>Inventaris Gudang</strong> berdasarkan Sumber Dana
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap lg:flex-nowrap items-center gap-2 w-full lg:w-auto">
             <button
               onClick={() => { setActiveSumberDanaId(null); setActiveFolderId(null); setViewMode('drive'); }}
-              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+              className={`w-full sm:w-auto px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 sm:gap-2 text-center ${
                 activeSumberDanaId === null && viewMode === 'drive'
                   ? 'bg-white text-emerald-800 shadow-md'
                   : 'bg-white/10 text-white hover:bg-white/20 backdrop-blur-sm'
               }`}
             >
-              <Grid className="h-4 w-4" /> Drive Folders
+              <Grid className="h-4 w-4 shrink-0" />
+              <span className="truncate">Drive Folders</span>
             </button>
             <button
               onClick={() => { setActiveSumberDanaId(null); setActiveFolderId(null); setViewMode('table'); }}
-              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+              className={`w-full sm:w-auto px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 sm:gap-2 text-center ${
                 viewMode === 'table'
                   ? 'bg-white text-emerald-800 shadow-md'
                   : 'bg-white/10 text-white hover:bg-white/20 backdrop-blur-sm'
               }`}
             >
-              <ListIcon className="h-4 w-4" /> Data Master Tabel
+              <ListIcon className="h-4 w-4 shrink-0" />
+              <span className="truncate">Data Master Tabel</span>
             </button>
             <button
               onClick={openAdd}
-              className="px-4 py-2.5 bg-white text-emerald-800 hover:bg-emerald-50 rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-2"
+              className="col-span-2 sm:col-span-1 w-full sm:w-auto px-3 sm:px-4 py-2 sm:py-2.5 bg-white text-emerald-800 hover:bg-emerald-50 rounded-xl text-xs font-bold transition-all shadow-md flex items-center justify-center gap-1.5 sm:gap-2 text-center"
             >
-              <Plus className="h-4 w-4" /> + Tambah Sumber Dana
+              <Plus className="h-4 w-4 text-emerald-600 shrink-0" />
+              <span className="truncate">+ Tambah Sumber Dana</span>
             </button>
           </div>
         </div>
@@ -725,7 +728,7 @@ export default function SumberDanaPage() {
                             {sumber.jenis_sumber}
                           </span>
                         )}
-                        <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 ml-1">
+                        <div className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex gap-1 ml-1">
                           <button
                             onClick={(e) => openEdit(sumber, e)}
                             className="p-1.5 bg-white/80 hover:bg-white text-slate-600 rounded-lg shadow-sm"
