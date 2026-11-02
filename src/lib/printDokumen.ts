@@ -109,18 +109,24 @@ const drawSignatureBlock = (
   doc.setFont('helvetica', 'normal')
   doc.setTextColor(50, 50, 50)
 
-  // Label atas
-  doc.text(label, x + w / 2, y, { align: 'center' })
+  // Tangani label multi-line (mis. Mengetahui,\nWakil Kepala Sekolah Sarpras)
+  const lines = label.split('\n')
+  lines.forEach((line, idx) => {
+    doc.text(line, x + w / 2, y + idx * 4, { align: 'center' })
+  })
 
-  // Ruang tanda tangan (24 mm tinggi)
-  const signH = 24
+  const labelHeight = (lines.length - 1) * 4
+
+  // Ruang tanda tangan (22 mm tinggi)
+  const signH = 22
+  const boxTop = y + labelHeight + 2
   doc.setDrawColor(180, 180, 180)
   doc.setLineDashPattern([1, 1], 0)
-  doc.rect(x, y + 2, w, signH)
+  doc.rect(x, boxTop, w, signH)
   doc.setLineDashPattern([], 0)
 
   // Garis tanda tangan di bawah ruang
-  const lineY = y + 2 + signH + 8
+  const lineY = boxTop + signH + 6
   doc.setDrawColor(80, 80, 80)
   doc.line(x + 5, lineY, x + w - 5, lineY)
 
@@ -155,14 +161,14 @@ const drawKopSurat = (doc: jsPDF, judulDokumen: string, nomorDokumen: string) =>
   doc.setTextColor(30, 64, 175)
   doc.setFontSize(13)
   doc.setFont('helvetica', 'bold')
-  doc.text('SMKN 1 CONTOH', pw / 2, 16, { align: 'center' })
+  doc.text('SMK PGRI TELAGASARI', pw / 2, 16, { align: 'center' })
 
   // Subjudul sekolah
   doc.setFontSize(8)
   doc.setFont('helvetica', 'normal')
   doc.setTextColor(80, 80, 80)
   doc.text(
-    'Jl. Pendidikan No. 1, Kota Contoh  |  Telp. (0xx) 000-0000  |  inventaris@smkn1contoh.sch.id',
+    'Talagasari, Kec. Talagasari, Karawang, Jawa Barat 41381  |  Telp. -  |  info@smkpgritelagasari.sch.id',
     pw / 2,
     21,
     { align: 'center' },
@@ -317,7 +323,7 @@ export const generateSuratJalan = (data: SuratJalanData): void => {
   )
 
   drawSignatureBlock(doc, startX, sigY, colW, 'Kepala Sekolah / Wakasek Sarpras,', '', true)
-  drawSignatureBlock(doc, startX + colW + gap, sigY, colW, 'Pengirim,', data.petugas_pengirim.nama_lengkap, true)
+  drawSignatureBlock(doc, startX + colW + gap, sigY, colW, 'Pengirim,', data.petugas_pengirim?.nama_lengkap ?? '', true)
   drawSignatureBlock(
     doc,
     startX + (colW + gap) * 2,
@@ -649,7 +655,7 @@ export const generateSuratJalanBulk = (response: SuratJalanBulkApiResponse): voi
   )
 
   drawSignatureBlock(doc, startX, sigY, colW, 'Kepala Sekolah / Wakasek Sarpras,', '', true)
-  drawSignatureBlock(doc, startX + colW + gap, sigY, colW, 'Pengirim,', first.petugas_pengirim.nama_lengkap, true)
+  drawSignatureBlock(doc, startX + colW + gap, sigY, colW, 'Pengirim,', first.petugas_pengirim?.nama_lengkap ?? '', true)
   drawSignatureBlock(
     doc,
     startX + (colW + gap) * 2,

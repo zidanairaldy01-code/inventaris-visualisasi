@@ -6,12 +6,15 @@ import { showErrorAlert } from '@/utils/errorHandler'
 import {
   generateSuratJalan,
   generateBast,
+  generateSuratJalanBulk,
+  type SuratJalanBulkApiResponse,
 } from '@/lib/printDokumen'
 import { 
   Package, Truck, CheckCircle2, Clock, XCircle, Plus, 
   Search, ChevronDown, X, AlertCircle, Send, 
   Banknote, MapPin, User, Calendar, Hash, RefreshCw,
-  FileText, Filter, Printer, Eye, Loader2, Camera
+  FileText, Filter, Printer, Eye, Loader2, Camera,
+  FileCheck2, Layers
 } from 'lucide-react'
 
 interface Ruangan {
@@ -181,6 +184,18 @@ export default function PetugasDistribusiPage() {
       showErrorAlert(err, 'Gagal Mengambil Data BAST')
     } finally {
       setPrintingBastId(null)
+    }
+  }
+
+  const handleCetakSuratJalanBulk = async (nomorPengiriman: string) => {
+    try {
+      const { data } = await axios.get(
+        `/api/distribusi-asets/bulk/${encodeURIComponent(nomorPengiriman)}/surat-jalan`
+      )
+      generateSuratJalanBulk(data as SuratJalanBulkApiResponse)
+    } catch (err) {
+      console.error('Gagal cetak surat jalan bulk:', err)
+      showErrorAlert(err, 'Gagal Mengambil Data Surat Jalan Massal')
     }
   }
 
@@ -666,26 +681,38 @@ export default function PetugasDistribusiPage() {
                       {/* Aksi & Cetak */}
                       <td className="py-3 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
-                          {/* Cetak SJ */}
+                          {/* Cetak SJ (Otomatis cetak Massal jika bulk, atau Satuan) */}
                           <button
-                            onClick={() => handleCetakSuratJalan(item.id)}
+                            onClick={() => {
+                              if (item.nomor_pengiriman) {
+                                handleCetakSuratJalanBulk(item.nomor_pengiriman)
+                              } else {
+                                handleCetakSuratJalan(item.id)
+                              }
+                            }}
                             disabled={isPrintingSJ}
-                            title="Cetak Surat Jalan"
+                            title={item.nomor_pengiriman ? `Cetak Surat Jalan Massal (${item.nomor_pengiriman})` : 'Cetak Surat Jalan'}
                             className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 rounded-lg text-xs font-bold transition disabled:opacity-50"
                           >
-                            {isPrintingSJ ? <Loader2 className="h-3 w-3 animate-spin" /> : <Printer className="h-3 w-3" />}
-                            SJ
+                            {isPrintingSJ ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : item.nomor_pengiriman ? (
+                              <Layers className="h-3 w-3" />
+                            ) : (
+                              <Printer className="h-3 w-3" />
+                            )}
+                            {item.nomor_pengiriman ? 'SJ Bulk' : 'SJ'}
                           </button>
 
-                          {/* Cetak BAST jika sudah diterima */}
-                          {isDiterima && (
+                          {/* Cetak BAST jika sudah diterima & nomor BAST ada */}
+                          {isDiterima && item.nomor_bast && (
                             <button
                               onClick={() => handleCetakBast(item.id)}
                               disabled={isPrintingBast}
                               title="Cetak Berita Acara Serah Terima (BAST)"
                               className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 rounded-lg text-xs font-bold transition disabled:opacity-50"
                             >
-                              {isPrintingBast ? <Loader2 className="h-3 w-3 animate-spin" /> : <Printer className="h-3 w-3" />}
+                              {isPrintingBast ? <Loader2 className="h-3 w-3 animate-spin" /> : <FileCheck2 className="h-3 w-3" />}
                               BAST
                             </button>
                           )}
