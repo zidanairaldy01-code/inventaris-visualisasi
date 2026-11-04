@@ -102,6 +102,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('peminjamans', PeminjamanController::class)->except(['index']);
 
     // Laporan
+    Route::get('laporan/sarana-prasarana', [LaporanController::class, 'saranaPrasarana']);
+    Route::get('laporan/sarana_prasarana', [LaporanController::class, 'saranaPrasarana']);
     Route::get('laporan/aset',        [LaporanController::class, 'aset']);
     Route::get('laporan/servis',      [LaporanController::class, 'servis']);
     Route::get('laporan/peminjaman',  [LaporanController::class, 'peminjaman']);

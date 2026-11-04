@@ -4,20 +4,22 @@ import { useState } from 'react';
 import axios from '@/lib/axios';
 import * as XLSX from 'xlsx';
 import {
-  FileText, Search, Download, Loader2, BarChart3,
+  FileText, Search, Download, Loader2,
   Package, Wrench, Handshake, ChevronDown, AlertCircle,
   TrendingUp, DollarSign, Hash, Calendar,
 } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type TipeLaporan = 'aset' | 'servis' | 'peminjaman';
+type TipeLaporan = 'sarana-prasarana' | 'servis' | 'peminjaman';
 
 interface Ringkasan {
-  // aset
+  // sarana-prasarana
   total_item?: number;
   total_unit?: number;
   total_nilai?: number;
+  total_nilai_pembelian?: number;
+  total_nilai_sekarang?: number;
   per_kategori?: Record<string, { jumlah_item: number; total_unit: number; total_nilai: number }>;
   per_kondisi?: Record<string, number>;
   // servis
@@ -80,24 +82,24 @@ const PRESETS = [
 
 // Kolom per tipe laporan untuk tabel & ekspor
 const COLUMNS: Record<TipeLaporan, { key: string; label: string; align?: 'right' }[]> = {
-  aset: [
-    { key: 'tanggal_input', label: 'Tgl Input' },
-    { key: 'kode_aset', label: 'Kode' },
-    { key: 'nama_aset', label: 'Nama Aset' },
-    { key: 'kategori', label: 'Kategori' },
-    { key: 'ruangan', label: 'Ruangan' },
-    { key: 'kondisi', label: 'Kondisi' },
+  'sarana-prasarana': [
+    { key: 'tanggal_pengambilan', label: 'Tgl Pengambilan' },
+    { key: 'kode', label: 'Kode Barang' },
+    { key: 'nama_barang', label: 'Nama Barang / Jenis' },
+    { key: 'folder', label: 'Folder / Kategori' },
     { key: 'sumber_dana', label: 'Sumber Dana' },
-    { key: 'jumlah', label: 'Jml', align: 'right' },
+    { key: 'kondisi', label: 'Kondisi' },
+    { key: 'luas_jumlah', label: 'Luas / Jumlah' },
+    { key: 'stok_akhir', label: 'Stok', align: 'right' },
     { key: 'satuan', label: 'Satuan' },
-    { key: 'harga_perolehan', label: 'Harga Satuan', align: 'right' },
-    { key: 'total_nilai', label: 'Total Nilai', align: 'right' },
-    { key: 'tahun_perolehan', label: 'Tahun' },
+    { key: 'nilai_harga_pembelian', label: 'Nilai Pembelian', align: 'right' },
+    { key: 'nilai_harga_sekarang', label: 'Nilai Sekarang', align: 'right' },
+    { key: 'keterangan', label: 'Keterangan' },
   ],
   servis: [
     { key: 'tanggal_servis', label: 'Tanggal' },
     { key: 'kode_aset', label: 'Kode' },
-    { key: 'nama_aset', label: 'Nama Aset' },
+    { key: 'nama_aset', label: 'Nama Barang' },
     { key: 'ruangan', label: 'Ruangan' },
     { key: 'jenis_perbaikan', label: 'Jenis Perbaikan' },
     { key: 'teknisi_bengkel', label: 'Teknisi/Bengkel' },
@@ -109,7 +111,8 @@ const COLUMNS: Record<TipeLaporan, { key: string; label: string; align?: 'right'
     { key: 'tanggal_pinjam', label: 'Tgl Pinjam' },
     { key: 'nama_peminjam', label: 'Nama Peminjam' },
     { key: 'role_peminjam', label: 'Status' },
-    { key: 'nama_aset', label: 'Aset Dipinjam' },
+    { key: 'kode_aset', label: 'Kode' },
+    { key: 'nama_aset', label: 'Barang Dipinjam' },
     { key: 'ruangan', label: 'Ruangan' },
     { key: 'jumlah', label: 'Jml', align: 'right' },
     { key: 'keperluan', label: 'Keperluan' },
@@ -120,15 +123,15 @@ const COLUMNS: Record<TipeLaporan, { key: string; label: string; align?: 'right'
 };
 
 const TIPE_CONFIG: Record<TipeLaporan, { label: string; icon: React.ElementType; color: string; gradient: string }> = {
-  aset:       { label: 'Inventaris Aset',   icon: Package,  color: 'blue',   gradient: 'from-blue-600 to-indigo-600' },
-  servis:     { label: 'Servis & Perbaikan', icon: Wrench,   color: 'amber',  gradient: 'from-amber-500 to-orange-600' },
-  peminjaman: { label: 'Peminjaman',         icon: Handshake, color: 'indigo', gradient: 'from-indigo-500 to-purple-600' },
+  'sarana-prasarana': { label: 'Sarana & Prasarana', icon: Package,   color: 'blue',   gradient: 'from-blue-600 to-indigo-600' },
+  servis:             { label: 'Servis & Perbaikan', icon: Wrench,    color: 'amber',  gradient: 'from-amber-500 to-orange-600' },
+  peminjaman:         { label: 'Laporan Peminjaman', icon: Handshake, color: 'indigo', gradient: 'from-indigo-500 to-purple-600' },
 };
 
 // ─── Komponen Utama ───────────────────────────────────────────────────────────
 
 export default function LaporanPage() {
-  const [tipe, setTipe] = useState<TipeLaporan>('aset');
+  const [tipe, setTipe] = useState<TipeLaporan>('sarana-prasarana');
   const [dari, setDari] = useState(firstOfMonth());
   const [sampai, setSampai] = useState(today());
   const [loading, setLoading] = useState(false);
@@ -176,26 +179,33 @@ export default function LaporanPage() {
   // ── Format nilai sel ───────────────────────────────────────────────────────
   const renderCell = (key: string, val: unknown) => {
     if (val === null || val === undefined || val === '') return <span className="text-slate-300">—</span>;
-    if ((key === 'harga_perolehan' || key === 'biaya_servis' || key === 'total_nilai') && typeof val === 'number') {
+    if (
+      (key === 'harga_perolehan' ||
+       key === 'biaya_servis' ||
+       key === 'total_nilai' ||
+       key === 'nilai_harga_pembelian' ||
+       key === 'nilai_harga_sekarang') &&
+      typeof val === 'number'
+    ) {
       return <span className="font-semibold text-slate-700">{fmt(val)}</span>;
     }
     if (key === 'kondisi') {
       const k = String(val).toLowerCase();
-      const cls = k === 'baik' ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-        : k.includes('rusak') ? 'bg-red-50 text-red-700 border-red-200'
+      const cls = k === 'baik' || k === 'cukup baik' ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+        : k.includes('rusak') || k.includes('tidak layak') ? 'bg-rose-50 text-rose-700 border-rose-200'
         : 'bg-amber-50 text-amber-700 border-amber-200';
       return <span className={`px-2 py-0.5 rounded-md text-xs font-semibold border ${cls}`}>{String(val)}</span>;
     }
     if (key === 'status') {
       const v = String(val);
-      const cls = v === 'Selesai' || v === 'Dikembalikan' || v === 'aktif'
+      const cls = v === 'Selesai' || v === 'Dikembalikan' || v === 'aktif' || v === 'Disetujui'
         ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-        : v === 'Proses' || v === 'Dipinjam'
+        : v === 'Proses' || v === 'Dipinjam' || v === 'Menunggu Persetujuan'
         ? 'bg-blue-50 text-blue-700 border-blue-200'
-        : 'bg-red-50 text-red-700 border-red-200';
+        : 'bg-rose-50 text-rose-700 border-rose-200';
       return <span className={`px-2 py-0.5 rounded-md text-xs font-semibold border ${cls}`}>{v}</span>;
     }
-    if (key === 'kode_aset') {
+    if (key === 'kode' || key === 'kode_aset') {
       return <span className="font-mono text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded">{String(val)}</span>;
     }
     return <span>{String(val)}</span>;
@@ -204,13 +214,18 @@ export default function LaporanPage() {
   // ── Export Excel ───────────────────────────────────────────────────────────
   const handleExport = () => {
     if (!result) return;
-    const rows = result.data.map(row =>
-      Object.fromEntries(columns.map(c => [c.label, row[c.key] ?? '']))
-    );
+    const rows = result.data.map((row, index) => {
+      const formatted: Record<string, unknown> = { 'No': index + 1 };
+      columns.forEach(c => {
+        formatted[c.label] = row[c.key] ?? '';
+      });
+      return formatted;
+    });
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Laporan');
-    XLSX.writeFile(wb, `laporan_${tipe}_${dari}_sd_${sampai}.xlsx`);
+    const sheetName = cfg.label.substring(0, 31);
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    XLSX.writeFile(wb, `Laporan_${tipe}_${dari}_sd_${sampai}.xlsx`);
   };
 
   // ── Ringkasan cards ────────────────────────────────────────────────────────
@@ -218,12 +233,27 @@ export default function LaporanPage() {
     if (!result) return null;
     const r = result.ringkasan;
 
-    if (tipe === 'aset') return (
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <StatCard icon={Hash} label="Total Item" value={String(r.total_item ?? 0)} sub="jenis aset" color="blue" />
-        <StatCard icon={Package} label="Total Unit" value={(r.total_unit ?? 0).toLocaleString('id-ID')} sub="unit barang" color="indigo" />
-        <StatCard icon={DollarSign} label="Total Nilai" value={fmtShort(r.total_nilai ?? 0)} sub="nilai perolehan" color="emerald" />
-        <StatCard icon={BarChart3} label="Kategori" value={String(Object.keys(r.per_kategori ?? {}).length)} sub="jenis kategori" color="amber" />
+    if (tipe === 'sarana-prasarana') return (
+      <div className="space-y-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <StatCard icon={Hash} label="Total Jenis Barang" value={String(r.total_item ?? 0)} sub="jenis sarpras" color="blue" />
+          <StatCard icon={Package} label="Total Unit" value={(r.total_unit ?? 0).toLocaleString('id-ID')} sub="unit barang" color="indigo" />
+          <StatCard icon={DollarSign} label="Nilai Pembelian" value={fmtShort(r.total_nilai_pembelian ?? r.total_nilai ?? 0)} sub="harga perolehan" color="emerald" />
+          <StatCard icon={TrendingUp} label="Nilai Sekarang" value={fmtShort(r.total_nilai_sekarang ?? 0)} sub="estimasi nilai kini" color="amber" />
+        </div>
+        {r.per_kondisi && Object.keys(r.per_kondisi).length > 0 && (
+          <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
+            <p className="text-xs font-semibold text-slate-400 mb-2">Ringkasan Kondisi Barang</p>
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(r.per_kondisi).map(([kondisi, count]) => (
+                <div key={kondisi} className="px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-100 text-xs flex items-center gap-2">
+                  <span className="text-slate-600 font-medium">{kondisi}:</span>
+                  <span className="font-bold text-slate-800">{count}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     );
 
@@ -488,7 +518,8 @@ export default function LaporanPage() {
       {/* Empty State (belum generate) */}
       {!result && !loading && !error && (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-16 text-center">
-          <div className={`w-16 h-16 rounded-2xl bg-linear-to-br ${cfg.gradient} flex items-center justify-center mx-auto mb-4 shadow-sm`}>
+          <div className={`w-16 h-16 rounded-2xl bg-linear-to-br ${cfg.gradient} opacity-10 flex items-center justify-center mx-auto mb-4`} />
+          <div className={`w-16 h-16 rounded-2xl bg-linear-to-br ${cfg.gradient} flex items-center justify-center mx-auto -mt-20 mb-4 shadow-sm`}>
             <ChevronDown className="h-7 w-7 text-white" />
           </div>
           <p className="font-semibold text-slate-600 text-sm">Pilih jenis laporan dan tentukan periode</p>
