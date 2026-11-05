@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect, useCallback } from 'react';
 import axios from '@/lib/axios';
@@ -131,7 +131,7 @@ export default function WakaproKondisiPage() {
     }
   }, [filterKerusakan, searchRusak, showToast]);
 
-  /* ── Fetch Daftar Semua Barang di Workshop Wakapro ── */
+  /* ── Fetch Daftar Semua Barang di Workshop Kaprog ── */
   const fetchWorkshopBarang = useCallback(async () => {
     try {
       setLoadingBarang(true);

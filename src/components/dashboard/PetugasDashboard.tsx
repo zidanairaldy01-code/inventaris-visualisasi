@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import Link from 'next/link';
 import {
@@ -129,7 +129,7 @@ export default function PetugasDashboard({ user, greeting, petugasStats, loading
               <span className="text-base font-semibold text-amber-700">Distribusi</span>
             </p>
           )}
-          <p className="text-sm text-slate-500 mt-1.5 font-medium">Menunggu konfirmasi Wakapro</p>
+          <p className="text-sm text-slate-500 mt-1.5 font-medium">Menunggu konfirmasi Kaprog</p>
         </div>
 
         <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
@@ -210,7 +210,7 @@ export default function PetugasDashboard({ user, greeting, petugasStats, loading
                       <td className="py-3 px-3 text-right">
                         {d.status_bast === 'disetujui' ? (
                           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                            Disetujui Wakapro
+                            Disetujui Kaprog
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">

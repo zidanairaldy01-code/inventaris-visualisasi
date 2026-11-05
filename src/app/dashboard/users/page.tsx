@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect } from 'react';
 import axios from '@/lib/axios';
@@ -40,7 +40,7 @@ const getRoleInfo = (role: string) => {
     super_admin: { label: 'Super Admin', color: 'bg-purple-600', badge: 'bg-purple-50 text-purple-700 border-purple-200' },
     petugas: { label: 'Petugas Input', color: 'bg-blue-600', badge: 'bg-blue-50 text-blue-700 border-blue-200' },
     wakasek: { label: 'Wakasek Sarpras', color: 'bg-emerald-600', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-    wakapro: { label: 'Wakapro Bengkel', color: 'bg-amber-600', badge: 'bg-amber-50 text-amber-800 border-amber-200' },
+    wakapro: { label: 'Kaprog Bengkel', color: 'bg-amber-600', badge: 'bg-amber-50 text-amber-800 border-amber-200' },
   };
   return roles[role as keyof typeof roles] || { label: role, color: 'bg-slate-600', badge: 'bg-slate-50 text-slate-700 border-slate-200' };
 };
@@ -82,7 +82,7 @@ export default function UsersPage() {
       .then(res => setCurrentUser(res.data))
       .catch(() => {});
 
-    axios.get('/api/ruangans')
+    axios.get('/api/ruangans?jenis=workshop')
       .then(res => {
         const data = res.data?.data || res.data || [];
         setRuangans(Array.isArray(data) ? data : []);
@@ -212,7 +212,7 @@ export default function UsersPage() {
             Manajemen Pengguna &amp; Role Sistem
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Kelola hak akses 4 role: Super Admin, Petugas Input, Wakasek Sarpras, dan Wakapro Bengkel.
+            Kelola hak akses 4 role: Super Admin, Petugas Input, Wakasek Sarpras, dan Kaprog Bengkel.
           </p>
         </div>
 
@@ -256,7 +256,7 @@ export default function UsersPage() {
             <option value="super_admin">Super Admin</option>
             <option value="petugas">Petugas Input</option>
             <option value="wakasek">Wakasek Sarpras</option>
-            <option value="wakapro">Wakapro (Kepala Bengkel)</option>
+            <option value="wakapro">Kaprog (Kepala Bengkel)</option>
           </select>
         </div>
       </div>
@@ -445,7 +445,7 @@ export default function UsersPage() {
                           )}
                           {isWakapro && (
                             <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
-                              Wakapro Bengkel
+                              Kaprog Bengkel
                             </span>
                           )}
                         </td>
@@ -622,7 +622,7 @@ export default function UsersPage() {
                   >
                     <option value="petugas">Petugas Input</option>
                     <option value="super_admin">Super Admin</option>
-                    <option value="wakapro">Wakapro (Kepala Bengkel)</option>
+                    <option value="wakapro">Kaprog (Kepala Bengkel)</option>
                     <option value="wakasek">Wakasek Sarpras</option>
                   </select>
                 </div>
@@ -662,7 +662,7 @@ export default function UsersPage() {
                   </select>
                   <p className="text-[10px] text-amber-700 mt-1.5 flex items-center gap-1">
                     <AlertCircle className="h-3 w-3 shrink-0" />
-                    Wajib diisi — digunakan untuk membatasi data distribusi yang dapat dilihat wakapro ini.
+                    Wajib diisi — digunakan untuk membatasi data distribusi yang dapat dilihat Kaprog ini.
                   </p>
                 </div>
               )}

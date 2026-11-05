@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -39,7 +39,7 @@ export default function DashboardPage() {
         router.push('/petugas-input');
         return;
       } else if (role === 'wakapro') {
-        console.log('Redirecting to wakapro dashboard...');
+        console.log('Redirecting to Kaprog dashboard...');
         router.push('/wakapro');
         return;
       } else if (role === 'wakasek') {

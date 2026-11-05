@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
@@ -137,7 +137,7 @@ export default function ServisPage() {
   };
 
   const openEditModal = (item: ServisItem) => {
-    // Wakapro hanya bisa edit yang masih 'Menunggu Persetujuan'
+    // Kaprog hanya bisa edit yang masih 'Menunggu Persetujuan'
     if (item.status !== 'Menunggu Persetujuan') return;
     setEditingItem(item);
     setFotoFile(null);

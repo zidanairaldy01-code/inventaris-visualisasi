@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
@@ -910,12 +910,12 @@ export default function WakasekDashboard({ user, greeting, wakasekStats, loading
                 </div>
               )}
 
-              {/* ── FOTO KONDISI WAKAPRO ── */}
+              {/* ── FOTO KONDISI Kaprog ── */}
               {selectedItem.foto_kondisi_wakapro_url && (
                 <div className="pt-3 border-t border-slate-100">
                   <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
                     <Camera className="h-3.5 w-3.5 text-indigo-500" />
-                    Foto Kondisi saat Diterima (Wakapro)
+                    Foto Kondisi saat Diterima (Kaprog)
                   </p>
                   <button
                     type="button"
@@ -924,7 +924,7 @@ export default function WakasekDashboard({ user, greeting, wakasekStats, loading
                   >
                     <img
                       src={selectedItem.foto_kondisi_wakapro_url}
-                      alt="Foto kondisi wakapro"
+                      alt="Foto kondisi Kaprog"
                       className="w-full max-h-48 object-cover group-hover:scale-102 transition-transform duration-300"
                       onError={(e) => {
                         (e.target as HTMLImageElement).style.display = 'none';

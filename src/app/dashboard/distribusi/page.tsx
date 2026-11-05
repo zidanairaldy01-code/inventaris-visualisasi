@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
@@ -630,7 +630,7 @@ export default function DistribusiPage() {
                         </span>
                       </td>
 
-                      {/* Penerima (Wakapro) */}
+                      {/* Penerima (Kaprog) */}
                       <td className="px-4 py-3.5 align-middle">
                         {item.wakapro_penerima ? (
                           <div>
@@ -820,7 +820,7 @@ export default function DistribusiPage() {
                   </span>
                 </div>
                 <div className="flex justify-between border-b border-slate-100 pb-2">
-                  <span className="text-slate-500">Wakapro Penerima:</span>
+                  <span className="text-slate-500">Kaprog Penerima:</span>
                   <span className="font-semibold text-blue-700">
                     {detailItem.wakapro_penerima?.nama_lengkap || 'Belum Dikonfirmasi'}
                   </span>
@@ -847,7 +847,7 @@ export default function DistribusiPage() {
                 )}
                 {detailItem.catatan_penerimaan && (
                   <div className="pt-1">
-                    <span className="text-slate-500 block mb-1">Catatan Penerimaan (Wakapro):</span>
+                    <span className="text-slate-500 block mb-1">Catatan Penerimaan (Kaprog):</span>
                     <p className="p-2.5 bg-slate-50 rounded-lg text-slate-700 border border-slate-200">
                       {detailItem.catatan_penerimaan}
                     </p>

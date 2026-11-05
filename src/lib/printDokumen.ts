@@ -1,4 +1,4 @@
-/**
+﻿/**
  * printDokumen.ts
  * ─────────────────────────────────────────────────────────────────────────────
  * Library terpusat untuk mencetak Surat Jalan dan BAST (Berita Acara Serah
@@ -93,7 +93,7 @@ const fmtStatus = (s: string) => {
  *  @param x       sudut kiri (mm)
  *  @param y       posisi vertikal awal (mm)
  *  @param w       lebar blok (mm)
- *  @param label   mis. "Pengirim," atau "Penerima (Wakapro)"
+ *  @param label   mis. "Pengirim," atau "Penerima (Kaprog)"
  *  @param name    nama yang sudah terisi (atau '' jika belum)
  */
 const drawSignatureBlock = (
@@ -201,7 +201,7 @@ const drawKopSurat = (doc: jsPDF, judulDokumen: string, nomorDokumen: string) =>
 /**
  * Buat dan unduh PDF Surat Jalan.
  * Surat jalan diterbitkan oleh admin/petugas saat mengirim barang.
- * Berisi kolom tanda tangan: Pengirim & Penerima (Wakapro).
+ * Berisi kolom tanda tangan: Pengirim & Penerima (Kaprog).
  */
 export const generateSuratJalan = (data: SuratJalanData): void => {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
@@ -217,7 +217,7 @@ export const generateSuratJalan = (data: SuratJalanData): void => {
     ['Tanggal Pengiriman', fmtTanggal(data.tanggal_kirim)],
     ['Tujuan Pengiriman', fmtTujuan(data.ruangan_tujuan)],
     ['Dikirim Oleh', data.petugas_pengirim?.nama_lengkap ?? '-'],
-    ['Penerima (Wakapro)', data.wakapro_penerima?.nama_lengkap ?? '(belum dikonfirmasi)'],
+    ['Penerima (Kaprog)', data.wakapro_penerima?.nama_lengkap ?? '(belum dikonfirmasi)'],
   ]
 
   doc.setFontSize(8.5)
@@ -329,7 +329,7 @@ export const generateSuratJalan = (data: SuratJalanData): void => {
     startX + (colW + gap) * 2,
     sigY,
     colW,
-    'Penerima (Wakapro),',
+    'Penerima (Kaprog),',
     data.wakapro_penerima?.nama_lengkap ?? '',
     true,
   )
@@ -354,8 +354,8 @@ export const generateSuratJalan = (data: SuratJalanData): void => {
 
 /**
  * Buat dan unduh PDF BAST (Berita Acara Serah Terima).
- * BAST hanya ada setelah wakapro mengkonfirmasi penerimaan (status = diterima).
- * Berisi kolom tanda tangan: Wakapro Penerima (kiri) & Wakasek Sarpras (kanan, mengetahui).
+ * BAST hanya ada setelah Kaprog mengkonfirmasi penerimaan (status = diterima).
+ * Berisi kolom tanda tangan: Kaprog Penerima (kiri) & Wakasek Sarpras (kanan, mengetahui).
  */
 export const generateBast = (response: BastApiResponse): void => {
   const { distribusi: data, wakasek } = response
@@ -491,7 +491,7 @@ export const generateBast = (response: BastApiResponse): void => {
     { align: 'right' },
   )
 
-  // Kiri: Penerima (Wakapro)
+  // Kiri: Penerima (Kaprog)
   drawSignatureBlock(
     doc,
     startX,
@@ -554,7 +554,7 @@ export const generateSuratJalanBulk = (response: SuratJalanBulkApiResponse): voi
     ['Tanggal Pengiriman', fmtTanggal(first.tanggal_kirim)],
     ['Tujuan Pengiriman', fmtTujuan(first.ruangan_tujuan)],
     ['Dikirim Oleh', first.petugas_pengirim?.nama_lengkap ?? '-'],
-    ['Penerima (Wakapro)', first.wakapro_penerima?.nama_lengkap ?? '(belum dikonfirmasi)'],
+    ['Penerima (Kaprog)', first.wakapro_penerima?.nama_lengkap ?? '(belum dikonfirmasi)'],
     ['Jumlah Jenis Barang', `${items.length} jenis (${items.reduce((s, i) => s + (i.jumlah || 0), 0)} unit total)`],
   ]
 
@@ -661,7 +661,7 @@ export const generateSuratJalanBulk = (response: SuratJalanBulkApiResponse): voi
     startX + (colW + gap) * 2,
     sigY,
     colW,
-    'Penerima (Wakapro),',
+    'Penerima (Kaprog),',
     first.wakapro_penerima?.nama_lengkap ?? '',
     true,
   )

@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useRef } from 'react'
 import axios from '@/lib/axios'
@@ -886,7 +886,7 @@ export default function PenerimaanPage() {
                 </div>
               )}
 
-              {/* Upload Foto Kondisi Wakapro (opsional, semua kondisi) */}
+              {/* Upload Foto Kondisi Kaprog (opsional, semua kondisi) */}
               {aksi === 'terima' && (
                 <div>
                   <label className="block text-xs font-bold text-indigo-600 mb-1.5 flex items-center gap-1.5">

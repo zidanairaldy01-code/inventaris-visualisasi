@@ -8,9 +8,10 @@ import {
   Package, AlertTriangle, CheckCircle2, Search, RefreshCw,
   FileSpreadsheet, Plus, Upload, DollarSign, Layers, TrendingUp,
   Camera, Edit2, Trash2, X, Loader2, Download, ChevronLeft, ChevronRight,
-  Folder, FolderOpen, ArrowLeft, Grid, List as ListIcon, FolderPlus, MoreVertical, Save
+  Folder, FolderOpen, ArrowLeft, Grid, List as ListIcon, FolderPlus, MoreVertical, Save, FileText
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { exportFolderSaranaPdf } from '@/lib/exportLaporanPdf';
 import Toast from '@/components/Toast';
 import AsetFotoModal from '@/components/AsetFotoModal';
 import SaranaPrasaranaDetailModal from '@/components/SaranaPrasaranaDetailModal';
@@ -336,6 +337,13 @@ export default function SaranaPrasaranaPage() {
   // Folder navigation: null = Root (Folders Grid), number = Inside Folder ID, -1 = Loose items (Tanpa Folder)
   const [activeFolderId, setActiveFolderId] = useState<number | null | -1>(null);
   const [viewMode, setViewMode] = useState<'folders' | 'all'>('folders');
+  const [exportMenuFolderId, setExportMenuFolderId] = useState<number | null>(null);
+
+  useEffect(() => {
+    const handleCloseMenu = () => setExportMenuFolderId(null);
+    window.addEventListener('click', handleCloseMenu);
+    return () => window.removeEventListener('click', handleCloseMenu);
+  }, []);
 
   // Multi-select Checkbox Batch Delete
   const [isSelectMode, setIsSelectMode] = useState(false);
@@ -792,6 +800,46 @@ export default function SaranaPrasaranaPage() {
     showToast('Template berhasil didownload', 'success');
   };
 
+    const exportPdf = () => {
+    if (!filtered.length) { showToast('Tidak ada data untuk diexport', 'warning'); return; }
+    exportFolderSaranaPdf({
+      folderName: activeFolderTitle,
+      items: filtered,
+    });
+    showToast(`Export PDF ${filtered.length} data berhasil`, 'success');
+  };
+
+  const handleExportFolderExcel = (folderName: string, items: SaranaPrasaranaItem[]) => {
+    if (!items.length) {
+      showToast('Tidak ada data dalam folder ini untuk diexport', 'warning');
+      return;
+    }
+    const ws = XLSX.utils.json_to_sheet(items.map((a, i) => ({
+      'NO': i + 1,
+      'JENIS KEKAYAAN': a.nama_barang,
+      'KONDISI': a.kondisi || 'Baik',
+      'LUAS/JUMLAH': a.luas_jumlah || (a.stok_akhir !== undefined ? `${a.stok_akhir} ${a.satuan || 'Unit'}` : '-'),
+      'NILAI HARGA PEMBELIAN': a.nilai_harga_pembelian || 0,
+      'NILAI HARGA SEKARANG': a.nilai_harga_sekarang || 0,
+      'KET': a.keterangan || '',
+    })));
+    const wb = XLSX.utils.book_new();
+    const sheetName = folderName.substring(0, 31).replace(/[\\/?*[\]]/g, '_');
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    const safeName = folderName.replace(/[^a-zA-Z0-9_\-]/g, '_');
+    XLSX.writeFile(wb, `Sarana_Prasarana_${safeName}_${new Date().toISOString().split('T')[0]}.xlsx`);
+    showToast(`Export Excel "${folderName}" berhasil (${items.length} items)`, 'success');
+  };
+
+  const handleExportFolderPdf = (folderName: string, items: SaranaPrasaranaItem[]) => {
+    if (!items.length) {
+      showToast('Tidak ada data dalam folder ini untuk diexport', 'warning');
+      return;
+    }
+    exportFolderSaranaPdf({ folderName, items });
+    showToast(`Export PDF "${folderName}" berhasil (${items.length} items)`, 'success');
+  };
+
   const exportExcel = () => {
     if (!filtered.length) { showToast('Tidak ada data untuk diexport', 'warning'); return; }
     const ws = XLSX.utils.json_to_sheet(filtered.map((a, i) => ({
@@ -880,9 +928,15 @@ export default function SaranaPrasaranaPage() {
                 <span>{isSelectMode ? 'Batal Pilih' : 'Hapus Beberapa'}</span>
               </button>
             )}
+            <button onClick={exportPdf} disabled={!filtered.length}
+              className="flex items-center gap-2 px-3.5 py-2.5 bg-rose-600/80 backdrop-blur-sm border border-rose-400/40 text-white rounded-xl hover:bg-rose-600 text-sm font-semibold transition-colors disabled:opacity-40"
+              title="Export Laporan PDF Resmi">
+              <FileText className="h-4 w-4" /> Export PDF
+            </button>
             <button onClick={exportExcel} disabled={!filtered.length}
-              className="flex items-center gap-2 px-3.5 py-2.5 bg-white/10 backdrop-blur-sm border border-white/20 text-white rounded-xl hover:bg-white/20 text-sm font-semibold transition-colors disabled:opacity-40">
-              <Download className="h-4 w-4" /> Export
+              className="flex items-center gap-2 px-3.5 py-2.5 bg-white/10 backdrop-blur-sm border border-white/20 text-white rounded-xl hover:bg-white/20 text-sm font-semibold transition-colors disabled:opacity-40"
+              title="Export Data Excel">
+              <Download className="h-4 w-4" /> Export Excel
             </button>
             <button onClick={openImport}
               className="flex items-center gap-2 px-3.5 py-2.5 bg-white text-indigo-700 hover:bg-blue-50 rounded-xl text-sm font-bold transition-all shadow-md">
@@ -1036,7 +1090,58 @@ export default function SaranaPrasaranaPage() {
                     <div className="p-3 rounded-2xl bg-indigo-50 text-indigo-600 group-hover:scale-110 transition-transform">
                       <Folder className="h-7 w-7" />
                     </div>
-                    <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center gap-1.5">
+                      {/* Tombol Export Folder (Dropdown Opsi 1) */}
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExportMenuFolderId(exportMenuFolderId === f.id ? null : f.id);
+                          }}
+                          className="flex items-center gap-1 px-2 py-1 bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 rounded-lg text-xs font-semibold transition-colors border border-slate-200/80 shadow-2xs"
+                          title="Export Folder ini ke Excel atau PDF"
+                        >
+                          <Download className="h-3 w-3 text-slate-500" />
+                          <span>Export</span>
+                        </button>
+                        {exportMenuFolderId === f.id && (
+                          <div
+                            onClick={(e) => e.stopPropagation()}
+                            className="absolute right-0 top-full mt-1.5 w-48 bg-white rounded-xl shadow-xl border border-slate-200 p-1.5 z-40 animate-in fade-in zoom-in-95 text-left"
+                          >
+                            <div className="px-2.5 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">
+                              Export Folder ({itemCount})
+                            </div>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setExportMenuFolderId(null);
+                                handleExportFolderExcel(f.nama_folder, asets.filter(a => Number(a.id_folder) === f.id));
+                              }}
+                              className="w-full flex items-center gap-2 px-2.5 py-2 text-xs text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 rounded-lg transition-colors text-left font-medium mt-1"
+                            >
+                              <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600" />
+                              Export Excel (.xlsx)
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setExportMenuFolderId(null);
+                                handleExportFolderPdf(f.nama_folder, asets.filter(a => Number(a.id_folder) === f.id));
+                              }}
+                              className="w-full flex items-center gap-2 px-2.5 py-2 text-xs text-slate-700 hover:bg-rose-50 hover:text-rose-700 rounded-lg transition-colors text-left font-medium"
+                            >
+                              <FileText className="h-3.5 w-3.5 text-rose-600" />
+                              Export PDF (.pdf)
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Tombol Edit & Hapus */}
                       <button onClick={(e) => openEditFolder(f, e)} className="p-1.5 hover:bg-slate-100 text-slate-500 rounded-lg transition-colors" title="Edit Folder">
                         <Edit2 className="h-3.5 w-3.5" />
                       </button>
@@ -1067,9 +1172,59 @@ export default function SaranaPrasaranaPage() {
                 <div className="p-3 rounded-2xl bg-linear-to-tr from-indigo-600 to-blue-600 text-white shadow-md shadow-indigo-200 group-hover:scale-110 transition-transform">
                   <Layers className="h-7 w-7" />
                 </div>
-                <span className="px-2 py-0.5 text-[10px] font-bold bg-indigo-100 text-indigo-700 rounded-full border border-indigo-200">
-                  Semua Data
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="px-2 py-0.5 text-[10px] font-bold bg-indigo-100 text-indigo-700 rounded-full border border-indigo-200">
+                    Semua Data
+                  </span>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setExportMenuFolderId(exportMenuFolderId === -1 ? null : -1);
+                      }}
+                      className="flex items-center gap-1 px-2 py-1 bg-white hover:bg-indigo-100 text-indigo-600 rounded-lg text-xs font-semibold transition-colors border border-indigo-200 shadow-2xs"
+                      title="Export Semua Data ke Excel atau PDF"
+                    >
+                      <Download className="h-3 w-3 text-indigo-600" />
+                      <span>Export</span>
+                    </button>
+                    {exportMenuFolderId === -1 && (
+                      <div
+                        onClick={(e) => e.stopPropagation()}
+                        className="absolute right-0 top-full mt-1.5 w-48 bg-white rounded-xl shadow-xl border border-slate-200 p-1.5 z-40 animate-in fade-in zoom-in-95 text-left"
+                      >
+                        <div className="px-2.5 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">
+                          Export Semua Data ({asets.length})
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExportMenuFolderId(null);
+                            handleExportFolderExcel('Folder Keseluruhan', asets);
+                          }}
+                          className="w-full flex items-center gap-2 px-2.5 py-2 text-xs text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 rounded-lg transition-colors text-left font-medium mt-1"
+                        >
+                          <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600" />
+                          Export Excel (.xlsx)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExportMenuFolderId(null);
+                            handleExportFolderPdf('Folder Keseluruhan', asets);
+                          }}
+                          className="w-full flex items-center gap-2 px-2.5 py-2 text-xs text-slate-700 hover:bg-rose-50 hover:text-rose-700 rounded-lg transition-colors text-left font-medium"
+                        >
+                          <FileText className="h-3.5 w-3.5 text-rose-600" />
+                          Export PDF (.pdf)
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
               <div>
                 <h3 className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">Folder Keseluruhan</h3>
@@ -1166,7 +1321,7 @@ export default function SaranaPrasaranaPage() {
                         </td>
                         <td className="px-4 py-3 text-center">
                           <span className="font-bold text-slate-800">
-                            {aset.luas_jumlah || (aset.stok_akhir ? `${aset.stok_akhir} ${aset.satuan}` : '-')}
+                            {aset.luas_jumlah || (aset.stok_akhir !== undefined ? aset.stok_akhir : '-')}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-right">

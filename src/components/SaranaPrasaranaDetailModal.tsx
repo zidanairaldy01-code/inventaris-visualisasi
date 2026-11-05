@@ -242,7 +242,7 @@ export default function SaranaPrasaranaDetailModal({ item, folderName, onClose }
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Luas / Jumlah</span>
                   </div>
                   <p className="text-base font-bold text-slate-900">
-                    {item.luas_jumlah || (item.stok_akhir ? `${item.stok_akhir} ${item.satuan}` : '-')}
+                    {item.luas_jumlah || (item.stok_akhir !== undefined ? item.stok_akhir : '-')}
                   </p>
                 </div>
                 <div className="bg-slate-50 rounded-2xl p-3.5 border border-slate-100">

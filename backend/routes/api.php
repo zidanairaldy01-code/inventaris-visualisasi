@@ -99,6 +99,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('servises/{servis}', [ServisController::class, 'update']); // Support PUT via POST + _method for file uploads
     Route::apiResource('servises', ServisController::class);
     Route::get('peminjamans', [PeminjamanController::class, 'index']); // Dipindahkan ke auth untuk mendukung filter per wakapro
+    Route::post('peminjamans/{id}/pengembalian', [PeminjamanController::class, 'kembalikan']);
     Route::apiResource('peminjamans', PeminjamanController::class)->except(['index']);
 
     // Laporan

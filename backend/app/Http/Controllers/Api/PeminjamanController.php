@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Peminjaman;
+use App\Models\PengembalianPeminjaman;
 use App\Models\Aset;
 use App\Models\SaranaPrasarana;
 use App\Models\DistribusiAset;
@@ -16,7 +17,7 @@ class PeminjamanController extends Controller
     {
         $user = $request->user();
 
-        $query = Peminjaman::with(['aset.ruangan', 'aset.kategori', 'saranaPrasarana.folder'])
+        $query = Peminjaman::with(['aset.ruangan', 'aset.kategori', 'saranaPrasarana.folder', 'pengembalians'])
             ->orderBy('created_at', 'desc');
 
         // Jika wakapro, batasi hanya peminjaman dari aset atau sarana prasarana di ruangan workshop-nya
@@ -52,7 +53,7 @@ class PeminjamanController extends Controller
             'tanggal_pinjam'          => 'required|date',
             'tanggal_kembali_rencana' => 'nullable|date',
             'keperluan'               => 'nullable|string',
-            'status'                  => 'nullable|in:Dipinjam,Dikembalikan,Terlambat',
+            'status'                  => 'nullable|in:Dipinjam,Dikembalikan Sebagian,Dikembalikan,Terlambat',
         ]);
 
         if (empty($validated['id_aset']) && empty($validated['sarana_prasarana_id'])) {
@@ -88,7 +89,7 @@ class PeminjamanController extends Controller
         }
 
         $peminjaman = Peminjaman::create($validated);
-        $peminjaman->load(['aset.ruangan', 'aset.kategori', 'saranaPrasarana.folder']);
+        $peminjaman->load(['aset.ruangan', 'aset.kategori', 'saranaPrasarana.folder', 'pengembalians']);
 
         $namaBarang = $peminjaman->saranaPrasarana?->nama_barang 
             ?? $peminjaman->aset?->nama_aset 
@@ -108,7 +109,7 @@ class PeminjamanController extends Controller
 
     public function show($id)
     {
-        $peminjaman = Peminjaman::with(['aset.ruangan', 'aset.kategori', 'saranaPrasarana.folder'])->findOrFail($id);
+        $peminjaman = Peminjaman::with(['aset.ruangan', 'aset.kategori', 'saranaPrasarana.folder', 'pengembalians'])->findOrFail($id);
         return response()->json($peminjaman);
     }
 
@@ -126,7 +127,7 @@ class PeminjamanController extends Controller
             'tanggal_kembali_rencana' => 'nullable|date',
             'tanggal_kembali_aktual'  => 'nullable|date',
             'keperluan'               => 'nullable|string',
-            'status'                  => 'sometimes|required|in:Dipinjam,Dikembalikan,Terlambat',
+            'status'                  => 'sometimes|required|in:Dipinjam,Dikembalikan Sebagian,Dikembalikan,Terlambat',
         ]);
 
         // Check if status changed to "Dikembalikan" - BARANG MASUK
@@ -139,7 +140,7 @@ class PeminjamanController extends Controller
         }
 
         $peminjaman->update($validated);
-        $peminjaman->load(['aset.ruangan', 'aset.kategori', 'saranaPrasarana.folder']);
+        $peminjaman->load(['aset.ruangan', 'aset.kategori', 'saranaPrasarana.folder', 'pengembalians']);
 
         // Create history when returned
         if ($statusBerubah) {
@@ -157,6 +158,97 @@ class PeminjamanController extends Controller
         }
 
         return response()->json($peminjaman);
+    }
+
+    /**
+     * Catat pengembalian barang (baik sebagian maupun seluruhnya).
+     */
+    public function kembalikan(Request $request, $id)
+    {
+        $peminjaman = Peminjaman::with('pengembalians')->findOrFail($id);
+
+        $validated = $request->validate([
+            'jumlah_kembali'  => 'required|integer|min:1',
+            'tanggal_kembali' => 'required|date',
+            'kondisi'         => 'required|string|in:Baik,Rusak Ringan,Rusak Berat,Hilang',
+            'keterangan'      => 'nullable|string',
+        ]);
+
+        $sudahKembali = (int) $peminjaman->pengembalians->sum('jumlah_kembali');
+        $sisaPinjam = max(0, (int) $peminjaman->jumlah - $sudahKembali);
+
+        if ($validated['jumlah_kembali'] > $sisaPinjam) {
+            return response()->json([
+                'message' => "Jumlah yang dikembalikan ({$validated['jumlah_kembali']}) melebihi sisa pinjaman yang belum kembali ({$sisaPinjam})."
+            ], 422);
+        }
+
+        // 1. Simpan ke tabel pengembalian_peminjamans
+        $pengembalian = PengembalianPeminjaman::create([
+            'peminjaman_id'   => $peminjaman->id,
+            'jumlah_kembali'  => $validated['jumlah_kembali'],
+            'tanggal_kembali' => $validated['tanggal_kembali'],
+            'kondisi'         => $validated['kondisi'],
+            'keterangan'      => $validated['keterangan'] ?? null,
+            'id_user'         => $request->user()?->id,
+        ]);
+
+        $namaBarang = $peminjaman->saranaPrasarana?->nama_barang 
+            ?? $peminjaman->aset?->nama_aset 
+            ?? 'Barang';
+
+        // 2. Jika kondisi HILANG: kurangi stok fisik inventaris
+        if ($validated['kondisi'] === 'Hilang') {
+            if ($peminjaman->sarana_prasarana_id) {
+                $sarana = SaranaPrasarana::find($peminjaman->sarana_prasarana_id);
+                if ($sarana) {
+                    $sarana->stok_keluar += (int) $validated['jumlah_kembali'];
+                    $sarana->save();
+                }
+            } elseif ($peminjaman->id_aset) {
+                $aset = Aset::find($peminjaman->id_aset);
+                if ($aset) {
+                    $aset->jumlah = max(0, (int) $aset->jumlah - (int) $validated['jumlah_kembali']);
+                    $aset->save();
+                }
+            }
+
+            History::create([
+                'id_aset'    => $peminjaman->id_aset,
+                'id_user'    => $request->user()?->id,
+                'aksi'       => 'BARANG_HILANG',
+                'keterangan' => "{$namaBarang} dinyatakan HILANG saat pengembalian oleh {$peminjaman->nama_peminjam} sejumlah {$validated['jumlah_kembali']} unit. Stok inventaris dikurangi.",
+                'tanggal'    => now()
+            ]);
+        } else {
+            // Kondisi Baik / Rusak Ringan / Rusak Berat -> Stok tidak berkurang, riwayat tercatat
+            History::create([
+                'id_aset'    => $peminjaman->id_aset,
+                'id_user'    => $request->user()?->id,
+                'aksi'       => 'PENGEMBALIAN',
+                'keterangan' => "{$namaBarang} dikembalikan oleh {$peminjaman->nama_peminjam} sejumlah {$validated['jumlah_kembali']} unit dengan kondisi '{$validated['kondisi']}'." . ($validated['keterangan'] ? " Catatan: {$validated['keterangan']}" : ''),
+                'tanggal'    => now()
+            ]);
+        }
+
+        // 3. Perbarui status peminjaman
+        $totalKembaliBaru = $sudahKembali + (int) $validated['jumlah_kembali'];
+        if ($totalKembaliBaru >= (int) $peminjaman->jumlah) {
+            $peminjaman->status = 'Dikembalikan';
+            $peminjaman->tanggal_kembali_aktual = $validated['tanggal_kembali'];
+        } else {
+            $peminjaman->status = 'Dikembalikan Sebagian';
+        }
+        $peminjaman->save();
+
+        $peminjaman->load(['aset.ruangan', 'aset.kategori', 'saranaPrasarana.folder', 'pengembalians']);
+
+        return response()->json([
+            'status'       => 'success',
+            'message'      => 'Pengembalian barang berhasil dicatat.',
+            'data'         => $peminjaman,
+            'pengembalian' => $pengembalian,
+        ]);
     }
 
     public function destroy($id)

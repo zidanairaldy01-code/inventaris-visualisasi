@@ -62,11 +62,25 @@ class SaranaPrasarana extends Model
         return $this->hasMany(\App\Models\DistribusiAset::class, 'sarana_prasarana_id');
     }
 
-    // Auto calculate stok_akhir before saving
+    // Auto calculate stok_akhir and synchronize luas_jumlah before saving
     protected static function booted()
     {
         static::saving(function ($item) {
-            $item->stok_akhir = $item->stok_awal + $item->stok_masuk - $item->stok_keluar;
+            $item->stok_akhir = max(0, (int) $item->stok_awal + (int) $item->stok_masuk - (int) $item->stok_keluar);
+
+            // Jika luas_jumlah berupa angka murni atau kuantitas unit, sinkronkan dengan stok_akhir
+            if (!empty($item->luas_jumlah)) {
+                $trimmed = trim((string) $item->luas_jumlah);
+                if (is_numeric($trimmed)) {
+                    $item->luas_jumlah = (string) $item->stok_akhir;
+                } elseif (preg_match('/^\d+(\s+[a-zA-Z]+.*)$/', $trimmed, $m)) {
+                    $item->luas_jumlah = $item->stok_akhir . $m[1];
+                } elseif (preg_match('/^(.*?\/ *)\d+$/', $trimmed, $m)) {
+                    $item->luas_jumlah = $m[1] . $item->stok_akhir;
+                }
+            } else {
+                $item->luas_jumlah = (string) $item->stok_akhir;
+            }
         });
     }
 }

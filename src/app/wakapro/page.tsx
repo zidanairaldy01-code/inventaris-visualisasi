@@ -47,7 +47,7 @@ export default function WakaproDashboardPage() {
       .then(([userRes, wakaproStatsRes]) => {
         setUser(userRes.data);
         
-        // Verify user role is wakapro
+        // Verify user role is Kaprog
         if (userRes.data && userRes.data.role !== 'wakapro') {
           router.push('/');
           return;
@@ -56,7 +56,7 @@ export default function WakaproDashboardPage() {
         setWakaproStats({ ...defaultWakaproStats, ...wakaproStatsRes.data });
       })
       .catch(err => {
-        console.error('Gagal memuat statistik dashboard wakapro', err);
+        console.error('Gagal memuat statistik dashboard Kaprog', err);
       })
       .finally(() => setLoading(false));
   };

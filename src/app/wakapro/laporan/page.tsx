@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import axios from '@/lib/axios';
 import * as XLSX from 'xlsx';
+import { exportLaporanPdf } from '@/lib/exportLaporanPdf';
 import {
   FileText, Search, Download, Loader2,
   Package, Wrench, Handshake, ChevronDown, AlertCircle,
@@ -200,7 +201,9 @@ export default function LaporanPage() {
       const v = String(val);
       const cls = v === 'Selesai' || v === 'Dikembalikan' || v === 'aktif' || v === 'Disetujui'
         ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-        : v === 'Proses' || v === 'Dipinjam' || v === 'Menunggu Persetujuan'
+        : v === 'Dikembalikan Sebagian'
+        ? 'bg-amber-50 text-amber-700 border-amber-200'
+        : v === 'Proses' || v === 'Dipinjam' || v === 'Menunggu Persetujuan' || v === 'Terlambat'
         ? 'bg-blue-50 text-blue-700 border-blue-200'
         : 'bg-rose-50 text-rose-700 border-rose-200';
       return <span className={`px-2 py-0.5 rounded-md text-xs font-semibold border ${cls}`}>{v}</span>;
@@ -226,6 +229,20 @@ export default function LaporanPage() {
     const sheetName = cfg.label.substring(0, 31);
     XLSX.utils.book_append_sheet(wb, ws, sheetName);
     XLSX.writeFile(wb, `Laporan_${tipe}_${dari}_sd_${sampai}.xlsx`);
+  };
+
+  // ── Export PDF ─────────────────────────────────────────────────────────────
+  const handleExportPdf = () => {
+    if (!result) return;
+    exportLaporanPdf({
+      tipe,
+      label: cfg.label,
+      dari,
+      sampai,
+      columns,
+      data: filteredData,
+      ringkasan: result.ringkasan,
+    });
   };
 
   // ── Ringkasan cards ────────────────────────────────────────────────────────
@@ -322,13 +339,24 @@ export default function LaporanPage() {
           </p>
         </div>
         {result && (
-          <button
-            onClick={handleExport}
-            className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold transition-all shadow-sm"
-          >
-            <Download className="h-4 w-4" />
-            Export Excel
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleExportPdf}
+              className="flex items-center gap-2 px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-sm font-bold transition-all shadow-sm"
+              title="Cetak / Download Laporan PDF Resmi"
+            >
+              <FileText className="h-4 w-4" />
+              Export PDF
+            </button>
+            <button
+              onClick={handleExport}
+              className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold transition-all shadow-sm"
+              title="Download Data Laporan Excel"
+            >
+              <Download className="h-4 w-4" />
+              Export Excel
+            </button>
+          </div>
         )}
       </div>
 
@@ -467,11 +495,20 @@ export default function LaporanPage() {
                   {filteredData.length} dari {result.data.length}
                 </span>
                 <button
+                  onClick={handleExportPdf}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-xs font-semibold hover:bg-rose-100 transition-colors"
+                  title="Unduh format PDF resmi"
+                >
+                  <FileText className="h-3.5 w-3.5" />
+                  PDF
+                </button>
+                <button
                   onClick={handleExport}
                   className="flex items-center gap-1.5 px-3 py-2 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl text-xs font-semibold hover:bg-emerald-100 transition-colors"
+                  title="Unduh format Excel"
                 >
                   <Download className="h-3.5 w-3.5" />
-                  Export
+                  Excel
                 </button>
               </div>
             </div>

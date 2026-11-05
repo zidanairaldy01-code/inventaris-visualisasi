@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -83,7 +83,7 @@ function getHrefForRole(href: string, role: string, isDynamic?: boolean): string
     return href; // super_admin stays at /dashboard
   }
 
-  // For wakapro role, map all accessible routes to /wakapro/...
+  // For wakapro role, map all accessible routes to /Kaprog/...
   if (role === 'wakapro') {
     if (href === '/dashboard/penerimaan') return '/wakapro/penerimaan';
     if (href === '/dashboard/peminjaman') return '/wakapro/peminjaman';

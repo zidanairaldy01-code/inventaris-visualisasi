@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
@@ -158,7 +158,7 @@ export default function WakasekServisPage() {
             Persetujuan Servis Aset
           </h1>
           <p className="text-sm text-slate-400 mt-1 ml-11">
-            Tinjau pengajuan kerusakan dari Wakapro — ACC dan tentukan anggaran, atau tolak jika tidak sesuai
+            Tinjau pengajuan kerusakan dari Kaprog — ACC dan tentukan anggaran, atau tolak jika tidak sesuai
           </p>
         </div>
         <button onClick={() => fetchData(true)} className="p-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-500 transition-colors self-start sm:self-auto" title="Muat Ulang">
@@ -174,7 +174,7 @@ export default function WakasekServisPage() {
           </div>
           <div>
             <p className="text-sm font-bold text-amber-800">{totalMenunggu} Pengajuan Servis Menunggu Persetujuan Anda</p>
-            <p className="text-xs text-amber-600 mt-0.5">Wakapro menunggu ACC anggaran dari Anda agar proses servis dapat dimulai.</p>
+            <p className="text-xs text-amber-600 mt-0.5">Kaprog menunggu ACC anggaran dari Anda agar proses servis dapat dimulai.</p>
           </div>
           <button onClick={() => setStatusFilter('Menunggu Persetujuan')} className="ml-auto px-3 py-1.5 bg-amber-600 text-white text-xs font-bold rounded-xl hover:bg-amber-700 transition-colors shrink-0">
             Tinjau Sekarang
@@ -213,7 +213,7 @@ export default function WakasekServisPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
             <input
               type="text"
-              placeholder="Cari barang, Wakapro, jenis perbaikan..."
+              placeholder="Cari barang, Kaprog, jenis perbaikan..."
               value={search}
               onChange={e => setSearch(e.target.value)}
               className="w-full pl-9 pr-4 py-2 text-sm border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 focus:bg-white transition-all"
@@ -243,7 +243,7 @@ export default function WakasekServisPage() {
                 <th className="px-4 py-3.5 font-semibold">Barang & Workshop</th>
                 <th className="px-4 py-3.5 font-semibold">Kerusakan & Perbaikan</th>
                 <th className="px-4 py-3.5 font-semibold text-center">Foto</th>
-                <th className="px-4 py-3.5 font-semibold">Pelapor (Wakapro)</th>
+                <th className="px-4 py-3.5 font-semibold">Pelapor (Kaprog)</th>
                 <th className="px-4 py-3.5 font-semibold text-right">Biaya Servis</th>
                 <th className="px-4 py-3.5 font-semibold">Status</th>
                 <th className="px-4 py-3.5 font-semibold text-center">Aksi Wakasek</th>
@@ -263,7 +263,7 @@ export default function WakasekServisPage() {
                     <p className="font-semibold text-slate-500 text-sm">
                       {statusFilter === 'Menunggu Persetujuan' ? 'Tidak ada pengajuan yang menunggu ACC' : 'Tidak ada data servis'}
                     </p>
-                    <p className="text-slate-400 text-xs mt-1">Laporan kerusakan dari Wakapro akan muncul di sini.</p>
+                    <p className="text-slate-400 text-xs mt-1">Laporan kerusakan dari Kaprog akan muncul di sini.</p>
                   </td>
                 </tr>
               ) : (
@@ -313,7 +313,7 @@ export default function WakasekServisPage() {
                               item.pelapor.role === 'admin' ? 'bg-blue-100 text-blue-800' :
                               'bg-purple-100 text-purple-800'
                             }`}>
-                              {item.pelapor.role === 'super_admin' ? 'Super Admin' : item.pelapor.role === 'admin' ? 'Admin' : 'Wakapro'}
+                              {item.pelapor.role === 'super_admin' ? 'Super Admin' : item.pelapor.role === 'admin' ? 'Admin' : 'Kaprog'}
                             </span>
                           )}
                         </div>
@@ -421,7 +421,7 @@ export default function WakasekServisPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Catatan untuk Wakapro & Admin (Opsional)</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Catatan untuk Kaprog & Admin (Opsional)</label>
                 <textarea
                   rows={2}
                   placeholder="Instruksi tambahan atau catatan persetujuan..."
@@ -465,7 +465,7 @@ export default function WakasekServisPage() {
             </div>
             <form onSubmit={handleTolak} className="p-5 space-y-4">
               <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-700">
-                <strong>Perhatian:</strong> Pengajuan ditolak akan dikembalikan ke Wakapro dengan alasan. Wakapro dapat mengajukan ulang jika diperlukan.
+                <strong>Perhatian:</strong> Pengajuan ditolak akan dikembalikan ke Kaprog dengan alasan. Kaprog dapat mengajukan ulang jika diperlukan.
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
@@ -473,7 +473,7 @@ export default function WakasekServisPage() {
                 </label>
                 <textarea
                   rows={3}
-                  placeholder="Jelaskan alasan penolakan kepada Wakapro..."
+                  placeholder="Jelaskan alasan penolakan kepada Kaprog..."
                   value={tolakForm.catatan_wakasek}
                   onChange={e => setTolakForm({ catatan_wakasek: e.target.value })}
                   required

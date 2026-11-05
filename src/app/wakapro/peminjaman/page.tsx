@@ -1,10 +1,13 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import axios from '@/lib/axios';
 import { showErrorAlert } from '@/utils/errorHandler';
-import { Handshake, Plus, Search, RefreshCw, CheckCircle2, Clock, X, Trash2, Edit2, Loader2, RotateCcw, User, Laptop } from 'lucide-react';
+import { 
+  Handshake, Plus, Search, RefreshCw, CheckCircle2, Clock, X, 
+  Trash2, Edit2, Loader2, RotateCcw, User, Laptop, History, AlertCircle 
+} from 'lucide-react';
 import { useIsMobile } from '@/hooks/useMediaQuery';
 import { 
   MobileCard, 
@@ -12,6 +15,9 @@ import {
   MobileCardRow, 
   MobileCardActions 
 } from '@/components/MobileCard';
+import PengembalianModal from '@/components/peminjaman/PengembalianModal';
+import RiwayatPengembalianModal from '@/components/peminjaman/RiwayatPengembalianModal';
+import { PeminjamanItem } from '@/types/peminjaman';
 
 interface BarangWorkshop {
   id: number;
@@ -24,36 +30,6 @@ interface BarangWorkshop {
   jumlah: number;
   satuan: string;
   keterangan: string | null;
-}
-
-interface Aset {
-  id: number;
-  kode_aset: string | null;
-  nama_aset: string;
-  jumlah: number;
-  satuan: string;
-  ruangan?: { nama_ruangan: string };
-}
-
-interface PeminjamanItem {
-  id: number;
-  id_aset?: number | null;
-  sarana_prasarana_id?: number | null;
-  nama_peminjam: string;
-  role_peminjam: string;
-  jumlah: number;
-  tanggal_pinjam: string;
-  tanggal_kembali_rencana: string | null;
-  tanggal_kembali_aktual: string | null;
-  keperluan: string | null;
-  status: 'Dipinjam' | 'Dikembalikan' | 'Terlambat';
-  aset?: Aset;
-  sarana_prasarana?: {
-    id: number;
-    nama_barang: string;
-    kode: string | null;
-    satuan: string | null;
-  };
 }
 
 export default function WakaproPeminjamanPage() {
@@ -72,7 +48,6 @@ export default function WakaproPeminjamanPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<PeminjamanItem | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [returningId, setReturningId] = useState<number | null>(null);
   const [formData, setFormData] = useState({
     item_key: '',
     id_aset: '',
@@ -86,6 +61,10 @@ export default function WakaproPeminjamanPage() {
     status: 'Dipinjam',
   });
 
+  // Modal Pengembalian & Riwayat
+  const [returnModalItem, setReturnModalItem] = useState<PeminjamanItem | null>(null);
+  const [historyModalItem, setHistoryModalItem] = useState<PeminjamanItem | null>(null);
+
   useEffect(() => {
     setMounted(true);
     fetchData();
@@ -96,7 +75,6 @@ export default function WakaproPeminjamanPage() {
     try {
       const [peminjamanRes, workshopRes] = await Promise.all([
         axios.get('/api/peminjamans'),
-        // Ambil HANYA barang yang ada di workshop wakapro yang sedang login
         axios.get('/api/workshop/pilih-barang'),
       ]);
       setPeminjamans(peminjamanRes.data || []);
@@ -203,25 +181,8 @@ export default function WakaproPeminjamanPage() {
     }
   };
 
-  const handleReturn = async (id: number) => {
-    if (!confirm('Tandai peminjaman ini sebagai SUDAH DIKEMBALIKAN?')) return;
-    setReturningId(id);
-    try {
-      await axios.put(`/api/peminjamans/${id}`, {
-        status: 'Dikembalikan',
-        tanggal_kembali_aktual: new Date().toISOString().split('T')[0],
-      });
-      fetchData(true);
-    } catch (err) {
-      console.error(err);
-      showErrorAlert(err, 'Gagal Memperbarui Status Peminjaman');
-    } finally {
-      setReturningId(null);
-    }
-  };
-
   const handleDelete = async (id: number) => {
-    if (!confirm('Apakah Anda yakin ingin menghapus data peminjaman ini?')) return;
+    if (!confirm('Apakah Anda yakin ingin menghapus data peminjaman ini? Seluruh riwayat pengembaliannya juga akan terhapus.')) return;
     try {
       await axios.delete(`/api/peminjamans/${id}`);
       fetchData(true);
@@ -246,7 +207,42 @@ export default function WakaproPeminjamanPage() {
   });
 
   const totalDipinjam = peminjamans.filter(p => p.status === 'Dipinjam').length;
+  const totalSebagian = peminjamans.filter(p => p.status === 'Dikembalikan Sebagian').length;
   const totalDikembalikan = peminjamans.filter(p => p.status === 'Dikembalikan').length;
+
+  const renderStatusBadge = (status: string) => {
+    switch (status) {
+      case 'Dikembalikan':
+        return (
+          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <CheckCircle2 className="h-3 w-3 mr-1 text-emerald-600" />
+            Dikembalikan
+          </span>
+        );
+      case 'Dikembalikan Sebagian':
+        return (
+          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+            <RotateCcw className="h-3 w-3 mr-1 text-blue-600" />
+            Kembali Sebagian
+          </span>
+        );
+      case 'Terlambat':
+        return (
+          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+            <AlertCircle className="h-3 w-3 mr-1 text-rose-600" />
+            Terlambat
+          </span>
+        );
+      case 'Dipinjam':
+      default:
+        return (
+          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+            <Clock className="h-3 w-3 mr-1 text-amber-600" />
+            Dipinjam
+          </span>
+        );
+    }
+  };
 
   return (
     <div className="space-y-6 animate-fadeInUp">
@@ -275,6 +271,7 @@ export default function WakaproPeminjamanPage() {
           <button
             onClick={() => fetchData(true)}
             className="p-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-500 transition-colors"
+            title="Muat Ulang"
           >
             <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
           </button>
@@ -289,14 +286,23 @@ export default function WakaproPeminjamanPage() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-linear-to-br from-indigo-600 to-purple-600 rounded-2xl p-5 text-white shadow-sm shadow-indigo-500/20">
           <div className="flex items-center space-x-2 mb-2">
             <Clock className="h-4 w-4 text-indigo-100" />
             <p className="text-xs font-semibold text-indigo-100 uppercase tracking-wider">Sedang Dipinjam</p>
           </div>
           <p className="text-3xl font-extrabold">{totalDipinjam} <span className="text-sm font-normal text-indigo-100">transaksi</span></p>
-          <p className="text-xs text-indigo-100 mt-1">Barang berada di luar ruangan</p>
+          <p className="text-xs text-indigo-100 mt-1">Barang berada di luar workshop</p>
+        </div>
+
+        <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
+          <div className="flex items-center space-x-2 mb-2">
+            <RotateCcw className="h-4 w-4 text-blue-500" />
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Kembali Sebagian</p>
+          </div>
+          <p className="text-3xl font-extrabold text-blue-600">{totalSebagian} <span className="text-sm font-normal text-slate-400">transaksi</span></p>
+          <p className="text-xs text-slate-400 mt-1">Masih tersisa sebagian barang</p>
         </div>
 
         <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
@@ -310,11 +316,11 @@ export default function WakaproPeminjamanPage() {
 
         <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
           <div className="flex items-center space-x-2 mb-2">
-            <Laptop className="h-4 w-4 text-blue-500" />
+            <Laptop className="h-4 w-4 text-slate-500" />
             <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Riwayat Pinjam</p>
           </div>
           <p className="text-3xl font-extrabold text-slate-900">{peminjamans.length} <span className="text-sm font-normal text-slate-400">kali</span></p>
-          <p className="text-xs text-slate-400 mt-1">Keseluruhan peminjaman</p>
+          <p className="text-xs text-slate-400 mt-1">Keseluruhan peminjaman workshop</p>
         </div>
       </div>
 
@@ -341,6 +347,7 @@ export default function WakaproPeminjamanPage() {
             >
               <option value="">Semua Status</option>
               <option value="Dipinjam">Status: Dipinjam</option>
+              <option value="Dikembalikan Sebagian">Status: Kembali Sebagian</option>
               <option value="Dikembalikan">Status: Dikembalikan</option>
             </select>
             <span className="text-xs text-slate-400 px-2.5 py-1 bg-slate-100 rounded-lg font-medium">
@@ -365,89 +372,108 @@ export default function WakaproPeminjamanPage() {
                 <p className="text-slate-400 text-xs mt-1">Klik &quot;+ Catat Peminjaman&quot; untuk mencatat peminjaman barang.</p>
               </div>
             ) : (
-              filtered.map((item) => (
-                <MobileCard key={item.id} className="p-3.5 border border-slate-100 shadow-sm">
-                  <MobileCardHeader
-                    title={
-                      <div className="flex items-center space-x-2">
-                        <User className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                        <span className="font-bold text-slate-900">{item.nama_peminjam}</span>
-                        <span className="text-[10px] font-semibold px-2 py-0.5 bg-slate-100 text-slate-600 rounded">
-                          {item.role_peminjam}
-                        </span>
-                      </div>
-                    }
-                    badge={
-                      <span className={`px-2 py-0.5 rounded-md text-[11px] font-semibold ${
-                        item.status === 'Dikembalikan'
-                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                          : 'bg-amber-50 text-amber-700 border border-amber-200'
-                      }`}>
-                        {item.status}
-                      </span>
-                    }
-                  />
-                  <div className="space-y-1.5 mt-2">
-                    <MobileCardRow
-                      label="Barang"
-                      value={
-                        <span className="font-medium text-indigo-900">
-                          {item.sarana_prasarana?.nama_barang || item.aset?.nama_aset || 'Barang Workshop'}
-                          <span className="text-xs text-slate-400 ml-1 font-normal">
-                            ({item.jumlah} {item.sarana_prasarana?.satuan || item.aset?.satuan || 'Unit'})
+              filtered.map((item) => {
+                const namaBarang = item.sarana_prasarana?.nama_barang || item.aset?.nama_aset || 'Barang Workshop';
+                const kodeBarang = item.sarana_prasarana?.kode || item.aset?.kode_aset || null;
+                const satuan = item.sarana_prasarana?.satuan || item.aset?.satuan || 'Unit';
+                const lokasi = item.aset?.ruangan?.nama_ruangan || namaWorkshop || 'Workshop';
+
+                const totalKembali = item.total_dikembalikan ?? (
+                  item.pengembalians ? item.pengembalians.reduce((acc, p) => acc + Number(p.jumlah_kembali), 0) : 0
+                );
+                const sisaPinjam = item.sisa_pinjam ?? Math.max(0, item.jumlah - totalKembali);
+
+                return (
+                  <MobileCard key={item.id} className="p-3.5 border border-slate-100 shadow-sm">
+                    <MobileCardHeader
+                      title={
+                        <div className="flex items-center space-x-2">
+                          <User className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                          <span className="font-bold text-slate-900">{item.nama_peminjam}</span>
+                          <span className="text-[10px] font-semibold px-2 py-0.5 bg-slate-100 text-slate-600 rounded">
+                            {item.role_peminjam}
                           </span>
-                        </span>
+                        </div>
                       }
+                      badge={renderStatusBadge(item.status)}
                     />
-                    <MobileCardRow
-                      label="Ruangan"
-                      value={item.aset?.ruangan?.nama_ruangan || namaWorkshop || 'Workshop'}
-                    />
-                    <MobileCardRow
-                      label="Keperluan"
-                      value={item.keperluan || '—'}
-                    />
-                    <MobileCardRow
-                      label="Tgl Pinjam"
-                      value={<span className="font-mono text-xs">{item.tanggal_pinjam}</span>}
-                    />
-                    <MobileCardRow
-                      label="Rencana Kembali"
-                      value={<span className="font-mono text-xs">{item.tanggal_kembali_rencana || '—'}</span>}
-                    />
-                  </div>
-                  <MobileCardActions className="pt-2 mt-2 border-t border-slate-100 flex flex-wrap gap-2">
-                    {item.status === 'Dipinjam' && (
-                      <button
-                        onClick={() => handleReturn(item.id)}
-                        disabled={returningId === item.id}
-                        className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-all disabled:opacity-50"
-                      >
-                        {returningId === item.id ? (
-                          <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                        ) : (
+                    <div className="space-y-1.5 mt-2">
+                      <MobileCardRow
+                        label="Barang"
+                        value={
+                          <div>
+                            <span className="font-medium text-indigo-900">{namaBarang}</span>
+                            <div className="text-xs text-slate-500 mt-0.5">
+                              Total: <span className="font-semibold text-slate-800">{item.jumlah} {satuan}</span>
+                              {item.status === 'Dikembalikan Sebagian' && (
+                                <span className="ml-1.5 text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded font-medium border border-amber-200/60">
+                                  Sisa: {sisaPinjam}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        }
+                      />
+                      {kodeBarang && (
+                        <MobileCardRow
+                          label="Kode"
+                          value={<span className="font-mono text-xs">{kodeBarang}</span>}
+                        />
+                      )}
+                      <MobileCardRow
+                        label="Ruangan"
+                        value={lokasi}
+                      />
+                      <MobileCardRow
+                        label="Keperluan"
+                        value={item.keperluan || '—'}
+                      />
+                      <MobileCardRow
+                        label="Tgl Pinjam"
+                        value={<span className="font-mono text-xs">{item.tanggal_pinjam}</span>}
+                      />
+                      <MobileCardRow
+                        label="Rencana Kembali"
+                        value={<span className="font-mono text-xs">{item.tanggal_kembali_rencana || '—'}</span>}
+                      />
+                    </div>
+                    <MobileCardActions className="pt-2 mt-2 border-t border-slate-100 flex flex-wrap gap-2">
+                      {item.status !== 'Dikembalikan' && (
+                        <button
+                          onClick={() => setReturnModalItem(item)}
+                          className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-all"
+                        >
                           <RotateCcw className="h-3 w-3 mr-1" />
-                        )}
-                        Kembalikan
+                          Kembalikan ({sisaPinjam})
+                        </button>
+                      )}
+                      {(item.pengembalians && item.pengembalians.length > 0) && (
+                        <button
+                          onClick={() => setHistoryModalItem(item)}
+                          className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-lg transition-colors"
+                        >
+                          <History className="h-3 w-3 mr-1" />
+                          Riwayat ({item.pengembalians.length})
+                        </button>
+                      )}
+                      <button
+                        onClick={() => openEditModal(item)}
+                        className="inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors"
+                      >
+                        <Edit2 className="h-3.5 w-3.5 mr-1" />
+                        Edit
                       </button>
-                    )}
-                    <button
-                      onClick={() => openEditModal(item)}
-                      className="inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors"
-                    >
-                      <Edit2 className="h-3.5 w-3.5 mr-1" />
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDelete(item.id)}
-                      className="inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
-                    >
-                      <Trash2 className="h-3.5 w-3.5 mr-1" />
-                      Hapus
-                    </button>
-                  </MobileCardActions>
-                </MobileCard>
-              ))
+                      <button
+                        onClick={() => handleDelete(item.id)}
+                        className="inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
+                      >
+                        <Trash2 className="h-3.5 w-3.5 mr-1" />
+                        Hapus
+                      </button>
+                    </MobileCardActions>
+                  </MobileCard>
+                );
+              })
             )}
           </div>
         ) : (
@@ -458,7 +484,7 @@ export default function WakaproPeminjamanPage() {
                 <tr className="bg-slate-50/80 border-b border-slate-100 text-slate-400 text-[11px] uppercase tracking-widest">
                   <th className="px-4 py-3.5 font-semibold">#</th>
                   <th className="px-4 py-3.5 font-semibold">Nama Peminjam</th>
-                  <th className="px-4 py-3.5 font-semibold">Aset yang Dipinjam</th>
+                  <th className="px-4 py-3.5 font-semibold">Barang yang Dipinjam</th>
                   <th className="px-4 py-3.5 font-semibold">Keperluan</th>
                   <th className="px-4 py-3.5 font-semibold">Tgl Pinjam</th>
                   <th className="px-4 py-3.5 font-semibold">Rencana Kembali</th>
@@ -482,76 +508,96 @@ export default function WakaproPeminjamanPage() {
                     </td>
                   </tr>
                 ) : (
-                  filtered.map((item, idx) => (
-                    <tr key={item.id} className="hover:bg-slate-50/80 transition-colors group">
-                      <td className="px-4 py-3.5 text-xs text-slate-400 font-medium">{idx + 1}</td>
-                      <td className="px-4 py-3.5">
-                        <p className="text-sm font-semibold text-slate-800 flex items-center">
-                          <User className="h-3.5 w-3.5 text-slate-400 mr-1.5" />
-                          {item.nama_peminjam}
-                        </p>
-                        <span className="inline-block mt-0.5 text-[10px] font-semibold px-2 py-0.5 bg-slate-100 text-slate-600 rounded">
-                          {item.role_peminjam}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3.5">
-                        <p className="text-sm font-semibold text-indigo-900">
-                          {item.sarana_prasarana?.nama_barang || item.aset?.nama_aset || 'Barang Workshop'}
-                        </p>
-                        <p className="text-[11px] text-slate-400">
-                          {item.jumlah} {item.sarana_prasarana?.satuan || item.aset?.satuan || 'Unit'} · {item.aset?.ruangan?.nama_ruangan || namaWorkshop || 'Workshop'}
-                        </p>
-                      </td>
-                      <td className="px-4 py-3.5 text-xs text-slate-600 max-w-xs truncate">
-                        {item.keperluan || '—'}
-                      </td>
-                      <td className="px-4 py-3.5 text-xs text-slate-600 font-mono">{item.tanggal_pinjam}</td>
-                      <td className="px-4 py-3.5 text-xs text-slate-600 font-mono">
-                        {item.tanggal_kembali_rencana || '—'}
-                      </td>
-                      <td className="px-4 py-3.5">
-                        <span className={`px-2.5 py-1 rounded-lg text-xs font-semibold ${
-                          item.status === 'Dikembalikan'
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            : 'bg-amber-50 text-amber-700 border border-amber-200'
-                        }`}>
-                          {item.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3.5 text-right">
-                        <div className="flex items-center justify-end space-x-1">
-                          {item.status === 'Dipinjam' && (
-                            <button
-                              onClick={() => handleReturn(item.id)}
-                              disabled={returningId === item.id}
-                              className="inline-flex items-center px-2.5 py-1 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-all disabled:opacity-50"
-                            >
-                              {returningId === item.id ? (
-                                <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                              ) : (
+                  filtered.map((item, idx) => {
+                    const namaBarang = item.sarana_prasarana?.nama_barang || item.aset?.nama_aset || 'Barang Workshop';
+                    const kodeBarang = item.sarana_prasarana?.kode || item.aset?.kode_aset || null;
+                    const satuan = item.sarana_prasarana?.satuan || item.aset?.satuan || 'Unit';
+                    const lokasi = item.aset?.ruangan?.nama_ruangan || namaWorkshop || 'Workshop';
+
+                    const totalKembali = item.total_dikembalikan ?? (
+                      item.pengembalians ? item.pengembalians.reduce((acc, p) => acc + Number(p.jumlah_kembali), 0) : 0
+                    );
+                    const sisaPinjam = item.sisa_pinjam ?? Math.max(0, item.jumlah - totalKembali);
+                    const hasReturns = item.pengembalians && item.pengembalians.length > 0;
+
+                    return (
+                      <tr key={item.id} className="hover:bg-slate-50/80 transition-colors group">
+                        <td className="px-4 py-3.5 text-xs text-slate-400 font-medium">{idx + 1}</td>
+                        <td className="px-4 py-3.5">
+                          <p className="text-sm font-semibold text-slate-800 flex items-center">
+                            <User className="h-3.5 w-3.5 text-slate-400 mr-1.5" />
+                            {item.nama_peminjam}
+                          </p>
+                          <span className="inline-block mt-0.5 text-[10px] font-semibold px-2 py-0.5 bg-slate-100 text-slate-600 rounded">
+                            {item.role_peminjam}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3.5">
+                          <p className="text-sm font-semibold text-indigo-900">{namaBarang}</p>
+                          <div className="flex items-center space-x-1.5 mt-0.5 flex-wrap">
+                            <span className="text-[11px] text-slate-500 font-medium">
+                              Total: {item.jumlah} {satuan}
+                            </span>
+                            {item.status === 'Dikembalikan Sebagian' && (
+                              <span className="text-[10px] font-semibold px-1.5 py-0.2 bg-amber-50 text-amber-700 border border-amber-200 rounded">
+                                Sisa: {sisaPinjam}
+                              </span>
+                            )}
+                            {kodeBarang && <span className="text-[11px] text-slate-400 font-mono">· {kodeBarang}</span>}
+                            <span className="text-[11px] text-slate-400">· {lokasi}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3.5 text-xs text-slate-600 max-w-xs truncate">
+                          {item.keperluan || '—'}
+                        </td>
+                        <td className="px-4 py-3.5 text-xs text-slate-600 font-mono">{item.tanggal_pinjam}</td>
+                        <td className="px-4 py-3.5 text-xs text-slate-600 font-mono">
+                          {item.tanggal_kembali_rencana || '—'}
+                        </td>
+                        <td className="px-4 py-3.5">
+                          {renderStatusBadge(item.status)}
+                        </td>
+                        <td className="px-4 py-3.5 text-right">
+                          <div className="flex items-center justify-end space-x-1">
+                            {item.status !== 'Dikembalikan' && (
+                              <button
+                                onClick={() => setReturnModalItem(item)}
+                                className="inline-flex items-center px-2.5 py-1 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-all"
+                                title={`Kembalikan barang (Sisa: ${sisaPinjam} ${satuan})`}
+                              >
                                 <RotateCcw className="h-3 w-3 mr-1" />
-                              )}
-                              Kembalikan
+                                Kembalikan
+                              </button>
+                            )}
+                            {hasReturns && (
+                              <button
+                                onClick={() => setHistoryModalItem(item)}
+                                className="inline-flex items-center px-2 py-1 text-xs font-medium text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-100 transition-colors"
+                                title="Lihat Riwayat Pengembalian"
+                              >
+                                <History className="h-3 w-3 mr-1" />
+                                Riwayat
+                              </button>
+                            )}
+                            <button
+                              onClick={() => openEditModal(item)}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                              title="Edit"
+                            >
+                              <Edit2 className="h-3.5 w-3.5" />
                             </button>
-                          )}
-                          <button
-                            onClick={() => openEditModal(item)}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
-                            title="Edit"
-                          >
-                            <Edit2 className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(item.id)}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                            title="Hapus"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+                            <button
+                              onClick={() => handleDelete(item.id)}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                              title="Hapus"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -559,7 +605,7 @@ export default function WakaproPeminjamanPage() {
         )}
       </div>
 
-      {/* Modal Form */}
+      {/* Modal Form Tambah/Edit */}
       {isModalOpen && mounted && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60" onClick={() => setIsModalOpen(false)} />
@@ -678,6 +724,7 @@ export default function WakaproPeminjamanPage() {
                   className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 focus:bg-white"
                 >
                   <option value="Dipinjam">Dipinjam</option>
+                  <option value="Dikembalikan Sebagian">Dikembalikan Sebagian</option>
                   <option value="Dikembalikan">Dikembalikan</option>
                 </select>
               </div>
@@ -704,6 +751,24 @@ export default function WakaproPeminjamanPage() {
         </div>,
         document.body
       )}
+
+      {/* Modal Pengembalian */}
+      <PengembalianModal
+        isOpen={!!returnModalItem}
+        peminjaman={returnModalItem}
+        onClose={() => setReturnModalItem(null)}
+        onSuccess={() => fetchData(true)}
+      />
+
+      {/* Modal Riwayat Pengembalian */}
+      <RiwayatPengembalianModal
+        isOpen={!!historyModalItem}
+        peminjaman={historyModalItem}
+        onClose={() => setHistoryModalItem(null)}
+        onOpenReturnModal={() => {
+          if (historyModalItem) setReturnModalItem(historyModalItem);
+        }}
+      />
     </div>
   );
 }

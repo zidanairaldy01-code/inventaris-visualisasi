@@ -74,7 +74,7 @@ export default function WakaproDashboard({ user, wakaproStats, loading, onRefres
 
   return (
     <div className="space-y-6 sm:space-y-8 animate-fadeIn pb-12">
-      {/* ── Banner Utama Wakapro (Kepala Bengkel Jurusan) ── */}
+      {/* ── Banner Utama Kaprog (Kepala Bengkel Jurusan) ── */}
       <div className="bg-linear-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-6 sm:p-8 shadow-xl text-white relative overflow-hidden border border-indigo-900/40">
         <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none -translate-y-16 translate-x-16" />
         <div className="absolute bottom-0 left-1/3 w-64 h-64 bg-blue-600/10 rounded-full blur-3xl pointer-events-none translate-y-16" />
@@ -84,7 +84,7 @@ export default function WakaproDashboard({ user, wakaproStats, loading, onRefres
             <div className="flex items-center gap-2 mb-2">
               <span className="px-3 py-1 bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded-full text-xs font-semibold flex items-center gap-1.5 backdrop-blur-sm">
                 <Warehouse className="h-3.5 w-3.5 text-indigo-400" />
-                WAKAPRO • KEPALA BENGKEL JURUSAN
+                Kaprog • KEPALA BENGKEL JURUSAN
               </span>
               {ruangan?.gedung?.nama_gedung && (
                 <span className="text-xs text-slate-400 font-medium">
@@ -104,7 +104,7 @@ export default function WakaproDashboard({ user, wakaproStats, loading, onRefres
             </p>
           </div>
 
-          {/* Quick Actions Wakapro */}
+          {/* Quick Actions Kaprog */}
           <div className="flex items-center gap-2.5 flex-wrap">
             <button
               onClick={() => setShowKirModal(true)}
@@ -150,7 +150,7 @@ export default function WakaproDashboard({ user, wakaproStats, loading, onRefres
         </div>
       )}
 
-      {/* ── 5 KPI Stats Card khusus Bengkel Wakapro ── */}
+      {/* ── 5 KPI Stats Card khusus Bengkel Kaprog ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 sm:gap-5">
         {/* Card 1: Total Unit di Bengkel */}
         <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">

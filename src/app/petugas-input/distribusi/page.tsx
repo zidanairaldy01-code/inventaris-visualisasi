@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback } from 'react'
 import axios from '@/lib/axios'
@@ -205,7 +205,7 @@ export default function PetugasDistribusiPage() {
     setFormSuccess('')
 
     if (!formBarang) return setFormError('Pilih barang terlebih dahulu.')
-    if (!formRuangan) return setFormError('Pilih wakapro/ruangan tujuan.')
+    if (!formRuangan) return setFormError('Pilih Kaprog/ruangan tujuan.')
     if (!formJumlah || Number(formJumlah) < 1) return setFormError('Jumlah harus minimal 1.')
 
     setSubmitting(true)
@@ -309,7 +309,7 @@ export default function PetugasDistribusiPage() {
             Pengiriman &amp; Riwayat BAST
           </h1>
           <p className="text-sm text-slate-500 mt-1 ml-11">
-            Kirimkan barang/sarana prasarana ke workshop dan pantau riwayat konfirmasi BAST dari Wakapro
+            Kirimkan barang/sarana prasarana ke workshop dan pantau riwayat konfirmasi BAST dari Kaprog
           </p>
         </div>
 
@@ -445,7 +445,7 @@ export default function PetugasDistribusiPage() {
                   <option value="">-- Pilih Ruangan Workshop --</option>
                   {ruanganList.map((r) => (
                     <option key={r.id} value={r.id}>
-                      {r.nama_ruangan} ({r.gedung?.nama_gedung || 'Gedung'}) {r.wakapro ? `— Wakapro: ${r.wakapro.nama_lengkap}` : ''}
+                      {r.nama_ruangan} ({r.gedung?.nama_gedung || 'Gedung'}) {r.wakapro ? `— Kaprog: ${r.wakapro.nama_lengkap}` : ''}
                     </option>
                   ))}
                 </select>
@@ -802,7 +802,7 @@ export default function PetugasDistribusiPage() {
                   <span className="font-semibold text-slate-800">{detailItem.ruangan_tujuan.nama_ruangan} ({detailItem.ruangan_tujuan.gedung?.nama_gedung})</span>
                 </div>
                 <div className="flex justify-between border-b border-slate-100 pb-2">
-                  <span className="text-slate-500">Wakapro Penerima:</span>
+                  <span className="text-slate-500">Kaprog Penerima:</span>
                   <span className="font-semibold text-blue-700">{detailItem.wakapro_penerima?.nama_lengkap || 'Belum Dikonfirmasi'}</span>
                 </div>
                 <div className="flex justify-between border-b border-slate-100 pb-2">
@@ -817,7 +817,7 @@ export default function PetugasDistribusiPage() {
                 )}
                 {detailItem.catatan_penerimaan && (
                   <div className="pt-1">
-                    <span className="text-slate-500 block mb-1">Catatan dari Wakapro:</span>
+                    <span className="text-slate-500 block mb-1">Catatan dari Kaprog:</span>
                     <p className="p-2.5 bg-slate-50 rounded-lg text-slate-700 border border-slate-200">
                       {detailItem.catatan_penerimaan}
                     </p>

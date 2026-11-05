@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
@@ -428,7 +428,7 @@ export default function AdminServisPage() {
                   <FileWarning className="h-6 w-6 text-slate-300" />
                 </div>
                 <p className="font-semibold text-slate-500 text-sm">Belum ada data servis</p>
-                <p className="text-slate-400 text-xs mt-1">Laporan dari Wakapro akan muncul di sini setelah dikirim.</p>
+                <p className="text-slate-400 text-xs mt-1">Laporan dari Kaprog akan muncul di sini setelah dikirim.</p>
               </div>
             ) : (
               filtered.map((item) => {
@@ -578,7 +578,7 @@ export default function AdminServisPage() {
                         <FileWarning className="h-7 w-7 text-slate-300" />
                       </div>
                       <p className="font-semibold text-slate-500 text-sm">Belum ada data servis</p>
-                      <p className="text-slate-400 text-xs mt-1">Laporan dari Wakapro akan muncul di sini setelah dikirim.</p>
+                      <p className="text-slate-400 text-xs mt-1">Laporan dari Kaprog akan muncul di sini setelah dikirim.</p>
                     </td>
                   </tr>
                 ) : (
@@ -629,7 +629,7 @@ export default function AdminServisPage() {
                                 item.pelapor.role === 'admin' ? 'bg-blue-100 text-blue-800' :
                                 'bg-purple-100 text-purple-800'
                               }`}>
-                                {item.pelapor.role === 'super_admin' ? 'Super Admin' : item.pelapor.role === 'admin' ? 'Admin' : 'Wakapro'}
+                                {item.pelapor.role === 'super_admin' ? 'Super Admin' : item.pelapor.role === 'admin' ? 'Admin' : 'Kaprog'}
                               </span>
                             )}
                           </div>
@@ -749,7 +749,7 @@ export default function AdminServisPage() {
               <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex items-start gap-2">
                 <AlertTriangle className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
                 <p className="text-xs text-emerald-700">
-                  Tindakan ini akan mengubah status servis menjadi <strong>Selesai</strong> dan kondisi aset secara otomatis kembali menjadi <strong>Baik</strong>. Notifikasi akan dikirim ke Wakapro dan Wakasek.
+                  Tindakan ini akan mengubah status servis menjadi <strong>Selesai</strong> dan kondisi aset secara otomatis kembali menjadi <strong>Baik</strong>. Notifikasi akan dikirim ke Kaprog dan Wakasek.
                 </p>
               </div>
 

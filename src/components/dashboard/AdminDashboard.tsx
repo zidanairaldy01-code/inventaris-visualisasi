@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -153,7 +153,7 @@ export default function AdminDashboard({
         </div>
       </div>
 
-      {/* ── Alert Notifikasi Kerusakan Workshop (Jika ada laporan dari Wakapro) ── */}
+      {/* ── Alert Notifikasi Kerusakan Workshop (Jika ada laporan dari Kaprog) ── */}
       {unreadDamagedNotifs.length > 0 && (
         <div className="bg-linear-to-r from-amber-500/10 via-rose-500/10 to-amber-500/10 border-2 border-amber-300/80 rounded-2xl p-4 sm:p-5 shadow-sm animate-fadeIn">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -171,7 +171,7 @@ export default function AdminDashboard({
                   </span>
                 </div>
                 <p className="text-xs text-slate-600 mt-1">
-                  Laporan terbaru: <strong className="text-slate-800">{unreadDamagedNotifs[0].data?.nama_barang || unreadDamagedNotifs[0].judul}</strong> di <strong className="text-slate-800">{unreadDamagedNotifs[0].data?.nama_ruangan || 'Workshop'}</strong> {unreadDamagedNotifs[0].data?.kondisi ? `(${unreadDamagedNotifs[0].data.kondisi})` : ''} oleh {unreadDamagedNotifs[0].data?.wakapro_nama || 'Wakapro'}.
+                  Laporan terbaru: <strong className="text-slate-800">{unreadDamagedNotifs[0].data?.nama_barang || unreadDamagedNotifs[0].judul}</strong> di <strong className="text-slate-800">{unreadDamagedNotifs[0].data?.nama_ruangan || 'Workshop'}</strong> {unreadDamagedNotifs[0].data?.kondisi ? `(${unreadDamagedNotifs[0].data.kondisi})` : ''} oleh {unreadDamagedNotifs[0].data?.wakapro_nama || 'Kaprog'}.
                 </p>
               </div>
             </div>
