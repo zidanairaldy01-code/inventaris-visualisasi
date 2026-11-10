@@ -21,8 +21,11 @@ WORKDIR /app/backend
 # Copy backend code
 COPY backend/ /app/backend/
 
-# Create a blank .env if not exists so artisan commands don't crash
+# Create a blank .env if not exists so artisan commands don't crash during build
 RUN touch /app/backend/.env
+
+# Normalize line endings and set execution permissions on startup script
+RUN sed -i 's/\r$//' /app/backend/start.sh && chmod +x /app/backend/start.sh
 
 # Set permissions for storage and bootstrap/cache
 RUN chmod -R 777 /app/backend/storage /app/backend/bootstrap/cache
@@ -32,4 +35,4 @@ RUN composer install --no-dev --optimize-autoloader
 
 EXPOSE 8080
 
-CMD ["sh", "-c", "php artisan config:clear && php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=${PORT:-8080}"]
+CMD ["/bin/bash", "/app/backend/start.sh"]
