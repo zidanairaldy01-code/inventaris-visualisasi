@@ -11,7 +11,14 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "SIM Aset - SMK PGRI Telagasari",
   description: "Sistem Informasi Manajemen Aset Digital SMK PGRI Telagasari",
-  viewport: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no",
+  icons: {
+    icon: [
+      { url: "/smk-pgri-telagasari.png" },
+      { url: "/icon.png" },
+    ],
+    shortcut: "/smk-pgri-telagasari.png",
+    apple: "/smk-pgri-telagasari.png",
+  },
   themeColor: "#1e293b",
 };
 
@@ -26,6 +33,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       className={`${inter.variable} h-full antialiased`}
     >
       <head>
+        <link rel="icon" href="/smk-pgri-telagasari.png" sizes="any" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />

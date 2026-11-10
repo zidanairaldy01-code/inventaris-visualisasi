@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -279,7 +279,7 @@ function SidebarContent({
             <img
               src="/smk-pgri-telagasari.png"
               alt="Logo SMK PGRI Telagasari"
-              className="w-9 h-9 rounded-xl object-cover bg-white p-0.5 shadow-md ring-2 ring-white/10 group-hover:ring-blue-500/40 transition-all shrink-0"
+              className="w-9 h-9 rounded-full object-contain bg-white p-0.5 shadow-md ring-2 ring-white/10 group-hover:ring-blue-500/40 transition-all shrink-0"
               onError={(e) => {
                 e.currentTarget.src = '/img/pgri-telagasari.jpg';
               }}
