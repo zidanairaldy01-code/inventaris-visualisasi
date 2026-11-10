@@ -1,7 +1,16 @@
 import axios from 'axios';
 import Cookies from 'js-cookie';
 
-export const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000').replace(/\/+$/, '');
+const getBaseUrl = (): string => {
+  let url = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+  url = url.trim().replace(/\/+$/, '');
+  if (url && !url.startsWith('http://') && !url.startsWith('https://')) {
+    url = `https://${url}`;
+  }
+  return url;
+};
+
+export const API_BASE_URL = getBaseUrl();
 
 // Helper untuk membuat full URL storage dengan backend URL
 export const getStorageUrl = (path: string | null): string | null => {

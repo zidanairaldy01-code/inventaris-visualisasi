@@ -5,12 +5,37 @@ echo "========================================="
 echo "   Railway Laravel Startup Script v2.1   "
 echo "========================================="
 
-# Resolve MySQL variables (supporting standard DB_* and Railway MYSQL* names)
-RESOLVED_DB_HOST="${DB_HOST:-${MYSQLHOST:-${MYSQL_HOST:-mysql.railway.internal}}}"
-RESOLVED_DB_PORT="${DB_PORT:-${MYSQLPORT:-${MYSQL_PORT:-3306}}}"
-RESOLVED_DB_DATABASE="${DB_DATABASE:-${MYSQLDATABASE:-${MYSQL_DATABASE:-railway}}}"
-RESOLVED_DB_USERNAME="${DB_USERNAME:-${MYSQLUSER:-${MYSQL_USER:-root}}}"
-RESOLVED_DB_PASSWORD="${DB_PASSWORD:-${MYSQLPASSWORD:-${MYSQL_PASSWORD:-}}}"
+# Resolve MySQL variables (supporting standard DB_* and Railway MYSQL* names, and guarding against raw ${{...}} templates)
+if [[ "${DB_HOST:-}" == *'${{'* ]] || [ -z "${DB_HOST:-}" ]; then
+    RESOLVED_DB_HOST="${MYSQLHOST:-${MYSQL_HOST:-mysql.railway.internal}}"
+else
+    RESOLVED_DB_HOST="$DB_HOST"
+fi
+
+if [[ "${DB_PORT:-}" == *'${{'* ]] || [ -z "${DB_PORT:-}" ]; then
+    RESOLVED_DB_PORT="${MYSQLPORT:-${MYSQL_PORT:-3306}}"
+else
+    RESOLVED_DB_PORT="$DB_PORT"
+fi
+
+if [[ "${DB_DATABASE:-}" == *'${{'* ]] || [ -z "${DB_DATABASE:-}" ]; then
+    RESOLVED_DB_DATABASE="${MYSQLDATABASE:-${MYSQL_DATABASE:-railway}}"
+else
+    RESOLVED_DB_DATABASE="$DB_DATABASE"
+fi
+
+if [[ "${DB_USERNAME:-}" == *'${{'* ]] || [ -z "${DB_USERNAME:-}" ]; then
+    RESOLVED_DB_USERNAME="${MYSQLUSER:-${MYSQL_USER:-root}}"
+else
+    RESOLVED_DB_USERNAME="$DB_USERNAME"
+fi
+
+if [[ "${DB_PASSWORD:-}" == *'${{'* ]] || [ -z "${DB_PASSWORD:-}" ]; then
+    RESOLVED_DB_PASSWORD="${MYSQLPASSWORD:-${MYSQL_PASSWORD:-}}"
+else
+    RESOLVED_DB_PASSWORD="$DB_PASSWORD"
+fi
+
 RESOLVED_DB_URL="${DB_URL:-${MYSQL_URL:-${MYSQL_PRIVATE_URL:-${DATABASE_URL:-}}}}"
 
 # Generate .env from Railway environment variables
