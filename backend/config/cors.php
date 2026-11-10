@@ -1,37 +1,53 @@
 <?php
 
+$customOrigins = [];
+
+$frontendUrl = env('FRONTEND_URL');
+if (!empty($frontendUrl)) {
+    foreach (explode(',', $frontendUrl) as $url) {
+        $trimmed = trim(rtrim($url, '/'));
+        if (!empty($trimmed)) {
+            $customOrigins[] = $trimmed;
+        }
+    }
+}
+
+$corsAllowed = env('CORS_ALLOWED_ORIGINS');
+if (!empty($corsAllowed)) {
+    foreach (explode(',', $corsAllowed) as $origin) {
+        $trimmed = trim(rtrim($origin, '/'));
+        if (!empty($trimmed)) {
+            $customOrigins[] = $trimmed;
+        }
+    }
+}
+
 return [
 
     /*
     |--------------------------------------------------------------------------
     | Cross-Origin Resource Sharing (CORS) Configuration
     |--------------------------------------------------------------------------
-    |
-    | Here you may configure your settings for cross-origin resource sharing
-    | or "CORS". This determines what cross-origin operations may execute
-    | in web browsers. You are free to adjust these settings as needed.
-    |
-    | To learn more: https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
-    |
     */
 
-    'paths' => ['api/*', 'sanctum/csrf-cookie', 'storage/*'],
+    'paths' => ['api/*', 'sanctum/csrf-cookie', 'storage/*', '*'],
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => env('APP_ENV') === 'production' 
-        ? array_merge(
-            array_filter(explode(',', env('CORS_ALLOWED_ORIGINS', ''))),
-            ['http://localhost:3000', 'http://127.0.0.1:3000'] // Allow localhost for development
-        )
-        : [
+    'allowed_origins' => array_values(array_unique(array_merge(
+        $customOrigins,
+        [
             'http://localhost:3000',
             'http://127.0.0.1:3000',
-        ],
+            'http://localhost:5173',
+            'http://127.0.0.1:5173',
+        ]
+    ))),
 
-    'allowed_origins_patterns' => env('APP_ENV') === 'production'
-        ? ['/^https:\/\/.*\.vercel\.app$/', '/^https:\/\/.*\.railway\.app$/']
-        : [],
+    'allowed_origins_patterns' => [
+        '#^https://.*\.vercel\.app$#',
+        '#^https://.*\.railway\.app$#',
+    ],
 
     'allowed_headers' => ['*'],
 

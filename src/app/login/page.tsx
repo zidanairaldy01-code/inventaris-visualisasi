@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -133,7 +133,11 @@ export default function LoginPage() {
     } catch (err: any) {
       const serverField = err.response?.data?.field;
       const serverTitle = err.response?.data?.title;
-      const serverMessage = err.response?.data?.message || 'Terjadi kesalahan saat masuk.';
+      console.error('Login error detail:', err);
+      const isNetworkError = !err.response;
+      const serverMessage = isNetworkError
+        ? 'Gagal terhubung ke backend. Pastikan server aktif dan NEXT_PUBLIC_API_URL sudah sesuai.'
+        : (err.response?.data?.message || 'Terjadi kesalahan saat masuk.');
 
       // Deteksi spesifik berdasarkan response backend
       if (serverField === 'username' || serverMessage.toLowerCase().includes('username')) {

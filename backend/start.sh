@@ -99,6 +99,11 @@ php artisan config:clear
 echo "Running database migrations..."
 if php artisan migrate --force; then
     echo "✓ Migrations executed successfully."
+
+    # Auto-seed initial master data and admin accounts
+    echo "Ensuring initial master data and default accounts (seeder)..."
+    php artisan db:seed --force || echo "⚠ Seeder note: skipped or table already populated"
+
     # Only cache config after successful setup
     php artisan config:cache || echo "⚠ Config caching failed"
 else
