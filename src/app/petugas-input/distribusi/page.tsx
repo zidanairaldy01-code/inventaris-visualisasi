@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState, useEffect, useCallback } from 'react'
 import axios from '@/lib/axios'
@@ -14,7 +14,7 @@ import {
   Search, ChevronDown, X, AlertCircle, Send, 
   Banknote, MapPin, User, Calendar, Hash, RefreshCw,
   FileText, Filter, Printer, Eye, Loader2, Camera,
-  FileCheck2, Layers
+  FileCheck2, Layers, Flame, Box
 } from 'lucide-react'
 
 interface Ruangan {
@@ -43,6 +43,8 @@ interface Distribusi {
   nomor_pengiriman?: string | null
   nomor_bast: string | null
   jumlah: number
+  sisa_unit?: number | null
+  jenis_barang?: 'habis_pakai' | 'tidak_habis_pakai' | null
   harga_satuan: number
   total_harga: number
   tanggal_kirim: string
@@ -90,6 +92,7 @@ export default function PetugasDistribusiPage() {
   const [formJumlah, setFormJumlah] = useState<number | ''>(1)
   const [formHarga, setFormHarga] = useState<number | ''>('')
   const [formCatatan, setFormCatatan] = useState('')
+  const [formJenisBarang, setFormJenisBarang] = useState<'tidak_habis_pakai' | 'habis_pakai'>('tidak_habis_pakai')
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState('')
   const [formSuccess, setFormSuccess] = useState('')
@@ -216,6 +219,7 @@ export default function PetugasDistribusiPage() {
         jumlah: formJumlah,
         harga_satuan: formHarga || 0,
         catatan_pengiriman: formCatatan || null,
+        jenis_barang: formJenisBarang,
       })
 
       setFormSuccess('Pengiriman berhasil dicatat! Surat Jalan telah dibuat.')
@@ -225,6 +229,7 @@ export default function PetugasDistribusiPage() {
       setFormJumlah(1)
       setFormHarga('')
       setFormCatatan('')
+      setFormJenisBarang('tidak_habis_pakai')
       setShowForm(false)
       fetchDistribusi()
     } catch (err: any) {
@@ -452,7 +457,18 @@ export default function PetugasDistribusiPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Jenis Barang *</label>
+                <select
+                  value={formJenisBarang}
+                  onChange={(e) => setFormJenisBarang(e.target.value as 'tidak_habis_pakai' | 'habis_pakai')}
+                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white font-medium"
+                >
+                  <option value="tidak_habis_pakai">🏷️ Aset Tetap</option>
+                  <option value="habis_pakai">🔥 Habis Pakai</option>
+                </select>
+              </div>
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">Jumlah Unit *</label>
                 <input
@@ -633,7 +649,14 @@ export default function PetugasDistribusiPage() {
 
                       {/* Barang */}
                       <td className="py-3 px-4">
-                        <p className="font-semibold text-slate-800">{item.sarana_prasarana.nama_barang}</p>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <p className="font-semibold text-slate-800">{item.sarana_prasarana.nama_barang}</p>
+                          {item.jenis_barang === "habis_pakai" && (
+                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold bg-orange-100 text-orange-700 border border-orange-200">
+                              <Flame className="h-2.5 w-2.5" /> Habis Pakai
+                            </span>
+                          )}
+                        </div>
                         <p className="text-[10px] text-slate-400 font-mono mt-0.5">{item.sarana_prasarana.kode}</p>
                       </td>
 

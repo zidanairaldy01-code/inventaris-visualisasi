@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState, useEffect, useRef } from 'react'
 import axios from '@/lib/axios'
@@ -19,7 +19,7 @@ import {
 import {
   Package, Truck, CheckCircle2, X, AlertTriangle,
   Camera, ZoomIn, AlertCircle, FileText, Printer,
-  Search, Clock, XCircle, Info, Calendar, User, Eye, Loader2
+  Search, Clock, XCircle, Info, Calendar, User, Eye, Loader2, Flame
 } from 'lucide-react'
 
 interface Distribusi {
@@ -34,6 +34,7 @@ interface Distribusi {
   status: string
   catatan_pengiriman: string | null
   catatan_penerimaan: string | null
+  jenis_barang?: 'habis_pakai' | 'tidak_habis_pakai' | null
   foto_kerusakan_url: string | null
   sarana_prasarana: {
     nama_barang: string
@@ -649,7 +650,14 @@ export default function PenerimaanPage() {
 
                       {/* Barang */}
                       <td className="py-3 px-4">
-                        <p className="font-semibold text-slate-900">{item.sarana_prasarana.nama_barang}</p>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                            <p className="font-semibold text-slate-900">{item.sarana_prasarana.nama_barang}</p>
+                            {item.jenis_barang === 'habis_pakai' && (
+                              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold bg-orange-100 text-orange-700 border border-orange-200">
+                                <Flame className="h-2.5 w-2.5" /> Habis Pakai
+                              </span>
+                            )}
+                          </div>
                         <p className="text-[10px] text-slate-400 font-mono mt-0.5">{item.sarana_prasarana.kode}</p>
                       </td>
 

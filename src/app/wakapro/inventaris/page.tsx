@@ -1,21 +1,36 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import axios from '@/lib/axios'
 import {
   Package, Search, CheckCircle2, AlertTriangle, Warehouse,
-  FileText, Filter, RefreshCw, Info, Edit, X
+  FileText, Filter, RefreshCw, Info, Edit, X, Flame,
+  Box, Minus, History, ChevronDown, ChevronUp, Loader2
 } from 'lucide-react'
 import { useIsMobile } from '@/hooks/useMediaQuery'
 import { MobileCard, MobileCardHeader, MobileCardRow, MobileCardDivider, MobileCardActions } from '@/components/MobileCard'
 import { useNotification } from '@/hooks/useNotification'
 import { showErrorAlert } from '@/utils/errorHandler'
 
+type JenisBarang = 'habis_pakai' | 'tidak_habis_pakai'
+
+interface RiwayatPemakaian {
+  id: number
+  jumlah_pakai: number
+  sisa_sebelumnya: number
+  sisa_setelahnya: number
+  tanggal_pemakaian: string
+  keperluan: string | null
+  user?: { nama_lengkap: string }
+}
+
 interface InventarisItem {
   id: number
   nomor_surat_jalan: string
   nomor_bast: string | null
   jumlah: number
+  sisa_unit: number | null
+  jenis_barang: JenisBarang | null
   tanggal_kirim: string
   tanggal_terima: string | null
   catatan_penerimaan: string | null
@@ -29,9 +44,14 @@ interface InventarisItem {
     nilai_harga_pembelian?: number
     nilai_harga_sekarang?: number
   }
-  petugas_pengirim: {
-    nama_lengkap: string
-  }
+  inventaris_gudang?: {
+    id: number
+    nama_barang: string
+    kode: string
+    satuan: string
+  } | null
+  petugas_pengirim: { nama_lengkap: string }
+  riwayat_pemakaian?: RiwayatPemakaian[]
 }
 
 interface Summary {
@@ -67,6 +87,19 @@ export default function InventarisWorkshopPage() {
   const [catatan, setCatatan] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
+  // Modal Pakai Barang (Habis Pakai)
+  const [showPakaiModal, setShowPakaiModal] = useState(false)
+  const [pakaiItem, setPakaiItem] = useState<InventarisItem | null>(null)
+  const [jumlahPakai, setJumlahPakai] = useState(1)
+  const [keperluanPakai, setKeperluanPakai] = useState('')
+  const [tanggalPakai, setTanggalPakai] = useState(() => new Date().toISOString().split('T')[0])
+  const [submittingPakai, setSubmittingPakai] = useState(false)
+
+  // Riwayat Pemakaian (expand per baris)
+  const [expandedRiwayat, setExpandedRiwayat] = useState<number | null>(null)
+  const [riwayatData, setRiwayatData] = useState<Record<number, RiwayatPemakaian[]>>({})
+  const [loadingRiwayat, setLoadingRiwayat] = useState<number | null>(null)
+
   const fetchInventaris = useCallback(async () => {
     setLoading(true)
     try {
@@ -86,60 +119,102 @@ export default function InventarisWorkshopPage() {
     }
   }, [search, filterKondisi])
 
-  useEffect(() => {
-    fetchInventaris()
-  }, [fetchInventaris])
+  useEffect(() => { fetchInventaris() }, [fetchInventaris])
 
+  // ── Edit Kondisi ──
   const openEditModal = (item: InventarisItem) => {
     setEditingItem(item)
     setSelectedKondisi(item.sarana_prasarana.kondisi)
     setCatatan(item.sarana_prasarana.keterangan || '')
     setShowEditModal(true)
   }
-
-  const closeEditModal = () => {
-    setShowEditModal(false)
-    setEditingItem(null)
-    setSelectedKondisi('')
-    setCatatan('')
-  }
+  const closeEditModal = () => { setShowEditModal(false); setEditingItem(null); setSelectedKondisi(''); setCatatan('') }
 
   const handleUpdateKondisi = async () => {
     if (!editingItem || !selectedKondisi) return
-
     setSubmitting(true)
     try {
       await axios.put(`/api/workshop/inventaris/${editingItem.id}/kondisi`, {
         kondisi: selectedKondisi,
         catatan: catatan.trim() || null,
       })
-
-      const isDamaged = ['Rusak Ringan', 'Rusak Berat', 'Tidak Layak Pakai'].includes(selectedKondisi);
-      success(isDamaged 
-        ? 'Kondisi aset berhasil diperbarui & laporan kerusakan dikirimkan ke Admin' 
-        : 'Kondisi aset berhasil diperbarui'
-      )
+      const isDamaged = ['Rusak Ringan', 'Rusak Berat', 'Tidak Layak Pakai'].includes(selectedKondisi)
+      success(isDamaged ? 'Kondisi aset diperbarui & laporan kerusakan dikirimkan ke Admin' : 'Kondisi aset berhasil diperbarui')
       closeEditModal()
-      fetchInventaris() // Refresh data
-    } catch (err: any) {
+      fetchInventaris()
+    } catch (err: unknown) {
       showErrorAlert(err, 'Gagal Memperbarui Kondisi Aset')
     } finally {
       setSubmitting(false)
     }
   }
 
-  const formatRupiah = (amount: number | undefined | null) => {
-    if (!amount || amount === 0) return '-'
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
-    }).format(amount)
+  // ── Pakai Barang Habis Pakai ──
+  const openPakaiModal = (item: InventarisItem) => {
+    setPakaiItem(item)
+    setJumlahPakai(1)
+    setKeperluanPakai('')
+    setTanggalPakai(new Date().toISOString().split('T')[0])
+    setShowPakaiModal(true)
+  }
+  const closePakaiModal = () => { setShowPakaiModal(false); setPakaiItem(null) }
+
+  const handlePakaiBarang = async () => {
+    if (!pakaiItem) return
+    setSubmittingPakai(true)
+    try {
+      await axios.post(`/api/workshop/inventaris/${pakaiItem.id}/pakai`, {
+        jumlah_pakai: jumlahPakai,
+        keperluan: keperluanPakai.trim() || null,
+        tanggal_pemakaian: tanggalPakai,
+      })
+      const namaBarang = pakaiItem.inventaris_gudang?.nama_barang ?? pakaiItem.sarana_prasarana.nama_barang
+      success(`Berhasil mencatat pemakaian ${jumlahPakai} unit ${namaBarang}`)
+      closePakaiModal()
+      fetchInventaris()
+      // Reset riwayat cache agar reload saat expand
+      setRiwayatData(prev => { const n = { ...prev }; delete n[pakaiItem.id]; return n })
+    } catch (err: unknown) {
+      showErrorAlert(err, 'Gagal Mencatat Pemakaian Barang')
+    } finally {
+      setSubmittingPakai(false)
+    }
   }
 
-  const kesiapanPersen = summary.total_unit > 0
-    ? Math.round((summary.kondisi_baik / summary.total_unit) * 100)
-    : 100
+  // ── Riwayat Pemakaian Toggle ──
+  const toggleRiwayat = async (itemId: number) => {
+    if (expandedRiwayat === itemId) { setExpandedRiwayat(null); return }
+    setExpandedRiwayat(itemId)
+    if (!riwayatData[itemId]) {
+      setLoadingRiwayat(itemId)
+      try {
+        const res = await axios.get(`/api/workshop/inventaris/${itemId}/riwayat-pemakaian`)
+        setRiwayatData(prev => ({ ...prev, [itemId]: res.data.riwayat ?? [] }))
+      } catch {
+        setRiwayatData(prev => ({ ...prev, [itemId]: [] }))
+      } finally {
+        setLoadingRiwayat(null)
+      }
+    }
+  }
+
+  // ── Helpers ──
+  const getNamaBarang = (item: InventarisItem) =>
+    item.inventaris_gudang?.nama_barang ?? item.sarana_prasarana.nama_barang
+  const getKode = (item: InventarisItem) =>
+    item.inventaris_gudang?.kode ?? item.sarana_prasarana.kode
+  const getSatuan = (item: InventarisItem) =>
+    item.inventaris_gudang?.satuan ?? item.sarana_prasarana.satuan ?? 'Unit'
+  const getSisaUnit = (item: InventarisItem) =>
+    item.sisa_unit !== null ? item.sisa_unit : item.jumlah
+  const isHabisPakai = (item: InventarisItem) => item.jenis_barang === 'habis_pakai'
+
+  const formatRupiah = (amount: number | undefined | null) => {
+    if (!amount || amount === 0) return '-'
+    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount)
+  }
+
+  const kesiapanPersen = summary.total_unit > 0 ? Math.round((summary.kondisi_baik / summary.total_unit) * 100) : 100
 
   const getKondisiBadge = (kondisi: string) => {
     if (kondisi === 'Baik') return 'bg-emerald-50 text-emerald-700 border border-emerald-200'
@@ -159,21 +234,16 @@ export default function InventarisWorkshopPage() {
             </div>
             <p className="text-xs text-slate-500">
               {ruangan
-                ? <>Aset aktif di <span className="font-semibold text-slate-700">{ruangan.nama_ruangan}</span> {ruangan.gedung ? `— ${ruangan.gedung.nama_gedung}` : ''}</>
+                ? <><span>Aset aktif di </span><span className="font-semibold text-slate-700">{ruangan.nama_ruangan}</span>{ruangan.gedung ? ` — ${ruangan.gedung.nama_gedung}` : ''}</>
                 : 'Daftar seluruh aset yang sudah diterima melalui distribusi dan BAST resmi'}
             </p>
           </div>
-          <button
-            onClick={fetchInventaris}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm"
-          >
-            <RefreshCw className="h-3.5 w-3.5" />
-            Refresh
+          <button onClick={fetchInventaris} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm">
+            <RefreshCw className="h-3.5 w-3.5" /> Refresh
           </button>
         </div>
       </div>
 
-      {/* Warning jika belum assign ruangan */}
       {warning && (
         <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-800">
           <Info className="h-4 w-4 shrink-0 mt-0.5 text-amber-600" />
@@ -181,26 +251,24 @@ export default function InventarisWorkshopPage() {
         </div>
       )}
 
-      {/* Keterangan sumber data */}
       <div className="flex items-start gap-2.5 p-4 bg-blue-50 border border-blue-200 rounded-2xl text-xs text-blue-800">
         <Info className="h-4 w-4 shrink-0 mt-0.5 text-blue-600" />
         <span>
           Inventaris ini hanya menampilkan barang yang sudah melalui proses{' '}
           <strong>Distribusi → Konfirmasi Penerimaan → BAST</strong> ke workshop Anda.
-          Barang yang masih menunggu konfirmasi tidak akan muncul di sini.
+          Barang <strong className="text-orange-700">🔥 Habis Pakai</strong> dapat dikurangi unitnya secara mandiri.
         </span>
       </div>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-          <p className="text-xs text-slate-500 mb-1">Total Unit</p>
+          <p className="text-xs text-slate-500 mb-1">Total Unit (Sisa)</p>
           {loading ? <div className="h-7 w-16 bg-slate-100 rounded animate-pulse" /> : (
             <p className="text-2xl font-black text-slate-900">{summary.total_unit.toLocaleString('id-ID')}</p>
           )}
           <p className="text-[11px] text-slate-400 mt-1">{summary.total_jenis} jenis barang</p>
         </div>
-
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
           <p className="text-xs text-slate-500 mb-1">Total Nilai Aset</p>
           {loading ? <div className="h-7 w-24 bg-slate-100 rounded animate-pulse" /> : (
@@ -210,7 +278,6 @@ export default function InventarisWorkshopPage() {
           )}
           <p className="text-[11px] text-slate-400 mt-1">akumulasi dari distribusi BAST</p>
         </div>
-
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
           <p className="text-xs text-slate-500 mb-1">Kondisi Baik</p>
           {loading ? <div className="h-7 w-16 bg-slate-100 rounded animate-pulse" /> : (
@@ -218,7 +285,6 @@ export default function InventarisWorkshopPage() {
           )}
           <p className="text-[11px] text-slate-400 mt-1">unit siap pakai</p>
         </div>
-
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
           <p className="text-xs text-slate-500 mb-1">Kesiapan</p>
           {loading ? <div className="h-7 w-16 bg-slate-100 rounded animate-pulse" /> : (
@@ -231,150 +297,29 @@ export default function InventarisWorkshopPage() {
         </div>
       </div>
 
-      {/* Filter & Search */}
+      {/* Filter */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Cari nama barang atau kode..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all"
-          />
+          <input type="text" placeholder="Cari nama barang atau kode..." value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all" />
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <Filter className="h-3.5 w-3.5 text-slate-400" />
-          <select
-            value={filterKondisi}
-            onChange={(e) => setFilterKondisi(e.target.value)}
-            className="text-xs border border-slate-200 rounded-xl px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 font-medium text-slate-700"
-          >
+          <select value={filterKondisi} onChange={e => setFilterKondisi(e.target.value)}
+            className="border border-slate-200 rounded-xl px-3 py-2 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all">
             <option value="">Semua Kondisi</option>
             <option value="Baik">Baik</option>
+            <option value="Cukup Baik">Cukup Baik</option>
             <option value="Rusak Ringan">Rusak Ringan</option>
             <option value="Rusak Berat">Rusak Berat</option>
           </select>
         </div>
       </div>
 
-      {/* Tabel / Mobile Cards */}
-      {isMobile ? (
-        /* Mobile Card View */
-        <div className="space-y-3">
-          {loading ? (
-            Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="bg-white border border-slate-200 rounded-xl p-4 animate-pulse">
-                <div className="h-4 bg-slate-100 rounded w-3/4 mb-3" />
-                <div className="h-3 bg-slate-100 rounded w-1/2 mb-2" />
-                <div className="h-3 bg-slate-100 rounded w-2/3" />
-              </div>
-            ))
-          ) : items.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-12 text-center">
-              <Package className="h-12 w-12 mx-auto mb-3 text-slate-300" />
-              <p className="font-semibold text-slate-600 text-sm">Belum ada aset yang masuk</p>
-              <p className="text-xs mt-1 text-slate-400">
-                Aset akan muncul setelah dikonfirmasi
-              </p>
-            </div>
-          ) : (
-            <>
-              {items.map((item) => (
-                <MobileCard key={item.id}>
-                  <MobileCardHeader
-                    title={item.sarana_prasarana.nama_barang}
-                    subtitle={item.sarana_prasarana.kode}
-                    badge={
-                      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold ${getKondisiBadge(item.sarana_prasarana.kondisi)}`}>
-                        {item.sarana_prasarana.kondisi === 'Baik'
-                          ? <CheckCircle2 className="h-2.5 w-2.5" />
-                          : <AlertTriangle className="h-2.5 w-2.5" />}
-                        {item.sarana_prasarana.kondisi}
-                      </span>
-                    }
-                    icon={<Package className="h-4 w-4 text-indigo-600" />}
-                  />
-                  
-                  <div className="space-y-2">
-                    <MobileCardRow
-                      label="Jumlah"
-                      value={
-                        <span className="font-extrabold text-slate-900">
-                          {item.jumlah} {item.sarana_prasarana.satuan || 'Unit'}
-                        </span>
-                      }
-                    />
-                    <MobileCardRow
-                      label="Harga Pembelian"
-                      value={
-                        <span className="font-bold text-emerald-700">
-                          {formatRupiah(item.sarana_prasarana.nilai_harga_pembelian)}
-                        </span>
-                      }
-                    />
-                    <MobileCardRow
-                      label="Tanggal Kirim"
-                      value={new Date(item.tanggal_kirim).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
-                    />
-                    <MobileCardRow
-                      label="Tanggal Terima"
-                      value={
-                        item.tanggal_terima
-                          ? new Date(item.tanggal_terima).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
-                          : '-'
-                      }
-                    />
-                    <MobileCardRow
-                      label="No. BAST"
-                      value={
-                        item.nomor_bast ? (
-                          <span className="text-emerald-700 font-bold flex items-center gap-1 justify-end">
-                            <FileText className="h-3 w-3" />
-                            {item.nomor_bast}
-                          </span>
-                        ) : (
-                          <span className="text-slate-400">-</span>
-                        )
-                      }
-                    />
-                    <MobileCardRow
-                      label="Surat Jalan"
-                      value={item.nomor_surat_jalan}
-                    />
-                    <MobileCardRow
-                      label="Pengirim"
-                      value={item.petugas_pengirim.nama_lengkap}
-                    />
-                    {item.sarana_prasarana.keterangan && (
-                      <>
-                        <MobileCardDivider />
-                        <div className="text-xs text-slate-500 italic">
-                          {item.sarana_prasarana.keterangan}
-                        </div>
-                      </>
-                    )}
-                  </div>
-
-                  <MobileCardActions>
-                    <button
-                      onClick={() => openEditModal(item)}
-                      className="flex items-center justify-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all"
-                    >
-                      <Edit className="h-3.5 w-3.5" />
-                      Edit Kondisi
-                    </button>
-                  </MobileCardActions>
-                </MobileCard>
-              ))}
-              <div className="text-center text-xs text-slate-400 py-2">
-                {items.length} item aset
-              </div>
-            </>
-          )}
-        </div>
-      ) : (
-        /* Desktop Table View */
+      {/* Tabel Desktop */}
+      {!isMobile && (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-xs text-left">
@@ -382,11 +327,9 @@ export default function InventarisWorkshopPage() {
                 <tr>
                   <th className="py-3.5 px-4">Barang</th>
                   <th className="py-3.5 px-4">Kode</th>
-                  <th className="py-3.5 px-4 text-right">Harga</th>
-                  <th className="py-3.5 px-4 text-center">Jumlah</th>
+                  <th className="py-3.5 px-4 text-center">Jenis</th>
+                  <th className="py-3.5 px-4 text-center">Jumlah / Sisa</th>
                   <th className="py-3.5 px-4 text-center">Kondisi</th>
-                  <th className="py-3.5 px-4">Tanggal Kirim</th>
-                  <th className="py-3.5 px-4">Tanggal Terima</th>
                   <th className="py-3.5 px-4">No. BAST</th>
                   <th className="py-3.5 px-4 text-center">Aksi</th>
                 </tr>
@@ -395,221 +338,340 @@ export default function InventarisWorkshopPage() {
                 {loading ? (
                   Array.from({ length: 5 }).map((_, i) => (
                     <tr key={i}>
-                      <td colSpan={9} className="py-3 px-4">
+                      <td colSpan={7} className="py-3 px-4">
                         <div className="h-5 bg-slate-100 rounded animate-pulse" />
                       </td>
                     </tr>
                   ))
                 ) : items.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="py-16 text-center text-slate-400">
+                    <td colSpan={7} className="py-16 text-center text-slate-400">
                       <Package className="h-10 w-10 mx-auto mb-3 opacity-30" />
                       <p className="font-semibold">Belum ada aset yang masuk ke workshop ini</p>
-                      <p className="text-[11px] mt-1 text-slate-400">
-                        Aset akan muncul setelah admin/petugas mendistribusikan dan Anda mengkonfirmasi penerimaan
-                      </p>
                     </td>
                   </tr>
-                ) : (
-                  items.map((item) => (
-                    <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-3.5 px-4">
-                        <p className="font-bold text-slate-900">{item.sarana_prasarana.nama_barang}</p>
-                        {item.sarana_prasarana.keterangan && (
-                          <p className="text-[11px] text-slate-400 mt-0.5 truncate max-w-[200px]">
-                            {item.sarana_prasarana.keterangan}
-                          </p>
-                        )}
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <span className="font-mono text-[11px] bg-slate-100 px-2 py-0.5 rounded border border-slate-200 text-slate-700">
-                          {item.sarana_prasarana.kode}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 text-right">
-                        <span className="font-bold text-emerald-700">
-                          {formatRupiah(item.sarana_prasarana.nilai_harga_pembelian)}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 text-center">
-                        <span className="font-extrabold text-slate-900">
-                          {item.jumlah} <span className="text-slate-400 font-normal">{item.sarana_prasarana.satuan || 'Unit'}</span>
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 text-center">
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold ${getKondisiBadge(item.sarana_prasarana.kondisi)}`}>
-                          {item.sarana_prasarana.kondisi === 'Baik'
-                            ? <CheckCircle2 className="h-3 w-3" />
-                            : <AlertTriangle className="h-3 w-3" />}
-                          {item.sarana_prasarana.kondisi}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 text-slate-600">
-                        {new Date(item.tanggal_kirim).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
-                      </td>
-                      <td className="py-3.5 px-4 text-slate-600">
-                        {item.tanggal_terima
-                          ? new Date(item.tanggal_terima).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
-                          : '-'}
-                      </td>
-                      <td className="py-3.5 px-4">
-                        {item.nomor_bast ? (
-                          <div className="flex items-center gap-1.5 text-emerald-700 font-bold">
-                            <FileText className="h-3.5 w-3.5 text-emerald-500" />
-                            {item.nomor_bast}
+                ) : items.map(item => {
+                  const namaBarang = getNamaBarang(item)
+                  const kode = getKode(item)
+                  const satuan = getSatuan(item)
+                  const sisaUnit = getSisaUnit(item)
+                  const habis = isHabisPakai(item)
+                  const isExpanded = expandedRiwayat === item.id
+
+                  return (
+                    <React.Fragment key={item.id}>
+                      <tr className={`hover:bg-slate-50/80 transition-colors ${sisaUnit === 0 && habis ? 'opacity-60' : ''}`}>
+                        <td className="py-3.5 px-4">
+                          <p className="font-bold text-slate-900">{namaBarang}</p>
+                          {item.inventaris_gudang && (
+                            <p className="text-[10px] text-orange-600 mt-0.5">📦 Dari Inventaris Gudang</p>
+                          )}
+                          <p className="text-[11px] text-slate-400 mt-0.5">Dikirim oleh: {item.petugas_pengirim?.nama_lengkap}</p>
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <span className="font-mono text-[11px] bg-slate-100 px-2 py-0.5 rounded border border-slate-200 text-slate-700">{kode}</span>
+                        </td>
+                        <td className="py-3.5 px-4 text-center">
+                          {habis ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-700 border border-orange-200">
+                              <Flame className="h-2.5 w-2.5" /> Habis Pakai
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-700 border border-indigo-200">
+                              <Box className="h-2.5 w-2.5" /> Aset Tetap
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3.5 px-4 text-center">
+                          {habis ? (
+                            <div>
+                              <p className="font-extrabold text-slate-900">
+                                <span className={sisaUnit === 0 ? 'text-red-600' : 'text-emerald-700'}>{sisaUnit}</span>
+                                <span className="text-slate-400 font-normal text-[10px]"> / {item.jumlah} {satuan}</span>
+                              </p>
+                              <p className="text-[9px] text-slate-400">sisa / total</p>
+                              {sisaUnit === 0 && <span className="text-[9px] font-bold text-red-600 bg-red-50 px-1.5 py-0.5 rounded-full">HABIS</span>}
+                            </div>
+                          ) : (
+                            <span className="font-extrabold text-slate-900">
+                              {item.jumlah} <span className="text-slate-400 font-normal">{satuan}</span>
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3.5 px-4 text-center">
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold ${getKondisiBadge(item.sarana_prasarana.kondisi)}`}>
+                            {item.sarana_prasarana.kondisi === 'Baik' ? <CheckCircle2 className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
+                            {item.sarana_prasarana.kondisi}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4">
+                          {item.nomor_bast ? (
+                            <div className="flex items-center gap-1.5 text-emerald-700 font-bold">
+                              <FileText className="h-3.5 w-3.5 text-emerald-500" />
+                              {item.nomor_bast}
+                            </div>
+                          ) : <span className="text-slate-400">-</span>}
+                          <p className="text-[11px] text-slate-400 mt-0.5">SJ: {item.nomor_surat_jalan}</p>
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <div className="flex items-center gap-1.5 justify-center flex-wrap">
+                            {/* Tombol Edit Kondisi (selalu ada) */}
+                            <button onClick={() => openEditModal(item)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[11px] font-bold transition-all"
+                              title="Edit Kondisi">
+                              <Edit className="h-3 w-3" /> Kondisi
+                            </button>
+
+                            {/* Tombol Pakai Barang (hanya Habis Pakai & sisa > 0) */}
+                            {habis && (
+                              <button onClick={() => openPakaiModal(item)}
+                                disabled={sisaUnit === 0}
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-orange-500 hover:bg-orange-600 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-lg text-[11px] font-bold transition-all"
+                                title="Kurangi / Gunakan Unit">
+                                <Minus className="h-3 w-3" /> Gunakan
+                              </button>
+                            )}
+
+                            {/* Tombol Riwayat Pemakaian (hanya Habis Pakai) */}
+                            {habis && (
+                              <button onClick={() => toggleRiwayat(item.id)}
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[11px] font-bold transition-all border border-slate-200"
+                                title="Lihat Riwayat Pemakaian">
+                                <History className="h-3 w-3" />
+                                {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                              </button>
+                            )}
                           </div>
-                        ) : (
-                          <span className="text-slate-400">-</span>
-                        )}
-                        <p className="text-[11px] text-slate-400 mt-0.5">SJ: {item.nomor_surat_jalan}</p>
-                      </td>
-                      <td className="py-3.5 px-4 text-center">
-                        <button
-                          onClick={() => openEditModal(item)}
-                          className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[11px] font-bold transition-all"
-                          title="Edit Kondisi"
-                        >
-                          <Edit className="h-3 w-3" />
-                          Edit
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
+                        </td>
+                      </tr>
+
+                      {/* Row Riwayat Pemakaian (expand) */}
+                      {habis && isExpanded && (
+                        <tr key={`riwayat-${item.id}`}>
+                          <td colSpan={7} className="bg-orange-50/60 border-t border-orange-100 px-6 py-4">
+                            <div className="flex items-center gap-2 mb-3">
+                              <History className="h-3.5 w-3.5 text-orange-600" />
+                              <p className="text-xs font-bold text-orange-700">Riwayat Pemakaian: {namaBarang}</p>
+                            </div>
+                            {loadingRiwayat === item.id ? (
+                              <div className="flex items-center gap-2 text-xs text-slate-500">
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Memuat riwayat...
+                              </div>
+                            ) : (riwayatData[item.id] ?? []).length === 0 ? (
+                              <p className="text-xs text-slate-400 italic">Belum ada riwayat pemakaian.</p>
+                            ) : (
+                              <div className="overflow-x-auto">
+                                <table className="w-full text-[11px] text-left">
+                                  <thead>
+                                    <tr className="text-slate-500 font-semibold">
+                                      <th className="pb-2 pr-4">Tanggal</th>
+                                      <th className="pb-2 pr-4 text-center">Pakai</th>
+                                      <th className="pb-2 pr-4 text-center">Sisa Sesudah</th>
+                                      <th className="pb-2 pr-4">Keperluan</th>
+                                      <th className="pb-2">Dicatat Oleh</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-orange-100">
+                                    {(riwayatData[item.id] ?? []).map(r => (
+                                      <tr key={r.id} className="text-slate-700">
+                                        <td className="py-1.5 pr-4 font-medium">
+                                          {new Date(r.tanggal_pemakaian).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                        </td>
+                                        <td className="py-1.5 pr-4 text-center font-bold text-orange-700">-{r.jumlah_pakai} {satuan}</td>
+                                        <td className="py-1.5 pr-4 text-center font-semibold">{r.sisa_setelahnya} {satuan}</td>
+                                        <td className="py-1.5 pr-4">{r.keperluan || <span className="text-slate-400 italic">-</span>}</td>
+                                        <td className="py-1.5">{r.user?.nama_lengkap || <span className="text-slate-400">-</span>}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  )
+                })}
               </tbody>
             </table>
           </div>
-          {!loading && items.length > 0 && (
-            <div className="px-4 py-3 border-t border-slate-100 text-[11px] text-slate-400">
-              Menampilkan {items.length} item aset yang sudah diterima di workshop ini
-            </div>
-          )}
         </div>
       )}
-      
-      {/* Modal Edit Kondisi */}
+
+      {/* Mobile Cards */}
+      {isMobile && (
+        <div className="space-y-3">
+          {loading ? Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="bg-white rounded-2xl border border-slate-200 p-4 animate-pulse">
+              <div className="h-4 bg-slate-100 rounded w-3/4 mb-2" />
+              <div className="h-3 bg-slate-100 rounded w-1/2" />
+            </div>
+          )) : items.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-slate-200 p-10 text-center">
+              <Package className="h-10 w-10 mx-auto mb-3 text-slate-200" />
+              <p className="font-semibold text-slate-500 text-sm">Belum ada aset</p>
+            </div>
+          ) : items.map(item => {
+            const namaBarang = getNamaBarang(item)
+            const kode = getKode(item)
+            const satuan = getSatuan(item)
+            const sisaUnit = getSisaUnit(item)
+            const habis = isHabisPakai(item)
+
+            return (
+              <MobileCard key={item.id}>
+                <MobileCardHeader
+                  title={namaBarang}
+                  badge={
+                    habis ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-700 border border-orange-200">
+                        🔥 Habis Pakai
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-700 border border-indigo-200">
+                        🏷️ Aset Tetap
+                      </span>
+                    )
+                  }
+                />
+                <MobileCardRow label="Kode" value={kode} />
+                <MobileCardRow label="Kondisi" value={item.sarana_prasarana.kondisi} />
+                {habis ? (
+                  <MobileCardRow label="Sisa Unit" value={`${sisaUnit} / ${item.jumlah} ${satuan}`} />
+                ) : (
+                  <MobileCardRow label="Jumlah" value={`${item.jumlah} ${satuan}`} />
+                )}
+                <MobileCardRow label="No. BAST" value={item.nomor_bast || '-'} />
+                <MobileCardDivider />
+                <MobileCardActions>
+                  <button onClick={() => openEditModal(item)}
+                    className="flex items-center gap-1 px-3 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold">
+                    <Edit className="h-3 w-3" /> Kondisi
+                  </button>
+                  {habis && (
+                    <button onClick={() => openPakaiModal(item)} disabled={sisaUnit === 0}
+                      className="flex items-center gap-1 px-3 py-2 bg-orange-500 disabled:bg-slate-300 text-white rounded-xl text-xs font-bold">
+                      <Minus className="h-3 w-3" /> Gunakan
+                    </button>
+                  )}
+                </MobileCardActions>
+              </MobileCard>
+            )
+          })}
+        </div>
+      )}
+
+      {/* ── Modal Edit Kondisi ── */}
       {showEditModal && editingItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md animate-slideIn">
-            {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-slate-200">
-              <div>
-                <h2 className="text-lg font-bold text-slate-900">Edit Kondisi Aset</h2>
-                <p className="text-xs text-slate-500 mt-0.5">{editingItem.sarana_prasarana.nama_barang}</p>
-              </div>
-              <button
-                onClick={closeEditModal}
-                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-                disabled={submitting}
-              >
-                <X className="h-5 w-5 text-slate-400" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
+            <div className="flex items-center justify-between p-5 border-b border-slate-100">
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <Edit className="h-4 w-4 text-indigo-600" /> Edit Kondisi Aset
+              </h3>
+              <button onClick={closeEditModal} className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors">
+                <X className="h-4 w-4" />
               </button>
             </div>
-
-            {/* Body */}
-            <div className="p-6 space-y-4">
-              {/* Info Barang */}
-              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1">
-                    <p className="text-xs text-slate-500 mb-0.5">Kode Barang</p>
-                    <p className="font-mono text-xs font-bold text-slate-700">{editingItem.sarana_prasarana.kode}</p>
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-xs text-slate-500 mb-0.5">Jumlah</p>
-                    <p className="text-xs font-bold text-slate-900">{editingItem.jumlah} {editingItem.sarana_prasarana.satuan}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Kondisi Saat Ini */}
+            <div className="p-5 space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Kondisi Saat Ini
-                </label>
-                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl">
-                  <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold ${getKondisiBadge(editingItem.sarana_prasarana.kondisi)}`}>
-                    {editingItem.sarana_prasarana.kondisi === 'Baik'
-                      ? <CheckCircle2 className="h-3.5 w-3.5" />
-                      : <AlertTriangle className="h-3.5 w-3.5" />}
-                    {editingItem.sarana_prasarana.kondisi}
-                  </span>
-                </div>
+                <p className="text-xs text-slate-500 mb-1">Barang</p>
+                <p className="text-sm font-bold text-slate-800">{getNamaBarang(editingItem)}</p>
               </div>
-
-              {/* Ubah Kondisi */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-2">
-                  Ubah Kondisi <span className="text-rose-500">*</span>
-                </label>
-                <select
-                  value={selectedKondisi}
-                  onChange={(e) => setSelectedKondisi(e.target.value)}
-                  className="w-full px-4 py-2.5 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 font-medium"
-                  disabled={submitting}
-                >
-                  <option value="">-- Pilih Kondisi --</option>
-                  <option value="Baik">Baik</option>
-                  <option value="Cukup Baik">Cukup Baik</option>
-                  <option value="Rusak Ringan">Rusak Ringan</option>
-                  <option value="Rusak Berat">Rusak Berat</option>
-                  <option value="Tidak Layak Pakai">Tidak Layak Pakai</option>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">Kondisi Baru</label>
+                <select value={selectedKondisi} onChange={e => setSelectedKondisi(e.target.value)}
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
+                  {['Baik', 'Cukup Baik', 'Rusak Ringan', 'Rusak Berat', 'Tidak Layak Pakai'].map(k => (
+                    <option key={k} value={k}>{k}</option>
+                  ))}
                 </select>
               </div>
-
-              {/* Banner Info Notifikasi Otomatis ke Admin jika Rusak */}
-              {['Rusak Ringan', 'Rusak Berat', 'Tidak Layak Pakai'].includes(selectedKondisi) && (
-                <div className="p-3.5 bg-amber-50 border border-amber-200/80 rounded-xl flex items-start gap-2.5 text-xs text-amber-800 animate-fadeIn">
-                  <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-bold text-amber-900">Notifikasi Otomatis ke Administrator</p>
-                    <p className="text-[11px] text-amber-700 mt-0.5 leading-relaxed">
-                      Laporan kerusakan aset ini akan langsung dikirimkan ke panel Admin beserta nama workshop ({ruangan?.nama_ruangan || 'Workshop'}).
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* Catatan / Keterangan */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-2">
-                  Catatan / Keterangan
-                </label>
-                <textarea
-                  value={catatan}
-                  onChange={(e) => setCatatan(e.target.value)}
-                  placeholder="Jelaskan kondisi atau kerusakan yang terjadi..."
-                  rows={4}
-                  maxLength={500}
-                  className="w-full px-4 py-2.5 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 resize-none"
-                  disabled={submitting}
-                />
-                <p className="text-[11px] text-slate-400 mt-1">
-                  {catatan.length}/500 karakter
-                </p>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">Catatan</label>
+                <textarea value={catatan} onChange={e => setCatatan(e.target.value)} rows={3}
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all resize-none"
+                  placeholder="Deskripsi kerusakan atau catatan kondisi..." />
               </div>
             </div>
-
-            {/* Footer */}
-            <div className="flex items-center gap-3 p-6 border-t border-slate-200 bg-slate-50 rounded-b-2xl">
-              <button
-                onClick={closeEditModal}
-                className="flex-1 px-4 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl text-sm font-bold transition-all"
-                disabled={submitting}
-              >
+            <div className="flex gap-3 p-5 pt-0">
+              <button onClick={closeEditModal} className="flex-1 py-2.5 border border-slate-200 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-50 transition-colors">
                 Batal
               </button>
-              <button
-                onClick={handleUpdateKondisi}
-                disabled={!selectedKondisi || submitting}
-                className="flex-1 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {submitting ? 'Menyimpan...' : 'Simpan Perubahan'}
+              <button onClick={handleUpdateKondisi} disabled={submitting}
+                className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold disabled:opacity-60 transition-colors flex items-center justify-center gap-1.5">
+                {submitting ? <><Loader2 className="h-3 w-3 animate-spin" /> Menyimpan...</> : 'Simpan Kondisi'}
               </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* ── Modal Pakai Barang ── */}
+      {showPakaiModal && pakaiItem && (() => {
+        const namaBarang = getNamaBarang(pakaiItem)
+        const satuan = getSatuan(pakaiItem)
+        const sisaUnit = getSisaUnit(pakaiItem)
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
+              <div className="flex items-center justify-between p-5 border-b border-slate-100">
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <Flame className="h-4 w-4 text-orange-500" /> Catat Pemakaian Barang
+                </h3>
+                <button onClick={closePakaiModal} className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="p-5 space-y-4">
+                <div className="p-3 bg-orange-50 rounded-xl border border-orange-200">
+                  <p className="text-xs text-orange-600 font-medium">{namaBarang}</p>
+                  <p className="text-sm font-bold text-orange-800 mt-0.5">
+                    Sisa tersedia: <span className="text-lg">{sisaUnit}</span> {satuan}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    Jumlah yang Digunakan <span className="text-red-500">*</span>
+                  </label>
+                  <input type="number" min={1} max={sisaUnit} value={jumlahPakai}
+                    onChange={e => setJumlahPakai(Math.min(sisaUnit, Math.max(1, Number(e.target.value))))}
+                    className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-orange-400 transition-all font-bold text-orange-800" />
+                  {jumlahPakai > 0 && (
+                    <p className="text-[11px] text-slate-500 mt-1">
+                      Sisa setelah pemakaian: <strong className="text-orange-700">{sisaUnit - jumlahPakai} {satuan}</strong>
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Tanggal Pemakaian</label>
+                  <input type="date" value={tanggalPakai} onChange={e => setTanggalPakai(e.target.value)}
+                    className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-orange-400 transition-all" />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Keperluan / Catatan</label>
+                  <textarea value={keperluanPakai} onChange={e => setKeperluanPakai(e.target.value)} rows={3}
+                    className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-orange-400 transition-all resize-none"
+                    placeholder="Contoh: Digunakan untuk ujian praktik kelas XI TKJ semester ganjil" />
+                </div>
+              </div>
+              <div className="flex gap-3 p-5 pt-0">
+                <button onClick={closePakaiModal} className="flex-1 py-2.5 border border-slate-200 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-50 transition-colors">
+                  Batal
+                </button>
+                <button onClick={handlePakaiBarang} disabled={submittingPakai || jumlahPakai < 1 || jumlahPakai > sisaUnit}
+                  className="flex-1 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-bold disabled:opacity-60 transition-colors flex items-center justify-center gap-1.5">
+                  {submittingPakai ? <><Loader2 className="h-3 w-3 animate-spin" /> Menyimpan...</> : <><Minus className="h-3 w-3" /> Konfirmasi Pemakaian</>}
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }

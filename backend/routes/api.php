@@ -172,6 +172,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('stats/wakasek', [DistribusiAsetController::class, 'statsWakasek']);
     Route::get('workshop/inventaris', [DistribusiAsetController::class, 'inventarisWorkshop']);
     Route::put('workshop/inventaris/{id}/kondisi', [DistribusiAsetController::class, 'updateKondisiInventaris']);
+    Route::post('workshop/inventaris/{id}/pakai', [DistribusiAsetController::class, 'pakaiBarang']);
+    Route::get('workshop/inventaris/{id}/riwayat-pemakaian', [DistribusiAsetController::class, 'getRiwayatPemakaian']);
     Route::get('workshop/pilih-barang', [DistribusiAsetController::class, 'pilihBarangWorkshop']);
     
     // IMPORTANT: Specific routes MUST come BEFORE parameterized routes

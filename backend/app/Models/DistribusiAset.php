@@ -16,10 +16,13 @@ class DistribusiAset extends Model
         'nomor_pengiriman',
         'nomor_bast',
         'sarana_prasarana_id',
+        'inventaris_gudang_id',
         'ruangan_tujuan_id',
         'petugas_pengirim_id',
         'wakapro_penerima_id',
+        'jenis_barang',
         'jumlah',
+        'sisa_unit',
         'harga_satuan',
         'total_harga',
         'tanggal_kirim',
@@ -35,6 +38,7 @@ class DistribusiAset extends Model
         'tanggal_kirim' => 'date',
         'tanggal_terima' => 'datetime',
         'jumlah' => 'integer',
+        'sisa_unit' => 'integer',
         'harga_satuan' => 'float',
         'total_harga' => 'float',
     ];
@@ -64,6 +68,16 @@ class DistribusiAset extends Model
     public function saranaPrasarana()
     {
         return $this->belongsTo(SaranaPrasarana::class, 'sarana_prasarana_id');
+    }
+
+    public function inventarisGudang()
+    {
+        return $this->belongsTo(InventarisGudang::class, 'inventaris_gudang_id');
+    }
+
+    public function riwayatPemakaian()
+    {
+        return $this->hasMany(RiwayatPemakaianBarang::class, 'distribusi_aset_id')->orderBy('tanggal_pemakaian', 'desc')->orderBy('id', 'desc');
     }
 
     public function ruanganTujuan()

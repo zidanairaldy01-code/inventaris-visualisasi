@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\DistribusiAset;
 use App\Models\SaranaPrasarana;
+use App\Models\InventarisGudang;
+use App\Models\RiwayatPemakaianBarang;
 use App\Models\Ruangan;
 use App\Models\User;
 use App\Models\History;
@@ -25,9 +27,11 @@ class DistribusiAsetController extends Controller
         $user = $request->user();
         $query = DistribusiAset::with([
             'saranaPrasarana.fotos',
+            'inventarisGudang',
             'ruanganTujuan.gedung',
             'petugasPengirim',
             'wakaproPenerima',
+            'riwayatPemakaian.user',
         ]);
 
         // Jika Wakapro, batasi HANYA ruangan miliknya berdasarkan ruangan_id
@@ -59,6 +63,10 @@ class DistribusiAsetController extends Controller
                   ->orWhereHas('saranaPrasarana', function ($sq) use ($search) {
                       $sq->where('nama_barang', 'like', "%{$search}%")
                          ->orWhere('kode', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('inventarisGudang', function ($gq) use ($search) {
+                      $gq->where('nama_barang', 'like', "%{$search}%")
+                         ->orWhere('kode', 'like', "%{$search}%");
                   });
             });
         }
@@ -74,17 +82,33 @@ class DistribusiAsetController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'sarana_prasarana_id' => 'required|exists:sarana_prasaranas,id',
-            'ruangan_tujuan_id'   => 'required|exists:ruangans,id',
-            'jumlah'              => 'nullable|integer|min:1',
-            'harga_satuan'        => 'nullable|numeric|min:0',
-            'catatan_pengiriman'  => 'nullable|string',
+            'sarana_prasarana_id'  => 'nullable|exists:sarana_prasaranas,id',
+            'inventaris_gudang_id' => 'nullable|exists:inventaris_gudangs,id',
+            'jenis_barang'         => 'nullable|in:habis_pakai,tidak_habis_pakai',
+            'ruangan_tujuan_id'    => 'required|exists:ruangans,id',
+            'jumlah'               => 'nullable|integer|min:1',
+            'harga_satuan'         => 'nullable|numeric|min:0',
+            'catatan_pengiriman'   => 'nullable|string',
         ]);
+
+        if (empty($validated['sarana_prasarana_id']) && empty($validated['inventaris_gudang_id'])) {
+            return response()->json([
+                'message' => 'Pilih barang dari Sarana Prasarana atau Inventaris Gudang.',
+            ], 422);
+        }
 
         $user = $request->user();
         $jumlah = $validated['jumlah'] ?? 1;
 
-        $sarana = SaranaPrasarana::find($validated['sarana_prasarana_id']);
+        $sarana = null;
+        $gudang = null;
+        if (!empty($validated['sarana_prasarana_id'])) {
+            $sarana = SaranaPrasarana::find($validated['sarana_prasarana_id']);
+        }
+        if (!empty($validated['inventaris_gudang_id'])) {
+            $gudang = InventarisGudang::find($validated['inventaris_gudang_id']);
+        }
+
         $hargaSatuan = isset($validated['harga_satuan']) && $validated['harga_satuan'] !== ''
             ? (float) $validated['harga_satuan']
             : (float) ($sarana?->nilai_harga_pembelian ?? 0);
@@ -104,27 +128,61 @@ class DistribusiAsetController extends Controller
             $seq++;
         } while (DistribusiAset::where('nomor_surat_jalan', $nomorSuratJalan)->exists());
 
-        $distribusi = DB::transaction(function () use ($validated, $user, $wakapro, $nomorSuratJalan, $jumlah, $hargaSatuan, $totalHarga, $sarana) {
+        $distribusi = DB::transaction(function () use ($validated, $user, $wakapro, $nomorSuratJalan, $jumlah, $hargaSatuan, $totalHarga, $sarana, $gudang) {
+            $saranaId = $validated['sarana_prasarana_id'] ?? null;
+
+            // Jika distribusi berasal dari gudang dan belum ada sarana_prasarana, buatkan agar kompatibel dengan sistem
+            if ($gudang) {
+                // Potong / tambah stok keluar di gudang
+                $gudang->stok_keluar = (int)$gudang->stok_keluar + (int)$jumlah;
+                $gudang->save();
+
+                if (!$saranaId) {
+                    $saranaNew = SaranaPrasarana::create([
+                        'kode'                  => $gudang->kode,
+                        'nama_barang'           => $gudang->nama_barang,
+                        'satuan'                => $gudang->satuan ?? 'Unit',
+                        'stok_awal'             => $jumlah,
+                        'stok_masuk'            => 0,
+                        'stok_keluar'           => 0,
+                        'nilai_harga_pembelian' => $hargaSatuan,
+                        'nilai_harga_sekarang'  => $hargaSatuan,
+                        'kondisi'               => 'Baik',
+                        'keterangan'            => 'Distribusi dari Inventaris Gudang' . ($gudang->keterangan ? ' - ' . $gudang->keterangan : ''),
+                        'id_user'               => $user->id,
+                        'id_folder'             => $gudang->id_folder,
+                    ]);
+                    $saranaId = $saranaNew->id;
+                    $sarana = $saranaNew;
+                }
+            }
+
+            $jenisBarang = $validated['jenis_barang'] ?? ($gudang ? 'habis_pakai' : 'tidak_habis_pakai');
+
             $record = DistribusiAset::create([
-                'nomor_surat_jalan'   => $nomorSuratJalan,
-                'sarana_prasarana_id' => $validated['sarana_prasarana_id'],
-                'ruangan_tujuan_id'   => $validated['ruangan_tujuan_id'],
-                'petugas_pengirim_id' => $user->id,
-                'wakapro_penerima_id' => $wakapro ? $wakapro->id : null,
-                'jumlah'              => $jumlah,
-                'harga_satuan'        => $hargaSatuan,
-                'total_harga'         => $totalHarga,
-                'tanggal_kirim'       => Carbon::today(),
-                'status'              => 'menunggu_konfirmasi',
-                'catatan_pengiriman'  => $validated['catatan_pengiriman'] ?? null,
+                'nomor_surat_jalan'    => $nomorSuratJalan,
+                'sarana_prasarana_id'  => $saranaId,
+                'inventaris_gudang_id' => $validated['inventaris_gudang_id'] ?? null,
+                'ruangan_tujuan_id'    => $validated['ruangan_tujuan_id'],
+                'petugas_pengirim_id'  => $user->id,
+                'wakapro_penerima_id'  => $wakapro ? $wakapro->id : null,
+                'jenis_barang'         => $jenisBarang,
+                'jumlah'               => $jumlah,
+                'sisa_unit'            => $jumlah,
+                'harga_satuan'         => $hargaSatuan,
+                'total_harga'          => $totalHarga,
+                'tanggal_kirim'        => Carbon::today(),
+                'status'               => 'menunggu_konfirmasi',
+                'catatan_pengiriman'   => $validated['catatan_pengiriman'] ?? null,
             ]);
 
             // Catat history aktivitas jika model History aktif
             try {
+                $namaBrg = $gudang?->nama_barang ?? $sarana?->nama_barang ?? 'Barang';
                 History::create([
                     'id_user'    => $user->id,
                     'aksi'       => 'Kirim Aset ke Bengkel',
-                    'keterangan' => "Pengiriman {$sarana->nama_barang} dengan No. {$nomorSuratJalan} ke bengkel tujuan.",
+                    'keterangan' => "Pengiriman {$namaBrg} dengan No. {$nomorSuratJalan} ke bengkel tujuan.",
                     'tanggal'    => Carbon::now(),
                 ]);
             } catch (\Exception $e) {
@@ -134,7 +192,7 @@ class DistribusiAsetController extends Controller
             return $record;
         });
 
-        $distribusi->load(['saranaPrasarana', 'ruanganTujuan.gedung', 'petugasPengirim', 'wakaproPenerima']);
+        $distribusi->load(['saranaPrasarana', 'inventarisGudang', 'ruanganTujuan.gedung', 'petugasPengirim', 'wakaproPenerima']);
 
         return response()->json([
             'message' => 'Pengiriman aset berhasil dicatat. Surat Jalan telah dibuat.',
@@ -148,17 +206,19 @@ class DistribusiAsetController extends Controller
     public function bulkStore(Request $request)
     {
         $validated = $request->validate([
-            'ruangan_tujuan_id'   => 'required|exists:ruangans,id',
-            'catatan_pengiriman'  => 'nullable|string',
-            'items'               => 'required|array|min:1',
+            'ruangan_tujuan_id'           => 'required|exists:ruangans,id',
+            'catatan_pengiriman'          => 'nullable|string',
+            'items'                       => 'required|array|min:1',
             'items.*.sarana_prasarana_id' => 'nullable|exists:sarana_prasaranas,id',
-            'items.*.jumlah'      => 'required|integer|min:1',
-            'items.*.harga_satuan' => 'nullable|numeric|min:0',
+            'items.*.inventaris_gudang_id'=> 'nullable|exists:inventaris_gudangs,id',
+            'items.*.jenis_barang'        => 'nullable|in:habis_pakai,tidak_habis_pakai',
+            'items.*.jumlah'              => 'required|integer|min:1',
+            'items.*.harga_satuan'        => 'nullable|numeric|min:0',
             // Data untuk barang baru jika sarana_prasarana_id tidak ada
-            'items.*.nama_barang' => 'nullable|string',
-            'items.*.satuan'      => 'nullable|string',
-            'items.*.kondisi'     => 'nullable|string|in:Baik,Rusak Ringan,Rusak Berat',
-            'items.*.keterangan'  => 'nullable|string',
+            'items.*.nama_barang'         => 'nullable|string',
+            'items.*.satuan'              => 'nullable|string',
+            'items.*.kondisi'             => 'nullable|string|in:Baik,Rusak Ringan,Rusak Berat',
+            'items.*.keterangan'          => 'nullable|string',
         ]);
 
         $user = $request->user();
@@ -189,36 +249,64 @@ class DistribusiAsetController extends Controller
                     ? (float) $item['harga_satuan']
                     : 0;
 
-                // Jika sarana_prasarana_id tidak ada, buat data barang baru
+                $gudangId = $item['inventaris_gudang_id'] ?? null;
+                $gudangItem = $gudangId ? InventarisGudang::find($gudangId) : null;
+
+                // Jika ada barang dari gudang, potong stok keluar gudang
+                if ($gudangItem) {
+                    $gudangItem->stok_keluar = (int)$gudangItem->stok_keluar + (int)$item['jumlah'];
+                    $gudangItem->save();
+                }
+
+                // Jika sarana_prasarana_id tidak ada, buat data barang baru agar relasi sistem tetap utuh
                 if (empty($item['sarana_prasarana_id'])) {
-                    if (empty($item['nama_barang'])) {
-                        continue; // Skip jika nama barang kosong
+                    if ($gudangItem) {
+                        // Gunakan data dari gudang
+                        $saranaNew = SaranaPrasarana::create([
+                            'kode'                  => $gudangItem->kode,
+                            'nama_barang'           => $gudangItem->nama_barang,
+                            'satuan'                => $gudangItem->satuan ?? 'Unit',
+                            'stok_awal'             => $item['jumlah'],
+                            'stok_masuk'            => 0,
+                            'stok_keluar'           => 0,
+                            'nilai_harga_pembelian' => $hargaSatuan,
+                            'nilai_harga_sekarang'  => $hargaSatuan,
+                            'kondisi'               => $item['kondisi'] ?? 'Baik',
+                            'keterangan'            => 'Distribusi dari Inventaris Gudang' . ($gudangItem->keterangan ? ' - ' . $gudangItem->keterangan : ''),
+                            'id_user'               => $user->id,
+                            'id_folder'             => $gudangItem->id_folder,
+                        ]);
+                        $saranaId = $saranaNew->id;
+                    } else {
+                        if (empty($item['nama_barang'])) {
+                            continue; // Skip jika nama barang kosong
+                        }
+
+                        // Generate kode otomatis untuk barang baru
+                        $kodePrefix = 'BRG-' . date('Ym') . '-';
+                        $countBarang = SaranaPrasarana::where('kode', 'like', "{$kodePrefix}%")->count();
+                        $kodeSeq = $countBarang + 1;
+                        do {
+                            $kode = $kodePrefix . str_pad($kodeSeq, 4, '0', STR_PAD_LEFT);
+                            $kodeSeq++;
+                        } while (SaranaPrasarana::where('kode', $kode)->exists());
+
+                        $saranaNew = SaranaPrasarana::create([
+                            'kode'                  => $kode,
+                            'nama_barang'           => $item['nama_barang'],
+                            'satuan'                => $item['satuan'] ?? 'Unit',
+                            'stok_awal'             => $item['jumlah'],
+                            'stok_masuk'            => 0,
+                            'stok_keluar'           => 0,
+                            'nilai_harga_pembelian' => $hargaSatuan,
+                            'nilai_harga_sekarang'  => $hargaSatuan,
+                            'kondisi'               => $item['kondisi'] ?? 'Baik',
+                            'keterangan'            => $item['keterangan'] ?? 'Input manual saat distribusi',
+                            'id_user'               => $user->id,
+                        ]);
+
+                        $saranaId = $saranaNew->id;
                     }
-
-                    // Generate kode otomatis untuk barang baru
-                    $kodePrefix = 'BRG-' . date('Ym') . '-';
-                    $countBarang = SaranaPrasarana::where('kode', 'like', "{$kodePrefix}%")->count();
-                    $kodeSeq = $countBarang + 1;
-                    do {
-                        $kode = $kodePrefix . str_pad($kodeSeq, 4, '0', STR_PAD_LEFT);
-                        $kodeSeq++;
-                    } while (SaranaPrasarana::where('kode', $kode)->exists());
-
-                    $saranaNew = SaranaPrasarana::create([
-                        'kode'                  => $kode,
-                        'nama_barang'           => $item['nama_barang'],
-                        'satuan'                => $item['satuan'] ?? 'Unit',
-                        'stok_awal'             => $item['jumlah'],
-                        'stok_masuk'            => 0,
-                        'stok_keluar'           => 0,
-                        'nilai_harga_pembelian' => $hargaSatuan,
-                        'nilai_harga_sekarang'  => $hargaSatuan,
-                        'kondisi'               => $item['kondisi'] ?? 'Baik',
-                        'keterangan'            => $item['keterangan'] ?? 'Input manual saat distribusi',
-                        'id_user'               => $user->id,
-                    ]);
-
-                    $saranaId = $saranaNew->id;
                 } else {
                     $saranaId = $item['sarana_prasarana_id'];
                     $saranaExist = SaranaPrasarana::find($saranaId);
@@ -237,22 +325,27 @@ class DistribusiAsetController extends Controller
                     $sjSeq++;
                 } while (DistribusiAset::where('nomor_surat_jalan', $nomorSuratJalan)->exists());
 
+                $jenisBarang = $item['jenis_barang'] ?? ($gudangItem ? 'habis_pakai' : 'tidak_habis_pakai');
+
                 $distribusi = DistribusiAset::create([
-                    'nomor_surat_jalan'   => $nomorSuratJalan,
-                    'nomor_pengiriman'    => $nomorPengiriman,
-                    'sarana_prasarana_id' => $saranaId,
-                    'ruangan_tujuan_id'   => $ruanganTujuanId,
-                    'petugas_pengirim_id' => $user->id,
-                    'wakapro_penerima_id' => $wakapro ? $wakapro->id : null,
-                    'jumlah'              => $item['jumlah'],
-                    'harga_satuan'        => $hargaSatuan,
-                    'total_harga'         => $totalHarga,
-                    'tanggal_kirim'       => Carbon::today(),
-                    'status'              => 'menunggu_konfirmasi',
-                    'catatan_pengiriman'  => $validated['catatan_pengiriman'] ?? null,
+                    'nomor_surat_jalan'    => $nomorSuratJalan,
+                    'nomor_pengiriman'     => $nomorPengiriman,
+                    'sarana_prasarana_id'  => $saranaId,
+                    'inventaris_gudang_id' => $gudangId,
+                    'ruangan_tujuan_id'    => $ruanganTujuanId,
+                    'petugas_pengirim_id'  => $user->id,
+                    'wakapro_penerima_id'  => $wakapro ? $wakapro->id : null,
+                    'jenis_barang'         => $jenisBarang,
+                    'jumlah'               => $item['jumlah'],
+                    'sisa_unit'            => $item['jumlah'],
+                    'harga_satuan'         => $hargaSatuan,
+                    'total_harga'          => $totalHarga,
+                    'tanggal_kirim'        => Carbon::today(),
+                    'status'               => 'menunggu_konfirmasi',
+                    'catatan_pengiriman'   => $validated['catatan_pengiriman'] ?? null,
                 ]);
 
-                $distribusi->load(['saranaPrasarana', 'ruanganTujuan.gedung', 'petugasPengirim', 'wakaproPenerima']);
+                $distribusi->load(['saranaPrasarana', 'inventarisGudang', 'ruanganTujuan.gedung', 'petugasPengirim', 'wakaproPenerima']);
                 $results[] = $distribusi;
             }
 
@@ -317,26 +410,70 @@ class DistribusiAsetController extends Controller
     public function searchBarang(Request $request)
     {
         $search = $request->get('q', '');
-        
-        $results = SaranaPrasarana::where(function ($query) use ($search) {
-            $query->where('nama_barang', 'like', "%{$search}%")
-                  ->orWhere('kode', 'like', "%{$search}%");
-        })
-        ->with('folder')
-        ->limit(20)
-        ->get()
-        ->map(function ($item) {
-            return [
-                'id'                    => $item->id,
-                'kode'                  => $item->kode,
-                'nama_barang'           => $item->nama_barang,
-                'satuan'                => $item->satuan,
-                'stok_akhir'            => $item->stok_akhir,
-                'kondisi'               => $item->kondisi,
-                'nilai_harga_pembelian' => (float) ($item->nilai_harga_pembelian ?? 0),
-                'folder_nama'           => $item->folder ? $item->folder->nama_folder : null,
-            ];
-        });
+        $source = $request->get('source', 'all'); // 'all', 'gudang', 'sarpras'
+        $results = [];
+
+        // 1. Cari dari Inventaris Gudang jika source adalah 'all' atau 'gudang'
+        if ($source === 'all' || $source === 'gudang') {
+            $gudangItems = InventarisGudang::where(function ($query) use ($search) {
+                $query->where('nama_barang', 'like', "%{$search}%")
+                      ->orWhere('kode', 'like', "%{$search}%");
+            })
+            ->with('folder')
+            ->limit(15)
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'id'                    => 'gudang_' . $item->id,
+                    'source'                => 'gudang',
+                    'inventaris_gudang_id'  => $item->id,
+                    'sarana_prasarana_id'   => null,
+                    'kode'                  => $item->kode,
+                    'nama_barang'           => $item->nama_barang,
+                    'satuan'                => $item->satuan,
+                    'stok_akhir'            => (int) $item->stok_akhir,
+                    'kondisi'               => 'Baik',
+                    'nilai_harga_pembelian' => 0,
+                    'folder_nama'           => $item->folder ? $item->folder->nama_folder : 'Gudang Utama',
+                    'jenis_barang'          => 'habis_pakai', // Default barang gudang
+                ];
+            });
+
+            foreach ($gudangItems as $gi) {
+                $results[] = $gi;
+            }
+        }
+
+        // 2. Cari dari Sarana & Prasarana jika source adalah 'all' atau 'sarpras'
+        if ($source === 'all' || $source === 'sarpras') {
+            $sarprasItems = SaranaPrasarana::where(function ($query) use ($search) {
+                $query->where('nama_barang', 'like', "%{$search}%")
+                      ->orWhere('kode', 'like', "%{$search}%");
+            })
+            ->with('folder')
+            ->limit(15)
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'id'                    => 'sarpras_' . $item->id,
+                    'source'                => 'sarpras',
+                    'sarana_prasarana_id'   => $item->id,
+                    'inventaris_gudang_id'  => null,
+                    'kode'                  => $item->kode,
+                    'nama_barang'           => $item->nama_barang,
+                    'satuan'                => $item->satuan,
+                    'stok_akhir'            => (int) $item->stok_akhir,
+                    'kondisi'               => $item->kondisi,
+                    'nilai_harga_pembelian' => (float) ($item->nilai_harga_pembelian ?? 0),
+                    'folder_nama'           => $item->folder ? $item->folder->nama_folder : null,
+                    'jenis_barang'          => 'tidak_habis_pakai', // Default sarpras
+                ];
+            });
+
+            foreach ($sarprasItems as $si) {
+                $results[] = $si;
+            }
+        }
 
         return response()->json($results);
     }
@@ -730,8 +867,10 @@ class DistribusiAsetController extends Controller
 
         $query = DistribusiAset::with([
             'saranaPrasarana',
+            'inventarisGudang',
             'petugasPengirim',
             'wakaproPenerima',
+            'riwayatPemakaian.user',
         ])
         ->where('ruangan_tujuan_id', $ruanganId)
         ->where('status', 'diterima'); // Hanya yang sudah diterima via BAST
@@ -759,21 +898,30 @@ class DistribusiAsetController extends Controller
         // Pencarian
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->whereHas('saranaPrasarana', function ($q) use ($search) {
-                $q->where('nama_barang', 'like', "%{$search}%")
-                  ->orWhere('kode', 'like', "%{$search}%");
+            $query->where(function ($q) use ($search) {
+                $q->whereHas('saranaPrasarana', function ($sq) use ($search) {
+                    $sq->where('nama_barang', 'like', "%{$search}%")
+                      ->orWhere('kode', 'like', "%{$search}%");
+                })
+                ->orWhereHas('inventarisGudang', function ($gq) use ($search) {
+                    $gq->where('nama_barang', 'like', "%{$search}%")
+                      ->orWhere('kode', 'like', "%{$search}%");
+                });
             });
         }
 
         $items = $query->latest('tanggal_terima')->latest('id')->get();
 
         // Hitung summary
-        $totalUnit   = (int) $items->sum('jumlah');
+        $totalUnit   = 0;
         $totalJenis  = $items->pluck('sarana_prasarana_id')->unique()->count();
         $totalNilai  = 0;
         $kondisiBaik = 0;
         $kondisiRusak = 0;
         foreach ($items as $item) {
+            $unit = $item->sisa_unit !== null ? (int) $item->sisa_unit : (int) $item->jumlah;
+            $totalUnit += $unit;
+
             $harga = (float) ($item->total_harga ?: ($item->jumlah * ($item->harga_satuan ?: ($item->saranaPrasarana?->nilai_harga_pembelian ?? 0))));
             $totalNilai += $harga;
 
@@ -782,9 +930,9 @@ class DistribusiAsetController extends Controller
                 || stripos($k, 'rusak') !== false
                 || stripos($k, 'tidak layak') !== false;
             if ($isRusak) {
-                $kondisiRusak += (int) $item->jumlah;
+                $kondisiRusak += $unit;
             } else {
-                $kondisiBaik += (int) $item->jumlah;
+                $kondisiBaik += $unit;
             }
         }
 
@@ -798,6 +946,103 @@ class DistribusiAsetController extends Controller
                 'kondisi_baik' => $kondisiBaik,
                 'kondisi_rusak'=> $kondisiRusak,
             ],
+        ]);
+    }
+
+    /**
+     * Wakapro mencatat pemakaian barang habis pakai di workshop
+     */
+    public function pakaiBarang(Request $request, $id)
+    {
+        $user = $request->user();
+        $distribusi = DistribusiAset::with(['saranaPrasarana', 'inventarisGudang'])->findOrFail($id);
+
+        if ($user->role === 'wakapro') {
+            if (!$user->ruangan_id || $distribusi->ruangan_tujuan_id != $user->ruangan_id) {
+                return response()->json([
+                    'message' => 'Anda tidak memiliki hak akses untuk mengubah unit di workshop ini.',
+                ], 403);
+            }
+        } elseif (!in_array($user->role, ['super_admin', 'petugas'])) {
+            return response()->json([
+                'message' => 'Akses ditolak.',
+            ], 403);
+        }
+
+        if ($distribusi->status !== 'diterima') {
+            return response()->json([
+                'message' => 'Barang belum diterima melalui BAST.',
+            ], 422);
+        }
+
+        if ($distribusi->jenis_barang !== 'habis_pakai') {
+            return response()->json([
+                'message' => 'Hanya barang dengan tipe "Habis Pakai" yang unitnya dapat dikurangi/dipakai langsung.',
+            ], 422);
+        }
+
+        $sisaSaatIni = $distribusi->sisa_unit !== null ? (int)$distribusi->sisa_unit : (int)$distribusi->jumlah;
+
+        if ($sisaSaatIni <= 0) {
+            return response()->json([
+                'message' => 'Stok unit barang ini sudah habis (0).',
+            ], 422);
+        }
+
+        $validated = $request->validate([
+            'jumlah_pakai'      => "required|integer|min:1|max:{$sisaSaatIni}",
+            'tanggal_pemakaian' => 'nullable|date',
+            'keperluan'         => 'nullable|string|max:500',
+        ], [
+            'jumlah_pakai.max' => "Jumlah pemakaian tidak boleh melebihi sisa unit yang tersedia ({$sisaSaatIni}).",
+        ]);
+
+        $jumlahPakai = (int) $validated['jumlah_pakai'];
+        $sisaSetelahnya = $sisaSaatIni - $jumlahPakai;
+        $tanggalPemakaian = $validated['tanggal_pemakaian'] ?? Carbon::today();
+        $keperluan = $validated['keperluan'] ?? 'Pemakaian workshop';
+
+        DB::transaction(function () use ($distribusi, $user, $jumlahPakai, $sisaSaatIni, $sisaSetelahnya, $tanggalPemakaian, $keperluan) {
+            $distribusi->update([
+                'sisa_unit' => $sisaSetelahnya,
+            ]);
+
+            \App\Models\RiwayatPemakaianBarang::create([
+                'distribusi_aset_id' => $distribusi->id,
+                'user_id'            => $user->id,
+                'jumlah_pakai'       => $jumlahPakai,
+                'sisa_sebelumnya'    => $sisaSaatIni,
+                'sisa_setelahnya'    => $sisaSetelahnya,
+                'tanggal_pemakaian'  => $tanggalPemakaian,
+                'keperluan'          => $keperluan,
+            ]);
+        });
+
+        $namaBarang = $distribusi->inventarisGudang?->nama_barang 
+            ?? $distribusi->saranaPrasarana?->nama_barang 
+            ?? 'Barang';
+
+        return response()->json([
+            'message' => "Berhasil mencatat pemakaian {$jumlahPakai} unit {$namaBarang}. Sisa unit sekarang: {$sisaSetelahnya}.",
+            'data'    => $distribusi->fresh(['saranaPrasarana', 'inventarisGudang', 'riwayatPemakaian.user']),
+        ]);
+    }
+
+    /**
+     * Tampilkan riwayat pemakaian barang habis pakai
+     */
+    public function getRiwayatPemakaian($id)
+    {
+        $distribusi = DistribusiAset::findOrFail($id);
+        $riwayat = \App\Models\RiwayatPemakaianBarang::with('user')
+            ->where('distribusi_aset_id', $distribusi->id)
+            ->latest('tanggal_pemakaian')
+            ->latest('id')
+            ->get();
+
+        return response()->json([
+            'distribusi_id' => $distribusi->id,
+            'riwayat'       => $riwayat,
         ]);
     }
 
@@ -1133,6 +1378,10 @@ class DistribusiAsetController extends Controller
                   ->orWhere('nomor_pengiriman', 'like', "%{$search}%")
                   ->orWhereHas('saranaPrasarana', function ($sq) use ($search) {
                       $sq->where('nama_barang', 'like', "%{$search}%")
+                         ->orWhere('kode', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('inventarisGudang', function ($gq) use ($search) {
+                      $gq->where('nama_barang', 'like', "%{$search}%")
                          ->orWhere('kode', 'like', "%{$search}%");
                   });
             });

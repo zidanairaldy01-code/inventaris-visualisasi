@@ -36,6 +36,11 @@ class InventarisGudang extends Model
         return $this->belongsTo(FolderInventaris::class, 'id_folder')->withTrashed();
     }
 
+    public function distribusiAset()
+    {
+        return $this->hasMany(DistribusiAset::class, 'inventaris_gudang_id');
+    }
+
     // Auto calculate stok_akhir before saving
     protected static function booted()
     {
