@@ -24,25 +24,25 @@ export default function ConfirmDialog({
 }: ConfirmDialogProps) {
   const config = {
     danger: {
-      icon: <XCircle className="h-6 w-6" />,
+      icon: <XCircle className="h-5 w-5 sm:h-6 sm:w-6" />,
       iconBg: 'bg-red-100',
       iconColor: 'text-red-600',
       confirmBtn: 'bg-red-600 hover:bg-red-700 focus:ring-red-500',
     },
     warning: {
-      icon: <AlertTriangle className="h-6 w-6" />,
+      icon: <AlertTriangle className="h-5 w-5 sm:h-6 sm:w-6" />,
       iconBg: 'bg-amber-100',
       iconColor: 'text-amber-600',
       confirmBtn: 'bg-amber-600 hover:bg-amber-700 focus:ring-amber-500',
     },
     info: {
-      icon: <Info className="h-6 w-6" />,
+      icon: <Info className="h-5 w-5 sm:h-6 sm:w-6" />,
       iconBg: 'bg-blue-100',
       iconColor: 'text-blue-600',
       confirmBtn: 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500',
     },
     success: {
-      icon: <CheckCircle className="h-6 w-6" />,
+      icon: <CheckCircle className="h-5 w-5 sm:h-6 sm:w-6" />,
       iconBg: 'bg-emerald-100',
       iconColor: 'text-emerald-600',
       confirmBtn: 'bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-500',
@@ -52,40 +52,40 @@ export default function ConfirmDialog({
   const style = config[type];
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3.5 sm:p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
       <div 
-        className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden animate-in zoom-in-95 duration-200"
+        className="bg-white rounded-2xl shadow-2xl max-w-sm sm:max-w-md w-full overflow-hidden animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-6 pb-4">
-          <div className="flex items-start gap-4">
-            <div className={`shrink-0 ${style.iconBg} rounded-xl p-3 ${style.iconColor}`}>
+        <div className="p-4 sm:p-6 pb-3 sm:pb-4">
+          <div className="flex items-start gap-3 sm:gap-4">
+            <div className={`shrink-0 ${style.iconBg} rounded-xl p-2 sm:p-3 ${style.iconColor}`}>
               {style.icon}
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="text-lg font-bold text-slate-900 mb-1">
+              <h3 className="text-base sm:text-lg font-bold text-slate-900 mb-1">
                 {title}
               </h3>
-              <p className="text-sm text-slate-600 leading-relaxed">
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
                 {message}
               </p>
             </div>
             <button
               onClick={onCancel}
-              className="shrink-0 text-slate-400 hover:text-slate-600 transition-colors"
+              className="shrink-0 p-1 text-slate-400 hover:text-slate-600 transition-colors -mr-1 -mt-1"
               aria-label="Close"
             >
-              <X className="h-5 w-5" />
+              <X className="h-4 w-4 sm:h-5 sm:w-5" />
             </button>
           </div>
         </div>
 
         {/* Actions */}
-        <div className="px-6 pb-6 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2.5 sm:gap-3">
+        <div className="px-4 pb-4 sm:px-6 sm:pb-6 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2 sm:gap-3">
           <button
             onClick={onCancel}
-            className="w-full sm:w-auto px-4 py-2.5 text-sm font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors text-center"
+            className="w-full sm:w-auto px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-lg sm:rounded-xl transition-colors text-center"
           >
             {cancelText}
           </button>
@@ -94,7 +94,7 @@ export default function ConfirmDialog({
               onConfirm();
               onCancel();
             }}
-            className={`w-full sm:w-auto px-4 py-2.5 text-sm font-semibold text-white rounded-xl transition-all shadow-sm ${style.confirmBtn} focus:outline-none focus:ring-2 focus:ring-offset-2 text-center`}
+            className={`w-full sm:w-auto px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold text-white rounded-lg sm:rounded-xl transition-all shadow-sm ${style.confirmBtn} focus:outline-none focus:ring-2 focus:ring-offset-2 text-center`}
           >
             {confirmText}
           </button>

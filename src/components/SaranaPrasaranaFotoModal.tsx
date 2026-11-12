@@ -169,12 +169,12 @@ export default function SaranaPrasaranaFotoModal({ item, onClose, onUpdate }: Pr
   if (!mounted) return null;
 
   const modalContent = (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[92vh] flex flex-col overflow-hidden">
 
         {/* Header */}
-        <div className="flex items-start justify-between px-5 py-4 border-b border-slate-100 shrink-0">
+        <div className="flex items-start justify-between px-4 py-3 sm:px-5 sm:py-4 border-b border-slate-100 shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-50 rounded-xl">
               <Images className="h-5 w-5 text-blue-600" />
@@ -191,7 +191,7 @@ export default function SaranaPrasaranaFotoModal({ item, onClose, onUpdate }: Pr
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-0 px-5 pt-3 shrink-0 border-b border-slate-100">
+        <div className="flex gap-0 px-3 sm:px-5 pt-2 sm:pt-3 shrink-0 border-b border-slate-100 overflow-x-auto">
           <button
             onClick={() => setActiveTab('gallery')}
             className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold border-b-2 transition-all -mb-px ${
@@ -217,7 +217,7 @@ export default function SaranaPrasaranaFotoModal({ item, onClose, onUpdate }: Pr
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-4">
+        <div className="flex-1 overflow-y-auto p-3.5 sm:p-5 space-y-3 sm:space-y-4">
           {message && (
             <div className={`p-3 rounded-xl flex items-center text-xs font-medium border gap-2 ${
               message.type === 'success'
@@ -238,7 +238,7 @@ export default function SaranaPrasaranaFotoModal({ item, onClose, onUpdate }: Pr
               {/* Upload Zone */}
               <div
                 onClick={() => !uploading && fileInputRef.current?.click()}
-                className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center hover:border-blue-400 hover:bg-blue-50/30 transition-all cursor-pointer group"
+                className="border-2 border-dashed border-slate-200 rounded-xl sm:rounded-2xl p-4 sm:p-6 text-center hover:border-blue-400 hover:bg-blue-50/30 transition-all cursor-pointer group"
               >
                 <input
                   ref={fileInputRef}
@@ -524,7 +524,7 @@ export default function SaranaPrasaranaFotoModal({ item, onClose, onUpdate }: Pr
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3 border-t border-slate-100 bg-slate-50 shrink-0 flex items-center justify-between">
+        <div className="px-4 py-2.5 sm:px-5 sm:py-3 border-t border-slate-100 bg-slate-50 shrink-0 flex items-center justify-between">
           <p className="text-xs text-slate-400">
             {fotos.length > 0
               ? `${fotos.length} foto tersimpan untuk barang ini`

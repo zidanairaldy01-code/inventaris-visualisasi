@@ -22,25 +22,25 @@ export default function AlertDialog({
 }: AlertDialogProps) {
   const config = {
     success: {
-      icon: <CheckCircle className="h-6 w-6" />,
+      icon: <CheckCircle className="h-5 w-5 sm:h-6 sm:w-6" />,
       iconBg: 'bg-emerald-100',
       iconColor: 'text-emerald-600',
       button: 'bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-500',
     },
     error: {
-      icon: <XCircle className="h-6 w-6" />,
+      icon: <XCircle className="h-5 w-5 sm:h-6 sm:w-6" />,
       iconBg: 'bg-red-100',
       iconColor: 'text-red-600',
       button: 'bg-red-600 hover:bg-red-700 focus:ring-red-500',
     },
     warning: {
-      icon: <AlertTriangle className="h-6 w-6" />,
+      icon: <AlertTriangle className="h-5 w-5 sm:h-6 sm:w-6" />,
       iconBg: 'bg-amber-100',
       iconColor: 'text-amber-600',
       button: 'bg-amber-600 hover:bg-amber-700 focus:ring-amber-500',
     },
     info: {
-      icon: <Info className="h-6 w-6" />,
+      icon: <Info className="h-5 w-5 sm:h-6 sm:w-6" />,
       iconBg: 'bg-blue-100',
       iconColor: 'text-blue-600',
       button: 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500',
@@ -50,31 +50,31 @@ export default function AlertDialog({
   const style = config[type];
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3.5 sm:p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
       <div 
-        className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden animate-in zoom-in-95 duration-200"
+        className="bg-white rounded-2xl shadow-2xl max-w-sm sm:max-w-md w-full overflow-hidden animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Content */}
-        <div className="p-6">
-          <div className="flex items-start gap-4 mb-6">
-            <div className={`shrink-0 ${style.iconBg} rounded-xl p-3 ${style.iconColor}`}>
+        <div className="p-4 sm:p-6">
+          <div className="flex items-start gap-3 sm:gap-4 mb-4 sm:mb-6">
+            <div className={`shrink-0 ${style.iconBg} rounded-xl p-2 sm:p-3 ${style.iconColor}`}>
               {style.icon}
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="text-lg font-bold text-slate-900 mb-2">
+              <h3 className="text-base sm:text-lg font-bold text-slate-900 mb-1 sm:mb-2">
                 {title}
               </h3>
-              <p className="text-sm text-slate-600 leading-relaxed">
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
                 {message}
               </p>
               {details && (
-                <div className="mt-3 bg-red-50/80 border border-red-200 rounded-xl p-3 text-xs text-red-800">
-                  <div className="font-bold text-red-900 uppercase tracking-wider text-[10px] mb-1">
+                <div className="mt-2.5 sm:mt-3 bg-red-50/80 border border-red-200 rounded-lg sm:rounded-xl p-2.5 sm:p-3 text-[11px] sm:text-xs text-red-800">
+                  <div className="font-bold text-red-900 uppercase tracking-wider text-[9px] sm:text-[10px] mb-1">
                     Keterangan Error:
                   </div>
                   {Array.isArray(details) ? (
-                    <ul className="list-disc pl-4 space-y-1 max-h-36 overflow-y-auto">
+                    <ul className="list-disc pl-3.5 sm:pl-4 space-y-1 max-h-28 sm:max-h-36 overflow-y-auto">
                       {details.map((d, i) => (
                         <li key={i}>{d}</li>
                       ))}
@@ -87,17 +87,17 @@ export default function AlertDialog({
             </div>
             <button
               onClick={onClose}
-              className="shrink-0 text-slate-400 hover:text-slate-600 transition-colors"
+              className="shrink-0 p-1 text-slate-400 hover:text-slate-600 transition-colors -mr-1 -mt-1"
               aria-label="Close"
             >
-              <X className="h-5 w-5" />
+              <X className="h-4 w-4 sm:h-5 sm:w-5" />
             </button>
           </div>
 
           {/* Action Button */}
           <button
             onClick={onClose}
-            className={`w-full px-4 py-2.5 text-sm font-semibold text-white rounded-lg transition-all shadow-sm ${style.button} focus:outline-none focus:ring-2 focus:ring-offset-2`}
+            className={`w-full px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold text-white rounded-lg sm:rounded-xl transition-all shadow-sm ${style.button} focus:outline-none focus:ring-2 focus:ring-offset-2`}
           >
             {buttonText}
           </button>
