@@ -412,8 +412,8 @@ export default function MasterKondisiPage() {
         <div class="kop-surat">
           <h3>PEMERINTAH DAERAH PROVINSI JAWA BARAT</h3>
           <h2>DINAS PENDIDIKAN</h2>
-          <h1>SMK NEGERI 1 INVENTARIS SISTEM</h1>
-          <p>Jl. Pendidikan No. 45, Telp: (021) 87654321 | Email: sarpras@smkn1-inventaris.sch.id</p>
+          <h1>SMK PGRI TELAGASARI</h1>
+          <p>Jl, Raya Syeh Quro, Kec. Talagasari, Karawang, Jawa Barat 41381 | Telp: - | Email: smkpgritelagasari.01@gmail.com</p>
         </div>
 
         <div class="judul-surat">
@@ -1448,8 +1448,8 @@ export default function MasterKondisiPage() {
                 <div className="text-center border-b-2 border-slate-900 pb-3 space-y-0.5">
                   <p className="text-[11px] font-sans tracking-wider text-slate-600 uppercase">PEMERINTAH DAERAH PROVINSI JAWA BARAT</p>
                   <p className="text-xs font-sans font-bold text-slate-700 uppercase">DINAS PENDIDIKAN</p>
-                  <h2 className="text-base font-sans font-extrabold text-slate-900 tracking-wide uppercase">SMK NEGERI 1 INVENTARIS SISTEM</h2>
-                  <p className="text-[10px] font-sans text-slate-500">Jl. Pendidikan No. 45, Telp: (021) 87654321 | sarpras@smkn1-inventaris.sch.id</p>
+                  <h2 className="text-base font-sans font-extrabold text-slate-900 tracking-wide uppercase">SMK PGRI TELAGASARI</h2>
+                  <p className="text-[10px] font-sans text-slate-500">Jl, Raya Syeh Quro, Kec. Talagasari, Karawang, Jawa Barat 41381 | Telp: - | smkpgritelagasari.01@gmail.com</p>
                 </div>
 
                 {/* Judul & Nomor */}

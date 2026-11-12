@@ -86,13 +86,13 @@ export function exportLaporanPdf({
   doc.setFont('helvetica', 'normal')
   doc.setTextColor(75, 85, 99)
   doc.text(
-    'Jl. Raya Telagasari - Kosambi No. 67, Telagasari, Karawang, Jawa Barat 41381  |  Telp. (0267) 510365',
+    'Jl, Raya Syeh Quro, Kec. Talagasari, Karawang, Jawa Barat 41381  |  Telp. -',
     pw / 2,
     19,
     { align: 'center' }
   )
   doc.text(
-    'Website: smkpgritelagasari.sch.id  |  Email: info@smkpgritelagasari.sch.id',
+    'Email: smkpgritelagasari.01@gmail.com',
     pw / 2,
     23,
     { align: 'center' }
@@ -369,13 +369,13 @@ export function exportFolderSaranaPdf({ folderName, items }: ExportFolderSaranaP
   doc.setFont('helvetica', 'normal')
   doc.setTextColor(75, 85, 99)
   doc.text(
-    'Jl. Raya Telagasari - Kosambi No. 67, Telagasari, Karawang, Jawa Barat 41381  |  Telp. (0267) 510365',
+    'Jl, Raya Syeh Quro, Kec. Talagasari, Karawang, Jawa Barat 41381  |  Telp. -',
     pw / 2,
     19,
     { align: 'center' }
   )
   doc.text(
-    'Website: smkpgritelagasari.sch.id  |  Email: info@smkpgritelagasari.sch.id',
+    'Email: smkpgritelagasari.01@gmail.com',
     pw / 2,
     23,
     { align: 'center' }

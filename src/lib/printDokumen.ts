@@ -168,7 +168,7 @@ const drawKopSurat = (doc: jsPDF, judulDokumen: string, nomorDokumen: string) =>
   doc.setFont('helvetica', 'normal')
   doc.setTextColor(80, 80, 80)
   doc.text(
-    'Talagasari, Kec. Talagasari, Karawang, Jawa Barat 41381  |  Telp. -  |  info@smkpgritelagasari.sch.id',
+    'Jl, Raya Syeh Quro, Kec. Talagasari, Karawang, Jawa Barat 41381  |  Telp. -  |  smkpgritelagasari.01@gmail.com',
     pw / 2,
     21,
     { align: 'center' },
