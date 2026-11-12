@@ -291,9 +291,6 @@ function SidebarContent({
               <span className="text-sm font-bold text-white tracking-tight group-hover:text-blue-400 transition-colors">
                 SIM ASET
               </span>
-              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">
-                PRO
-              </span>
             </div>
             <p className="text-[10px] text-slate-400 truncate max-w-[130px]">
               SMK PGRI Telagasari
@@ -472,12 +469,12 @@ function SidebarContent({
                 <p className="text-xs font-semibold text-slate-200 group-hover:text-white truncate">
                   {user?.nama_lengkap || user?.name || 'Administrator'}
                 </p>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <span className="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30 uppercase tracking-wider">
+                <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-slate-400">
+                  <span className="font-medium">
                     {formatRole(user?.role || roleFromPath)}
                   </span>
                   {user?.ruangan && (
-                    <span className="text-[9.5px] text-slate-400 truncate">
+                    <span className="truncate">
                       • {user.ruangan.nama_ruangan}
                     </span>
                   )}
