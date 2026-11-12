@@ -40,7 +40,7 @@ export default function HeroSection({ stats }: HeroSectionProps) {
 
           {/* Main Heading */}
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-6">
-            Sistem Inventaris Aset
+            Sistem Inventaris Manajemen Aset Sekolah
             <br />
             <span className="text-blue-200">SMK PGRI Telagasari</span>
           </h1>

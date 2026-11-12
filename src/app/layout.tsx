@@ -9,7 +9,10 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "SIM Aset - SMK PGRI Telagasari",
+  title: {
+    default: "SIMAS - SMK PGRI Telagasari",
+    template: "%s | SIMAS - SMK PGRI Telagasari",
+  },
   description: "Sistem Informasi Manajemen Aset Digital SMK PGRI Telagasari",
   icons: {
     icon: [
